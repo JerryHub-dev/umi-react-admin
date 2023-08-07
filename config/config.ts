@@ -2,7 +2,9 @@ import { defineConfig } from '@umijs/max';
 import { routes } from './routes';
 
 export default defineConfig({
-  antd: {},
+  antd: {
+    
+  },
   access: {},
   model: {},
   initialState: {},
@@ -16,5 +18,11 @@ export default defineConfig({
   // 路由配置
   routes,
   npmClient: 'pnpm',
+  // 多语言配置 https://umijs.org/docs/max/i18n
+  locale: {
+    // 默认使用 src/locales/zh-CN.ts 作为多语言文件
+    default: 'zh-CN',
+    baseSeparator: '-',
+  },
 });
 
