@@ -7,18 +7,39 @@ export const routes = [
     redirect: '/home',
   },
   {
-    name: '首页',
+    name: 'home',
     path: '/home',
+    icon: 'HomeOutlined',
     component: './Home',
   },
+  // {
+  //   name: '权限演示',
+  //   path: '/access',
+  //   component: './Access',
+  // },
+  // {
+  //   name: ' CRUD 示例',
+  //   path: '/table',
+  //   component: './Table',
+  // },
   {
-    name: '权限演示',
-    path: '/access',
-    component: './Access',
+    name: 'feature',
+    path: '/feature',
+    icon: 'ToolOutlined',
+    // component: './Feature',
+    routes: [
+      {
+        name: 'formily',
+        path: '/feature/formily',
+        component: './Feature/Formily',
+        icon: 'HourglassOutlined',
+      },
+      {
+        name: 'fullCalendar',
+        path: '/feature/fullCalendar',
+        component: './Feature/FullCalendar',
+        icon: 'CalendarOutlined',
+      },
+    ],
   },
-  {
-    name: ' CRUD 示例',
-    path: '/table',
-    component: './Table',
-  },
-]
+];

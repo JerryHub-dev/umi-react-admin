@@ -1,5 +1,1 @@
-
-
-export default {
-
-}
+export default {};
