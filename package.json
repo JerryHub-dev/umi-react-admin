@@ -10,6 +10,20 @@
     "setup": "max setup",
     "start": "npm run dev"
   },
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,jsx,less,md,json}": [
+      "prettier --write"
+    ],
+    "*.ts?(x)": [
+      "prettier --parser=typescript --write"
+    ],
+    "*.{js,jsx,ts,tsx,css,less}": [
+      "max lint"
+    ]
+  },
   "dependencies": {
     "@ant-design/icons": "^5.2.4",
     "@ant-design/pro-components": "^2.6.10",
