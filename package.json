@@ -10,9 +10,6 @@
     "setup": "max setup",
     "start": "npm run dev"
   },
-  "gitHooks": {
-    "pre-commit": "lint-staged"
-  },
   "lint-staged": {
     "*.{js,jsx,less,md,json}": [
       "prettier --write"
