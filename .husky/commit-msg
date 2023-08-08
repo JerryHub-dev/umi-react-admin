@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# npx --no-install max verify-commit $1
-pnpm lint-staged
+npx --no-install max verify-commit $1
