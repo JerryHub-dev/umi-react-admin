@@ -9,7 +9,7 @@ export const routes = [
   {
     name: 'home',
     path: '/home',
-    icon: 'HomeOutlined',
+    icon: 'HomeFilled',
     component: './Home',
   },
   // {
@@ -25,7 +25,7 @@ export const routes = [
   {
     name: 'feature',
     path: '/feature',
-    icon: 'ToolOutlined',
+    icon: 'ToolFilled',
     // component: './Feature',
     routes: [
       {
