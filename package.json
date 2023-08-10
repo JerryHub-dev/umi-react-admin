@@ -11,12 +11,6 @@
     "start": "npm run dev"
   },
   "lint-staged": {
-    "*.{js,jsx,less,md,json}": [
-      "prettier --write"
-    ],
-    "*.ts?(x)": [
-      "prettier --parser=typescript --write"
-    ],
     "*.{js,jsx,ts,tsx,css,less}": [
       "max lint"
     ]
@@ -38,8 +32,5 @@
     "prettier-plugin-packagejson": "^2.4.5",
     "tailwindcss": "^3",
     "typescript": "^5.1.6"
-  },
-  "gitHooks": {
-    "pre-commit": "lint-staged"
   }
 }

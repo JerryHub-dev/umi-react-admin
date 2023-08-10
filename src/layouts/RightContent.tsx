@@ -1,4 +1,9 @@
-import { DownOutlined, GithubOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  DownOutlined,
+  FontSizeOutlined,
+  GithubOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import { Avatar, Popover } from 'antd';
 
@@ -7,6 +12,11 @@ const RightContent = () => {
 
   return (
     <>
+      {/* NOTE: 多语言 */}
+      <Popover className="" trigger="hover" placement="bottom">
+        <FontSizeOutlined className="" />
+      </Popover>
+
       {/* NOTE: user */}
       <Popover
         title=""

@@ -18,8 +18,8 @@ export const layout: RunTimeLayoutConfig = (initialState) => {
   return {
     // 常用属性
     title: 'React Admin',
-    // logo: 'https://img.alicdn.com/tfs/TB1YHEpwUT1gK0jSZFhXXaAtVXa-28-27.svg',
-    logo: '../public/1297939-3f51b5.svg',
+    logo: 'https://img.alicdn.com/tfs/TB1YHEpwUT1gK0jSZFhXXaAtVXa-28-27.svg',
+    // logo: '../public/1297939-3f51b5.svg',
     // 默认布局调整
     // 自定义 render
     rightContentRender: () => <RightContent />,
