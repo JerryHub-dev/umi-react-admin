@@ -4,16 +4,54 @@ import {
   GithubOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useIntl } from '@umijs/max';
+import { setLocale, useIntl } from '@umijs/max';
 import { Avatar, Popover } from 'antd';
+import { useState } from 'react';
 
 const RightContent = () => {
   const intl = useIntl();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [localeType, setLocaleType] = useState(
+    localStorage.getItem('umi_locale') || 'zh-CN',
+  );
+  if (!localStorage.getItem('umi_locale')) {
+    setLocale('zh-CN');
+  }
+  const localeTypeData = [
+    {
+      label: '中文',
+      value: 'zh-CN',
+    },
+    {
+      label: 'English',
+      value: 'en-US',
+    },
+  ];
 
   return (
     <>
       {/* NOTE: 多语言 */}
-      <Popover className="" trigger="hover" placement="bottom">
+      <Popover
+        className="mr-4 text-2xl"
+        trigger="hover"
+        placement="bottom"
+        content={
+          <div>
+            {localeTypeData.map((item, index) => (
+              <div
+                className="hover:bg-zinc-200 py-1 px-2 rounded-md cursor-pointer w-24 text-center"
+                onClick={() => {
+                  setLocale(item.value);
+                  setLocaleType(item.value);
+                }}
+                key={index}
+              >
+                {item.label}
+              </div>
+            ))}
+          </div>
+        }
+      >
         <FontSizeOutlined className="" />
       </Popover>
 
