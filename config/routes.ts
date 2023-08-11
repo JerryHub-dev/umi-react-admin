@@ -26,13 +26,21 @@ export const routes = [
     name: 'feature',
     path: '/feature',
     icon: 'ToolFilled',
-    // component: './Feature',
     routes: [
+      {
+        name: 'feature',
+        path: '/feature',
+        hideInMenu: true,
+        component: './Feature/Formily',
+      },
       {
         name: 'formily',
         path: '/feature/formily',
-        component: './Feature/Formily',
+        component: './Feature/Formily/Designable',
         icon: 'HourglassOutlined',
+        target: '_blank',
+        hideChildrenInMenu: true,
+        menuRender: false,
       },
       {
         name: 'fullCalendar',

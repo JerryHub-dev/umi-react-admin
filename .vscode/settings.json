@@ -90,5 +90,14 @@
   "editor.quickSuggestions": {
     "strings": true
   },
-  "cSpell.words": ["antd", "umijs", "valtio"]
+  "cSpell.words": [
+    "ahooks",
+    "antd",
+    "formily",
+    "packagejson",
+    "pind",
+    "tailwindcss",
+    "umijs",
+    "valtio"
+  ]
 }

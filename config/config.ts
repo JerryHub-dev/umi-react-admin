@@ -26,4 +26,9 @@ export default defineConfig({
     baseSeparator: '-',
   },
   tailwindcss: {},
+  lessLoader: {
+    modifyVars: {
+      'root-entry-name': 'default',
+    },
+  },
 });
