@@ -2,15 +2,17 @@ import { defineConfig } from '@umijs/max';
 import { routes } from './routes';
 
 export default defineConfig({
-  antd: {},
+  // 开启 valtio 数据流方案 https://umijs.org/docs/max/valtio
+  valtio: {},
+  antd: {
+    theme: {},
+    appConfig: {},
+  },
   access: {},
   model: {},
   initialState: {},
   request: {},
-  layout: {
-    title: '@umijs/max1',
-    locale: true,
-  },
+  layout: {},
   // @umijs/max 内置了 styled-components 样式方案。
   // https://umijs.org/docs/max/styled-components
   styledComponents: {},

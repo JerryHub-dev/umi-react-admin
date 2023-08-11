@@ -89,5 +89,6 @@
   },
   "editor.quickSuggestions": {
     "strings": true
-  }
+  },
+  "cSpell.words": ["antd", "umijs", "valtio"]
 }
