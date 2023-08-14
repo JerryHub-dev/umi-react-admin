@@ -31,7 +31,7 @@ export const routes = [
         name: 'feature',
         path: '/feature',
         hideInMenu: true,
-        component: './Feature/Formily',
+        component: './Feature/index',
       },
       {
         name: 'formily',

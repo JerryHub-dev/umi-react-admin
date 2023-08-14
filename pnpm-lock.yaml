@@ -28,6 +28,9 @@ dependencies:
   '@fullcalendar/interaction':
     specifier: ^6.1.8
     version: 6.1.8(@fullcalendar/core@6.1.8)
+  '@fullcalendar/multimonth':
+    specifier: ^6.1.8
+    version: 6.1.8(@fullcalendar/core@6.1.8)
   '@fullcalendar/react':
     specifier: ^6.1.8
     version: 6.1.8(@fullcalendar/core@6.1.8)(react-dom@16.14.0)(react@16.14.0)
@@ -3053,6 +3056,15 @@ packages:
       '@fullcalendar/core': ~6.1.8
     dependencies:
       '@fullcalendar/core': 6.1.8
+    dev: false
+
+  /@fullcalendar/multimonth@6.1.8(@fullcalendar/core@6.1.8):
+    resolution: {integrity: sha512-3F0NlncQTfeE9x5ICxh/M9DaSdY6XjgM1NazY8k+d6ukd1jthHI7vs6j7tXJI9eGUKs3DNNEyzN/LoP06SIyKw==}
+    peerDependencies:
+      '@fullcalendar/core': ~6.1.8
+    dependencies:
+      '@fullcalendar/core': 6.1.8
+      '@fullcalendar/daygrid': 6.1.8(@fullcalendar/core@6.1.8)
     dev: false
 
   /@fullcalendar/react@6.1.8(@fullcalendar/core@6.1.8)(react-dom@16.14.0)(react@16.14.0):
