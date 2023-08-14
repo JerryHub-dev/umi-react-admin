@@ -3,6 +3,7 @@ export default {
   'menu.feature': 'feature',
   'menu.feature.formily': 'formily designable',
   'menu.feature.fullCalendar': 'calendar',
+  'menu.feature.RichTextEditing': 'RichTextEditing',
   Logout: 'Logout',
   undertone: 'undertone',
   DarkColor: 'Dark color',

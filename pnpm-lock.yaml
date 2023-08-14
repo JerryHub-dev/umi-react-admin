@@ -49,6 +49,9 @@ dependencies:
   '@pind/designable-react-settings-form':
     specifier: 2.0.0-beta.6
     version: 2.0.0-beta.6(@formily/antd-v5@1.1.0)(@formily/core@2.2.29)(@formily/json-schema@2.2.29)(@formily/path@2.2.29)(@formily/react@2.2.29)(@formily/reactive-react@2.2.29)(@formily/reactive@2.2.29)(@formily/shared@2.2.29)(@types/react-dom@18.2.7)(@types/react@18.2.18)(dayjs@1.11.9)(react-dom@16.14.0)(react@16.14.0)(typescript@5.1.6)
+  '@tinymce/tinymce-react':
+    specifier: ^4.3.0
+    version: 4.3.0(react-dom@16.14.0)(react@16.14.0)
   '@umijs/max':
     specifier: ^4.0.74
     version: 4.0.74(@babel/core@7.22.9)(@types/react-dom@18.2.7)(@types/react@18.2.18)(dva@2.5.0-beta.2)(postcss@8.4.27)(prettier@3.0.1)(rc-field-form@1.36.2)(react-dom@16.14.0)(react@16.14.0)(styled-components@6.0.7)(typescript@5.1.6)(webpack@5.88.2)
@@ -3885,6 +3888,18 @@ packages:
       react: 16.14.0
       react-dom: 16.14.0(react@16.14.0)
       use-sync-external-store: 1.2.0(react@16.14.0)
+    dev: false
+
+  /@tinymce/tinymce-react@4.3.0(react-dom@16.14.0)(react@16.14.0):
+    resolution: {integrity: sha512-iB4cUsYfcJL4NGuKhqCGYuTmFTje3nPxyPv1HxprTsp/YMGuuiiSNWrv3zwI31QX5Cn8qeq9MrMDnbxuRugHyg==}
+    peerDependencies:
+      react: ^18.0.0 || ^17.0.1 || ^16.7.0
+      react-dom: ^18.0.0 || ^17.0.1 || ^16.7.0
+    dependencies:
+      prop-types: 15.8.1
+      react: 16.14.0
+      react-dom: 16.14.0(react@16.14.0)
+      tinymce: 6.6.2
     dev: false
 
   /@trysound/sax@0.2.0:
@@ -12112,6 +12127,10 @@ packages:
 
   /tinycolor2@1.6.0:
     resolution: {integrity: sha512-XPaBkWQJdsf3pLKJV9p4qN/S+fm2Oj8AIPo1BTUhg5oxkvm9+SVEGFdhyOz7tTdUTfvxMiAs4sp6/eZO2Ew+pw==}
+    dev: false
+
+  /tinymce@6.6.2:
+    resolution: {integrity: sha512-ShoaznNP3qI8dPtEnYt3ByhAJfMhzIY1K04CoFu1IPDeAxmAZCUJLgfiplo8etP4wN8zrBIxHEqpwYYb2IllOQ==}
     dev: false
 
   /titleize@3.0.0:

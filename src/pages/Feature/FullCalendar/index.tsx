@@ -1,4 +1,5 @@
 /**
+ * FullCalendar 日历 官网: https://fullcalendar.io/
  * dayGridPlugin 月视图
  * timeGridPlugin 周视图
  * interactionPlugin 交互
@@ -177,7 +178,7 @@ export default () => {
           eventRemove={function(){}}
         */
         />
-        {renderSidebar()}
+        <div className="shadow-2xl p-8 m-8">{renderSidebar()}</div>
       </div>
     </ProCard>
   );

@@ -48,6 +48,12 @@ export const routes = [
         component: './Feature/FullCalendar',
         icon: 'CalendarOutlined',
       },
+      {
+        name: 'RichTextEditing',
+        path: '/feature/RichTextEditing',
+        component: './Feature/RichTextEditing',
+        icon: 'FileTextOutlined',
+      },
     ],
   },
 ];
