@@ -94,9 +94,11 @@
     "ahooks",
     "antd",
     "formily",
+    "fullcalendar",
     "packagejson",
     "pind",
     "tailwindcss",
+    "timegrid",
     "umijs",
     "valtio"
   ]
