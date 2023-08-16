@@ -4,6 +4,7 @@ export default {
   'menu.feature.formily': 'formily designable',
   'menu.feature.fullCalendar': 'calendar',
   'menu.feature.RichTextEditing': 'RichTextEditing',
+  'menu.feature.DndKit': 'DndKit',
   Logout: 'Logout',
   undertone: 'undertone',
   DarkColor: 'Dark color',

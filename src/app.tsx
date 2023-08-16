@@ -24,8 +24,7 @@ export const request: RequestConfig = requestConfig;
 export const layout: RunTimeLayoutConfig = (initialState) => {
   return {
     title: 'React Admin',
-    logo: 'https://img.alicdn.com/tfs/TB1YHEpwUT1gK0jSZFhXXaAtVXa-28-27.svg',
-    // logo: '../public/1297939-3f51b5.svg',
+    logo: '/logo.svg',
     // 默认布局调整
     rightContentRender: () => <RightContent />,
     menuHeaderRender: undefined,

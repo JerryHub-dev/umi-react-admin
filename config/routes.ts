@@ -54,6 +54,12 @@ export const routes = [
         component: './Feature/RichTextEditing',
         icon: 'FileTextOutlined',
       },
+      {
+        name: 'DndKit',
+        path: '/feature/DndKit',
+        component: './Feature/DndKit',
+        icon: 'FileTextOutlined',
+      },
     ],
   },
 ];

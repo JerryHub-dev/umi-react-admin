@@ -7,6 +7,7 @@
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky install",
+    "preview": "pnpm build:dev && pnpm max preview --port 8000",
     "setup": "max setup",
     "start": "npm run dev"
   },
@@ -19,6 +20,9 @@
     "@ant-design/icons": "^5.2.4",
     "@ant-design/pro-components": "^2.6.10",
     "@designable/formily-antd": "1.0.0-beta.45",
+    "@dnd-kit/core": "^6.0.8",
+    "@dnd-kit/modifiers": "^6.0.1",
+    "@dnd-kit/sortable": "^7.0.2",
     "@formily/antd-v5": "^1.1.0",
     "@formily/core": "^2.2.29",
     "@formily/react": "^2.2.29",
