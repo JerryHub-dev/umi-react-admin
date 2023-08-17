@@ -1,8 +1,8 @@
 import { ProCard } from '@ant-design/pro-components';
+import { useMount } from 'ahooks';
 import { Button } from 'antd';
 import SignaturePad from 'signature_pad';
 
-import { useMount } from 'ahooks';
 import { SignatureStyle } from './Signature.styles';
 
 export default function Signature() {

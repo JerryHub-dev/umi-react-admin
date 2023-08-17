@@ -73,6 +73,12 @@ dependencies:
   signature_pad:
     specifier: ^4.1.6
     version: 4.1.6
+  xgplayer:
+    specifier: ^3.0.8
+    version: 3.0.8(core-js@3.28.0)
+  xgplayer-music:
+    specifier: ^3.0.8
+    version: 3.0.8(core-js@3.28.0)(xgplayer@3.0.8)
 
 devDependencies:
   '@types/react':
@@ -6180,6 +6186,12 @@ packages:
       type: 1.2.0
     dev: false
 
+  /danmu.js@1.1.11:
+    resolution: {integrity: sha512-beL1hDnjvzvvXs2CuearTybkB+VzdyrMsBgRxIRO9FD6r5TakJ7O5D72sZz7Q7rfV1jwDUO1zlFwxrS0SNZTBQ==}
+    dependencies:
+      event-emitter: 0.3.5
+    dev: false
+
   /data-uri-to-buffer@4.0.1:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
@@ -6245,6 +6257,11 @@ packages:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
     dev: false
 
+  /deepmerge@2.2.1:
+    resolution: {integrity: sha512-R9hc1Xa/NOBi9WRVUWg19rl1UB7Tt4kuPd+thNJgFZoxXsTz7ncaPaeIm+40oSGuP33DfMb4sZt1QIGiJzC4EA==}
+    engines: {node: '>=0.10.0'}
+    dev: false
+
   /deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
@@ -6290,6 +6307,10 @@ packages:
   /delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
+    dev: false
+
+  /delegate@3.2.0:
+    resolution: {integrity: sha512-IofjkYBZaZivn0V8nnsMJGBr4jVLxHDheKSW88PyxS5QC4Vo9ZbZVvhzlSxY87fVq3STR6r+4cGepyHkcWOQSw==}
     dev: false
 
   /des.js@1.1.0:
@@ -6414,6 +6435,10 @@ packages:
     dependencies:
       no-case: 3.0.4
       tslib: 2.6.1
+    dev: false
+
+  /downloadjs@1.4.7:
+    resolution: {integrity: sha512-LN1gO7+u9xjU5oEScGFKvXhYf7Y/empUIIEAGBs1LzUq/rg5duiDrkuH5A2lQGd5jfMOb9X9usDa2oVXwJ0U/Q==}
     dev: false
 
   /duplexify@4.1.2:
@@ -6932,6 +6957,10 @@ packages:
     dependencies:
       d: 1.0.1
       es5-ext: 0.10.62
+    dev: false
+
+  /eventemitter3@4.0.7:
+    resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
     dev: false
 
   /events@3.3.0:
@@ -12734,6 +12763,40 @@ packages:
     dependencies:
       imurmurhash: 0.1.4
       signal-exit: 3.0.7
+    dev: false
+
+  /xgplayer-music@3.0.8(core-js@3.28.0)(xgplayer@3.0.8):
+    resolution: {integrity: sha512-uviuHy/sPzoc0sUInV15wEh41BW0cUj2F9BenW6xnONcvfdlpfi5KaW8S5pqgh0lICosLcOE6gdul1wmVeca6w==}
+    peerDependencies:
+      core-js: '>=3.12.1'
+      xgplayer: 3.0.8
+    dependencies:
+      core-js: 3.28.0
+      deepmerge: 2.2.1
+      eventemitter3: 4.0.7
+      xgplayer: 3.0.8(core-js@3.28.0)
+    dev: false
+
+  /xgplayer-subtitles@3.0.8(core-js@3.28.0):
+    resolution: {integrity: sha512-LjlEPSDQDg063grrWCtNAtdglNgksedh91HB12SXaHUOKshzg1y9CL22cpXnNpKTePlhwvYmYUVRVckV19QpHw==}
+    peerDependencies:
+      core-js: '>=3.12.1'
+    dependencies:
+      core-js: 3.28.0
+      eventemitter3: 4.0.7
+    dev: false
+
+  /xgplayer@3.0.8(core-js@3.28.0):
+    resolution: {integrity: sha512-6tvIz5u7c9WDLhE5b8ekdAq7jtlhsBGCawVgRsbi+VDU89WYpl4U+pdK9k/9VBFXLsyLgu03QhEK9Kp2OICZww==}
+    peerDependencies:
+      core-js: '>=3.12.1'
+    dependencies:
+      core-js: 3.28.0
+      danmu.js: 1.1.11
+      delegate: 3.2.0
+      downloadjs: 1.4.7
+      eventemitter3: 4.0.7
+      xgplayer-subtitles: 3.0.8(core-js@3.28.0)
     dev: false
 
   /xtend@4.0.2:

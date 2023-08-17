@@ -40,7 +40,9 @@
     "@umijs/max": "^4.0.74",
     "ahooks": "^3.7.8",
     "antd": "^5.8.1",
-    "signature_pad": "^4.1.6"
+    "signature_pad": "^4.1.6",
+    "xgplayer": "^3.0.8",
+    "xgplayer-music": "^3.0.8"
   },
   "devDependencies": {
     "@types/react": "^18.2.18",

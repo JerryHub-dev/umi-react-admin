@@ -67,6 +67,42 @@ export const routes = [
         component: './Feature/Signature',
         icon: 'EditOutlined',
       },
+      {
+        name: 'VideoPlayer',
+        path: '/feature/VideoPlayer',
+        component: './Feature/VideoPlayer',
+        icon: 'VideoCameraAddOutlined',
+      },
+      {
+        name: 'AudioFeature',
+        path: '/feature/AudioFeature',
+        // icon: 'NotificationOutlined',
+        icon: 'CustomerServiceOutlined',
+        routes: [
+          {
+            name: 'AudioPlayer',
+            path: '/feature/AudioFeature/AudioPlayer',
+            component: './Feature/AudioFeature/AudioPlayer',
+          },
+          {
+            name: 'AudioVisible',
+            path: '/feature/AudioFeature/AudioVisible',
+            component: './Feature/AudioFeature/AudioVisible',
+          },
+        ],
+      },
     ],
+  },
+  {
+    path: '/403',
+    name: 'NotAccessible',
+    component: '@/pages/403',
+    hideInMenu: true,
+  },
+  {
+    path: '*',
+    name: 'NotFound',
+    component: '@/pages/404',
+    hideInMenu: true,
   },
 ];
