@@ -5,6 +5,7 @@ export default {
   'menu.feature.fullCalendar': 'calendar',
   'menu.feature.RichTextEditing': 'RichTextEditing',
   'menu.feature.DndKit': 'DndKit',
+  'menu.feature.Signature': 'Signature',
   Logout: 'Logout',
   undertone: 'undertone',
   DarkColor: 'Dark color',

@@ -5,6 +5,7 @@ export default {
   'menu.feature.fullCalendar': '日历',
   'menu.feature.RichTextEditing': '富文本',
   'menu.feature.DndKit': '拖动',
+  'menu.feature.Signature': '签名',
   Logout: '退出登录',
   undertone: '浅色',
   DarkColor: '深色',

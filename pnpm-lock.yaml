@@ -70,6 +70,9 @@ dependencies:
   antd:
     specifier: ^5.8.1
     version: 5.8.1(react-dom@16.14.0)(react@16.14.0)
+  signature_pad:
+    specifier: ^4.1.6
+    version: 4.1.6
 
 devDependencies:
   '@types/react':
@@ -11472,6 +11475,10 @@ packages:
 
   /signal-exit@3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
+
+  /signature_pad@4.1.6:
+    resolution: {integrity: sha512-eoZB8qFPfCs7o00weajp5roNnE2gY2kTNjZsh805L8V+lYPagxoZi9qrBFS3A6sgbVq++ukdzgruK7tuv3JFXQ==}
+    dev: false
 
   /single-spa@5.9.5:
     resolution: {integrity: sha512-9SQdmsyz4HSP+3gs6PJzhkaMEg+6zTlu9oxIghnwUX3eq+ajq4ft5egl0iyR55LAmO/UwvU8NgIWs/ZyQMa6dw==}
