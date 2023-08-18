@@ -9,25 +9,24 @@ import { AudioPlayerStyles } from './AudioPlayer.style';
 export default function AudioPlayer() {
   useMount(() => {
     function initEvents() {
-      document
-        .getElementById('js-select')
-        .addEventListener('change', function (e) {
-          let value = e.target.value;
-          if (window.analyze) {
-            window.analyze.mode = value;
-            if (value === 'lightning') {
-              window.analyze.options.count = 512;
-              window.analyze.options.stroke = 4;
+      let jsSelect = document.getElementById('js-select') as HTMLSelectElement;
+      jsSelect.addEventListener('change', function (e: any) {
+        let value = e.target.value;
+        if (window.analyze) {
+          window.analyze.mode = value;
+          if (value === 'lightning') {
+            window.analyze.options.count = 512;
+            window.analyze.options.stroke = 4;
+          } else {
+            if (value === 'waves') {
+              window.analyze.options.stroke = 3;
             } else {
-              if (value === 'waves') {
-                window.analyze.options.stroke = 3;
-              } else {
-                window.analyze.options.stroke = 2;
-              }
-              window.analyze.options.count = 256;
+              window.analyze.options.stroke = 2;
             }
+            window.analyze.options.count = 256;
           }
-        });
+        }
+      });
     }
     initEvents();
     let player = new Player({

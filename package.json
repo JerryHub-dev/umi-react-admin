@@ -41,6 +41,7 @@
     "ahooks": "^3.7.8",
     "antd": "^5.8.1",
     "signature_pad": "^4.1.6",
+    "wavesurfer.js": "^7.1.4",
     "xgplayer": "^3.0.8",
     "xgplayer-music": "^3.0.8"
   },

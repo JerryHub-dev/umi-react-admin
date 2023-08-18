@@ -73,6 +73,9 @@ dependencies:
   signature_pad:
     specifier: ^4.1.6
     version: 4.1.6
+  wavesurfer.js:
+    specifier: ^7.1.4
+    version: 7.1.4
   xgplayer:
     specifier: ^3.0.8
     version: 3.0.8(core-js@3.28.0)
@@ -12613,6 +12616,10 @@ packages:
     dependencies:
       glob-to-regexp: 0.4.1
       graceful-fs: 4.2.11
+    dev: false
+
+  /wavesurfer.js@7.1.4:
+    resolution: {integrity: sha512-El67n1Ljx8nvdHZqIFqIkIZp72iiv4jUPzYUg3J9BksFPLpEn/XPLfv2vyumAURq4gl7rPhcj16aqni4UZnHCg==}
     dev: false
 
   /wbuf@1.7.3:
