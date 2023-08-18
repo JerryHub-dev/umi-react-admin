@@ -94,6 +94,26 @@ export const routes = [
     ],
   },
   {
+    name: 'Office',
+    path: '/Office',
+    icon: 'ExperimentFilled',
+    routes: [
+      {
+        name: 'Office',
+        path: '/Office',
+        hideInMenu: true,
+        // component: './Office/index',
+        component: './Office/Pdf',
+      },
+      {
+        name: 'pdf',
+        path: '/Office/pdf',
+        component: './Office/Pdf',
+        icon: 'FilePdfOutlined',
+      },
+    ],
+  },
+  {
     path: '/403',
     name: 'NotAccessible',
     component: '@/pages/403',

@@ -95,8 +95,8 @@ export default function Signature() {
   });
 
   return (
-    <ProCard className="shadow-2xl h-full">
-      <SignatureStyle className="overflow-auto">
+    <SignatureStyle>
+      <ProCard className="shadow-2xl h-full">
         <div className="wrapper">
           <canvas
             id="signature-pad"
@@ -114,7 +114,7 @@ export default function Signature() {
           <Button id="undo">撤销</Button>
           <Button id="clear">清除</Button>
         </div>
-      </SignatureStyle>
-    </ProCard>
+      </ProCard>
+    </SignatureStyle>
   );
 }
