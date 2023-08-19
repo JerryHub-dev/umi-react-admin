@@ -41,8 +41,8 @@ export default function Pdf() {
 
   return (
     <PdfStyle>
-      <PageContainer header={{ title: '', breadcrumb: {} }}>
-        <ProCard className="shadow-2xl" title="PDF-展示" headerBordered>
+      <PageContainer header={{ title: 'PDF' }}>
+        <ProCard className="shadow-2xl" headerBordered>
           <div className="Example">
             <header>
               <h1>示例页面</h1>

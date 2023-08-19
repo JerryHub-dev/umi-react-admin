@@ -16,6 +16,7 @@ export default {
   // NOTE office
   'menu.Office': 'Office',
   'menu.Office.pdf': 'PDF',
+  'menu.Office.excel': 'Excel',
   Logout: '退出登录',
   undertone: '浅色',
   DarkColor: '深色',
