@@ -14,5 +14,5 @@ git add -A
 git commit -m 'deploy'
 
 # 4、将打包出的所有文件push到github远程仓库data-view的gh-pages 分支，如果远程没有这个分支也不要紧，会自动创建
-git push -f git@github.com:Jerry-0425/umi-react-admin.git master:gh-pages
+git push -f https://github.com/Jerry-0425/umi-react-admin.git master:gh-pages
 cd -
