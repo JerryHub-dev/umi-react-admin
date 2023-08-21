@@ -31,4 +31,5 @@ export default defineConfig({
       'root-entry-name': 'default',
     },
   },
+  esbuildMinifyIIFE: true, // 开启 esbuild 压缩
 });
