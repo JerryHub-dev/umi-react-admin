@@ -3,13 +3,12 @@
   "author": "Jerry - li <lishuai4415@gmail.com>",
   "scripts": {
     "build": "max build",
-    "dev": "max dev",
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky install",
     "preview": "pnpm build:dev && pnpm max preview --port 8000",
     "setup": "max setup",
-    "start": "npm run dev"
+    "start": "max dev"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,css,less}": [
