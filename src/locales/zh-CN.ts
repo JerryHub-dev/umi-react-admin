@@ -13,6 +13,8 @@ export default {
   'menu.feature.AudioFeature': '音频',
   'menu.feature.AudioFeature.AudioPlayer': '音频播放器',
   'menu.feature.AudioFeature.AudioVisible': '音频可视',
+  'menu.feature.Map': '地图',
+  'menu.feature.Map.AutonaviMap': '高德地图',
   // NOTE office
   'menu.Office': 'Office',
   'menu.Office.pdf': 'PDF',

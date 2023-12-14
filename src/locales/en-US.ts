@@ -13,6 +13,8 @@ export default {
   'menu.feature.AudioFeature': 'Audio',
   'menu.feature.AudioFeature.AudioPlayer': 'AudioPlayer',
   'menu.feature.AudioFeature.AudioVisible': 'AudioVisible',
+  'menu.feature.Map': 'Map',
+  'menu.feature.Map.AutonaviMap': 'AutonaviMap',
   // NOTE office
   'menu.Office': 'Office',
   'menu.Office.pdf': 'PDF',

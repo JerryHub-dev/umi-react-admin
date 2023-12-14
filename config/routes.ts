@@ -91,6 +91,18 @@ export const routes = [
           },
         ],
       },
+      {
+        name: 'Map',
+        path: '/feature/Map',
+        icon: 'HeatMapOutlined',
+        routes: [
+          {
+            name: 'AutonaviMap',
+            path: '/feature/Map/AutonaviMap',
+            component: './Feature/Map/AutonaviMap',
+          },
+        ],
+      },
     ],
   },
   {
