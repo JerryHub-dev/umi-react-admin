@@ -1,8 +1,8 @@
-## umi-react-admin
+# umi-react-admin
 
 ## 简介
 
-`umi-react-admin` 是一个基于 `react` 和 `umi` 的后台管理系统，它使用了最新的前端技术栈。
+`umi-react-admin` 是一个基于 `react` 和 `umi max` 的模版系统, 一款开源免费且开箱即用的系统模版, 使用了最新的 `Umi4.x`, `React18.x` , `antd5.x` , `Tailwindcss` , `CSS in JS` , `TypeScript` , `ProComponents` 等主流技术开发。目前已包括, `Formily(低代码设计器)`, `日历`, `富文本`, `拖放界面`, `地图`, `音频/视频播放器`, `签名`, `音频可视化`, `多语言`等模块功能。
 
 ## 安装使用
 
