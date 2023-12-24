@@ -2,6 +2,28 @@ import { defineConfig } from '@umijs/max';
 import { routes } from './routes';
 
 export default defineConfig({
+  copy: [
+    {
+      from: 'node_modules/cesium/Build/Cesium/Workers',
+      to: 'dist/Cesium/Workers',
+    },
+    {
+      from: 'node_modules/cesium/Build/Cesium/ThirdParty',
+      to: 'dist/Cesium/ThirdParty',
+    },
+    {
+      from: 'node_modules/cesium/Build/Cesium/Assets',
+      to: 'dist/Cesium/Assets',
+    },
+    {
+      from: 'node_modules/cesium/Build/Cesium/Widgets',
+      to: 'dist/Cesium/Widgets',
+    },
+  ],
+  define: {
+    CESIUM_BASE_URL: '/Cesium',
+  },
+  jsMinifier: 'terser',
   // 开启 valtio 数据流方案 https://umijs.org/docs/max/valtio
   valtio: {},
   antd: {

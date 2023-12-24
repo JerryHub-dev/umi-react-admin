@@ -101,6 +101,11 @@ export const routes = [
             path: '/feature/Map/AutonaviMap',
             component: './Feature/Map/AutonaviMap',
           },
+          {
+            name: 'Cesium',
+            path: '/feature/Map/Cesium',
+            component: './Feature/Map/Cesium',
+          },
         ],
       },
     ],

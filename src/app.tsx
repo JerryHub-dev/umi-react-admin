@@ -6,6 +6,7 @@ import type {
   RunTimeLayoutConfig,
   RuntimeAntdConfig,
 } from '@umijs/max';
+import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { getInitialState as libGetInitialState } from './utils/Auth/initalState';
 import { requestConfig } from './utils/requestConfig';
 
