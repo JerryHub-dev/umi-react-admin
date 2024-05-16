@@ -80,6 +80,9 @@ dependencies:
   cesium:
     specifier: ^1.112.0
     version: 1.112.0
+  ngeohash:
+    specifier: ^0.6.3
+    version: 0.6.3
   react-pdf:
     specifier: ^7.3.3
     version: 7.3.3(@types/react@18.2.18)(react-dom@18.1.0)(react@18.1.0)
@@ -9098,6 +9101,11 @@ packages:
 
   /next-tick@1.1.0:
     resolution: {integrity: sha512-CXdUiJembsNjuToQvxayPZF9Vqht7hewsvy2sOWafLvi2awflj9mOC6bHIg50orX8IJvWKY9wYQ/zB2kogPslQ==}
+    dev: false
+
+  /ngeohash@0.6.3:
+    resolution: {integrity: sha512-kltF0cOxgx1AbmVzKxYZaoB0aj7mOxZeHaerEtQV0YaqnkXNq26WWqMmJ6lTqShYxVRWZ/mwvvTrNeOwdslWiw==}
+    engines: {node: '>=v0.2.0'}
     dev: false
 
   /no-case@3.0.4:
