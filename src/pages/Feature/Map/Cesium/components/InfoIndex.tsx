@@ -3,13 +3,13 @@
  */
 import { centerGeoHash, geohashBounds } from '@/utils/MapCompute/geoHash';
 import { ProCard } from '@ant-design/pro-components';
-import { Button, Spin, message } from 'antd';
+import type { InputNumberProps } from 'antd';
+import { Button, InputNumber, Spin, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useState } from 'react';
-// import { geohashBounds } from 'ngeohash';
 
-export default function InfoIndex() {
+const InfoIndex: React.FC = () => {
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -41,6 +41,13 @@ export default function InfoIndex() {
     // 1, 去除版权信息
     (viewer.cesiumWidget.creditContainer as HTMLElement).style.display = 'none';
 
+    // 修改 homeButton 的位置
+    let initView = {
+      destination: Cesium.Cartesian3.fromDegrees(116.3974, 39.9093, 15000000),
+    };
+    // viewer.camera.setView(initView);
+    viewer.camera.flyTo(initView);
+
     // 2, 添加一个点击事件来显示位置坐标：
     viewer.screenSpaceEventHandler.setInputAction(
       function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
@@ -65,6 +72,13 @@ export default function InfoIndex() {
       Cesium.ScreenSpaceEventType.LEFT_CLICK,
     );
 
+    // 监听相机高度变化
+    viewer.camera.moveEnd.addEventListener(() => {
+      const cameraHeight = viewer.camera.positionCartographic.height;
+      // messageApi.success(`相机高度变化: ${cameraHeight}`);
+      console.log('相机高度变化: ', cameraHeight);
+    });
+
     setViewer(viewer);
 
     // 销毁
@@ -73,7 +87,7 @@ export default function InfoIndex() {
     };
   }, []);
 
-  // 获取中心点
+  // NOTE 获取中心点
   const [centerPosition, setCenterPosition] = useState('');
   const getCenterPosition = () => {
     if (viewer === null) {
@@ -87,7 +101,11 @@ export default function InfoIndex() {
     setCenterPosition(`${longitude}, ${latitude}`);
   };
 
-  // 根据中心点坐标生成 GeoHash
+  // NOTE 根据中心点坐标生成 GeoHash
+  const [precisions, setPrecisions] = useState(5);
+  const inputNumberChange: InputNumberProps['onChange'] = (value) => {
+    setPrecisions(value);
+  };
   const [centerHash, setCenterHash] = useState('');
   const handleCenterGeoHash = () => {
     if (viewer === null) {
@@ -99,83 +117,175 @@ export default function InfoIndex() {
     const longitude = Cesium.Math.toDegrees(cartographic.longitude); // 转换为经度
     const latitude = Cesium.Math.toDegrees(cartographic.latitude); // 转换为纬度
     console.log(longitude, latitude);
-    const precision = 8; // 精度
+    // const precision = 5; // 精度
+    const precision = precisions; // 精度
     const geohash = centerGeoHash(latitude, longitude, precision);
+
     messageApi.success(`生成的GeoHash: ${geohash}`);
     setCenterHash(geohash);
+
+    setTimeout(() => {
+      // 如何根据 geohash 字符串手动实现显示范围 画出范围
+      viewer.entities.removeAll(); // 移除所有实体
+
+      const bounds: any = geohashBounds(geohash);
+      console.log(bounds);
+      const rectangles = Cesium.Rectangle.fromDegrees(
+        bounds.longitudeMin,
+        bounds.latitudeMin,
+        bounds.longitudeMax,
+        bounds.latitudeMax,
+      );
+      let rectangle = viewer.entities.add({
+        rectangle: {
+          coordinates: rectangles,
+          fill: true,
+          material: Cesium.Color.RED.withAlpha(0.5),
+          outline: true,
+          outlineColor: Cesium.Color.BLACK,
+        },
+      });
+      viewer.zoomTo(rectangle);
+      // viewer.camera.flyTo({
+      //   destination: rectangle,
+      //   duration: 1,
+      // });
+    }, 100);
   };
 
-  function getGeoHash(west: any, south: any, east: any, north: any) {
-    // 计算中心点的经纬度
-    const centerLat = (north + south) / 2;
-    const centerLon = (west + east) / 2;
+  // NOTE 根据当前视图获取四个方位角的每个点的经纬度
+  const [extent, setExtent] = useState('');
+  const getRectangle = () => {
+    if (viewer === null) return;
+    //获取四角经纬度
+    // 获取当前视图范围
+    let extent = viewer.camera.computeViewRectangle();
 
-    // 生成 geohash
-    const geohash = centerGeoHash(centerLat, centerLon, 5);
-    // const geohash = encodeGeohash(centerLat, centerLon, 5);
+    // 提取四个角的经纬度
+    let southwest = Cesium.Rectangle.southwest(extent);
+    let southeast = Cesium.Rectangle.southeast(extent);
+    let northeast = Cesium.Rectangle.northeast(extent);
+    let northwest = Cesium.Rectangle.northwest(extent);
 
-    // 根据生成的 geohash 字符串显示范围
-    return geohash;
+    setExtent(`
+      西北角/左上角: ${Cesium.Math.toDegrees(
+        northwest.longitude,
+      )}, ${Cesium.Math.toDegrees(northwest.latitude)}
+      东北角/右上角: ${Cesium.Math.toDegrees(
+        northeast.longitude,
+      )}, ${Cesium.Math.toDegrees(northeast.latitude)}
+      东南角/右下角: ${Cesium.Math.toDegrees(
+        southeast.longitude,
+      )}, ${Cesium.Math.toDegrees(southeast.latitude)}
+      西南角/左下角: ${Cesium.Math.toDegrees(
+        southwest.longitude,
+      )}, ${Cesium.Math.toDegrees(southwest.latitude)}
+    `);
+
+    // 根据当前视图四个方位每个角的经纬度, 如何获取这四个经纬度范围内的 geohash
+
+    // 打印经纬度信息
+    // console.log(
+    //   '西南角/左下角:' +
+    //     Cesium.Math.toDegrees(southwest.longitude) +
+    //     ', ' +
+    //     Cesium.Math.toDegrees(southwest.latitude),
+    // );
+    // console.log(
+    //   '东南角/右下角:' +
+    //     Cesium.Math.toDegrees(southeast.longitude) +
+    //     ', ' +
+    //     Cesium.Math.toDegrees(southeast.latitude),
+    // );
+    // console.log(
+    //   '东北角/右上角:' +
+    //     Cesium.Math.toDegrees(northeast.longitude) +
+    //     ', ' +
+    //     Cesium.Math.toDegrees(northeast.latitude),
+    // );
+    // console.log(
+    //   '西北角:/左上角' +
+    //     Cesium.Math.toDegrees(northwest.longitude) +
+    //     ', ' +
+    //     Cesium.Math.toDegrees(northwest.latitude),
+    // );
+  };
+
+  // 获取当前地图的显示范围
+  function getMapViewRectangle() {
+    const rectangle = viewer.camera.computeViewRectangle();
+    if (rectangle) {
+      return {
+        west: Cesium.Math.toDegrees(rectangle.west),
+        south: Cesium.Math.toDegrees(rectangle.south),
+        east: Cesium.Math.toDegrees(rectangle.east),
+        north: Cesium.Math.toDegrees(rectangle.north),
+      };
+    }
+    return null;
   }
 
-  // 根据视图范围生成 GeoHash
-  const [mapHash, setMapHash] = useState('');
-  const handleGeoHash = async () => {
-    if (viewer === null) {
-      return;
-    }
-    const rectangle = viewer.camera.computeViewRectangle(); // 获取视图范围
+  // 将范围分成6个子区域，并计算每个子区域的 GeoHash
+  function splitAndComputeGeohashes(rect, precision) {
+    const { west, south, east, north } = rect;
+    const lonStep = (east - west) / 3;
+    const latStep = (north - south) / 2;
 
-    if (rectangle) {
-      // 获取西、南、东、北的经纬度
-      const west = Cesium.Math.toDegrees(rectangle.west);
-      const south = Cesium.Math.toDegrees(rectangle.south);
-      const east = Cesium.Math.toDegrees(rectangle.east);
-      const north = Cesium.Math.toDegrees(rectangle.north);
+    const geohashes = [];
 
-      console.log(
-        `West: ${west}, South: ${south}, East: ${east}, North: ${north}`,
-      );
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 2; j++) {
+        const subWest = west + i * lonStep;
+        const subEast = subWest + lonStep;
+        const subSouth = south + j * latStep;
+        const subNorth = subSouth + latStep;
 
-      // 使用这些边界生成 GeoHash
-      const geohash = getGeoHash(west, south, east, north);
-      console.log(`GeoHash: ${geohash}`);
+        const centerLat = (subSouth + subNorth) / 2;
+        const centerLon = (subWest + subEast) / 2;
 
-      messageApi.success(`生成的GeoHash: ${geohash}`);
-      setMapHash(geohash);
+        // const geohash = ngeohash.encode(centerLat, centerLon, precision);
+        const geohash = centerGeoHash(centerLat, centerLon, precision);
+        geohashes.push({
+          geohash,
+          bounds: { subWest, subSouth, subEast, subNorth },
+        });
 
-      setTimeout(() => {
-        // 如何根据 geohash 字符串手动实现显示范围 画出范围
-        viewer.entities.removeAll(); // 移除所有实体
-
-        const bounds: any = geohashBounds(geohash);
-        // const bounds: any = decodeGeohash(geohash);
-        console.log(bounds);
-        const rectangles = Cesium.Rectangle.fromDegrees(
-          bounds.longitudeMin,
-          bounds.latitudeMin,
-          bounds.longitudeMax,
-          bounds.latitudeMax,
-          // bounds.longitude,
-          // bounds.latitude,
-          // bounds.latRange,
-          // bounds.lonRange,
-        );
+        // 在 Cesium 中绘制子区域
         viewer.entities.add({
           rectangle: {
-            coordinates: rectangles,
-            fill: true,
-            material: Cesium.Color.RED.withAlpha(0.5),
+            coordinates: Cesium.Rectangle.fromDegrees(
+              subWest,
+              subSouth,
+              subEast,
+              subNorth,
+            ),
+            material: Cesium.Color.RED.withAlpha(0.3),
             outline: true,
             outlineColor: Cesium.Color.BLACK,
           },
         });
-        viewer.camera.flyTo({
-          destination: rectangle,
-          duration: 1,
-        });
-      }, 100);
+      }
     }
+
+    return geohashes;
+  }
+
+  const [subAreas, setSubAreas] = useState([] as any[]);
+  const handleRange = () => {
+    const viewRect = getMapViewRectangle();
+    if (viewRect) {
+      console.log('Map view rectangle:', viewRect);
+
+      // 计算每个子区域的 GeoHash
+      const geohashes = splitAndComputeGeohashes(viewRect, 5); // 精度可以根据需要调整
+      console.log('Geohashes for sub-areas:', geohashes);
+      setSubAreas(geohashes);
+    }
+  };
+
+  // NOTE 清除所有实体
+  const handleRemoveAll = () => {
+    viewer.entities.removeAll();
   };
 
   return (
@@ -183,26 +293,40 @@ export default function InfoIndex() {
       {contextHolder}
       {viewer === null && <Spin spinning={true} />}
       <div id="cesiumContainer" />
-      <div>
-        <Button onClick={() => handleGeoHash()} className="mt-2">
-          根据视图范围生成 GeoHash
-        </Button>
-        <span className="ml-4 text-red-600 text-success">{mapHash}</span>
+      <Button className="mt-2" onClick={() => handleRemoveAll()}>
+        清除所有
+      </Button>
+      <div className="mt-2">
+        <Button onClick={() => handleRange()}>视图范围内 geohash</Button>
+        {subAreas.map((area, index) => (
+          <span className="ml-2 text-red-600" key={index}>
+            {area.geohash}
+          </span>
+        ))}
       </div>
-      <div>
-        <Button onClick={() => handleCenterGeoHash()} className="mt-2">
-          根据中心点生成 GeoHash
-        </Button>
+      <div className="mt-2">
+        <Button onClick={() => getRectangle()}>获取视图范围</Button>
+        <div className="ml-4 text-red-600 text-success">{extent}</div>
+      </div>
+      <div className="mt-2">
+        <InputNumber
+          addonBefore={'精度'}
+          className="mr-2 w-[120px]"
+          min={1}
+          max={10}
+          value={precisions}
+          defaultValue={precisions}
+          onChange={inputNumberChange}
+        />
+        <Button onClick={() => handleCenterGeoHash()}>生成 GeoHash</Button>
         <span className="ml-4 text-red-600 text-success">{centerHash}</span>
       </div>
-      <div>
-        <Button onClick={() => getCenterPosition()} className="mt-2">
-          获取中心点坐标
-        </Button>
-        <span className="ml-4 text-orange-500 text-success">
-          {centerPosition}
-        </span>
+      <div className="mt-2">
+        <Button onClick={() => getCenterPosition()}>获取中心点坐标</Button>
+        <span className="ml-4 text-red-600 text-success">{centerPosition}</span>
       </div>
     </ProCard>
   );
-}
+};
+
+export default InfoIndex;

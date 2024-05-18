@@ -1,101 +1,10 @@
-const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
-const BITS = [16, 8, 4, 2, 1];
-
-// 根据 geohash 字符串获取范围 (chatGPT)
-export function decodeGeohash(geohash: string) {
-  let isEven = true;
-  let latRange = [-90.0, 90.0];
-  let lonRange = [-180.0, 180.0];
-
-  for (let i = 0; i < geohash.length; i++) {
-    const currentChar = geohash[i];
-    const currentBits = BASE32.indexOf(currentChar);
-
-    for (let j = 0; j < BITS.length; j++) {
-      const mask = BITS[j];
-      if (isEven) {
-        if (currentBits & mask) {
-          lonRange[0] = (lonRange[0] + lonRange[1]) / 2;
-        } else {
-          lonRange[1] = (lonRange[0] + lonRange[1]) / 2;
-        }
-      } else {
-        if (currentBits & mask) {
-          latRange[0] = (latRange[0] + latRange[1]) / 2;
-        } else {
-          latRange[1] = (latRange[0] + latRange[1]) / 2;
-        }
-      }
-      isEven = !isEven;
-    }
-  }
-
-  const latitude = (latRange[0] + latRange[1]) / 2;
-  const longitude = (lonRange[0] + lonRange[1]) / 2;
-  return {
-    latitude,
-    longitude,
-    latRange,
-    lonRange,
-  };
-}
-
-// 根据经纬度生成 geohash (chatGPT)
-export function encodeGeohash(
-  latitude: number,
-  longitude: number,
-  precision: number,
-) {
-  let isEven = true;
-  let bit = 0;
-  let ch = 0;
-  let geohash = '';
-
-  let latRange = [-90.0, 90.0];
-  let lonRange = [-180.0, 180.0];
-
-  while (geohash.length < precision) {
-    let mid;
-
-    if (isEven) {
-      mid = (lonRange[0] + lonRange[1]) / 2;
-      if (longitude > mid) {
-        ch |= BITS[bit];
-        lonRange[0] = mid;
-      } else {
-        lonRange[1] = mid;
-      }
-    } else {
-      mid = (latRange[0] + latRange[1]) / 2;
-      if (latitude > mid) {
-        ch |= BITS[bit];
-        latRange[0] = mid;
-      } else {
-        latRange[1] = mid;
-      }
-    }
-
-    isEven = !isEven;
-
-    if (bit < 4) {
-      bit++;
-    } else {
-      geohash += BASE32[ch];
-      bit = 0;
-      ch = 0;
-    }
-  }
-
-  return geohash;
-}
-
-// 示例用法
-// const latitude = 37.7749;  // 例如，旧金山的纬度
-// const longitude = -122.4194;  // 例如，旧金山的经度
-// const geohash = encodeGeohash(latitude, longitude);
-// console.log(geohash);  // 输出 geohash，例如 '9q8yyk8rgn3q'
-
-// 根据 GeoHash 获取范围
+/**
+ * @description: 根据 geohash 获取经纬度范围
+ * @param {string} hash: geohash
+ * @return {object} { latitude, longitude, latitudeMin, latitudeMax, longitudeMin, longitudeMax }
+ * @example:
+ * geohashBounds("wx4g0s8q") => { latitude: 39.9042, longitude: 116.4074, latitudeMin: 39.9042, latitudeMax: 39.9042, longitudeMin: 116.4074, longitudeMax: 116.4074 }
+ */
 export function geohashBounds(hash: string) {
   if (hash.length === 0) {
     return null;
@@ -148,7 +57,7 @@ export function geohashBounds(hash: string) {
 }
 
 /**
- * @description: 生成geohash (github)
+ * @description: 生成 geohash
  * @param {number} lat: 纬度
  * @param {number} lon: 经度
  * @param {number} precision: 精度
@@ -206,3 +115,5 @@ export function centerGeoHash(
 
   return geohash;
 }
+
+// 根据四个经纬度, 如何获取这四个经纬度范围内的 geohash
