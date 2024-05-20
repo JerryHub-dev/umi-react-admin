@@ -16,7 +16,9 @@
     ]
   },
   "dependencies": {
+    "@ant-design/charts": "^2.1.1",
     "@ant-design/icons": "^5.2.4",
+    "@ant-design/plots": "^2.2.2",
     "@ant-design/pro-components": "^2.6.10",
     "@designable/formily-antd": "1.0.0-beta.45",
     "@dnd-kit/core": "^6.0.8",

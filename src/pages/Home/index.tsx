@@ -1,32 +1,43 @@
 import { PageContainer } from '@ant-design/pro-components';
-import { Carousel } from 'antd';
+import { Card, Col, Row } from 'antd';
+import DemoColumn from './components/DemoColumn';
+import DemoSankey from './components/DemoSankey';
+import DemoScatter from './components/DemoScatter';
+import DemoSunburst from './components/DemoSunburst';
+import DemoLine from './components/Line';
 
 const HomePage: React.FC = () => {
-  const contentStyle: React.CSSProperties = {
-    margin: 0,
-    height: '260px',
-    color: '#fff',
-    lineHeight: '260px',
-    textAlign: 'center',
-    background: '#364d79',
-  };
-
   return (
     <PageContainer ghost header={{ title: '' }}>
-      <Carousel arrows infinite={false} autoplay>
-        <div>
-          <h3 style={contentStyle}>1</h3>
-        </div>
-        <div>
-          <h3 style={contentStyle}>2</h3>
-        </div>
-        <div>
-          <h3 style={contentStyle}>3</h3>
-        </div>
-        <div>
-          <h3 style={contentStyle}>4</h3>
-        </div>
-      </Carousel>
+      <Row>
+        <Col span={8} className="pr-2">
+          <Card>
+            <DemoLine />
+          </Card>
+        </Col>
+        <Col span={8} className="pr-2">
+          <Card>
+            <DemoColumn />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <DemoSunburst />
+          </Card>
+        </Col>
+      </Row>
+      <Row className="mt-2">
+        <Col span={16} className="pr-2">
+          <Card>
+            <DemoSankey />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <DemoScatter />
+          </Card>
+        </Col>
+      </Row>
     </PageContainer>
   );
 };
