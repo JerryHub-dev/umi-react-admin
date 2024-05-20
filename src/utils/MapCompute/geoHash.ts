@@ -115,5 +115,3 @@ export function centerGeoHash(
 
   return geohash;
 }
-
-// 根据四个经纬度, 如何获取这四个经纬度范围内的 geohash

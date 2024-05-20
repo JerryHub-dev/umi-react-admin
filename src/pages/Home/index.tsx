@@ -1,16 +1,32 @@
-import Guide from '@/components/Guide';
-import { trim } from '@/utils/format';
 import { PageContainer } from '@ant-design/pro-components';
-import { useModel } from '@umijs/max';
-import styles from './index.less';
+import { Carousel } from 'antd';
 
 const HomePage: React.FC = () => {
-  const { name } = useModel('global');
+  const contentStyle: React.CSSProperties = {
+    margin: 0,
+    height: '260px',
+    color: '#fff',
+    lineHeight: '260px',
+    textAlign: 'center',
+    background: '#364d79',
+  };
+
   return (
-    <PageContainer ghost>
-      <div className={styles.container}>
-        <Guide name={trim(name)} />
-      </div>
+    <PageContainer ghost header={{ title: '' }}>
+      <Carousel arrows infinite={false} autoplay>
+        <div>
+          <h3 style={contentStyle}>1</h3>
+        </div>
+        <div>
+          <h3 style={contentStyle}>2</h3>
+        </div>
+        <div>
+          <h3 style={contentStyle}>3</h3>
+        </div>
+        <div>
+          <h3 style={contentStyle}>4</h3>
+        </div>
+      </Carousel>
     </PageContainer>
   );
 };

@@ -13,8 +13,7 @@ const InfoIndex: React.FC = () => {
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
 
-  Cesium.Ion.defaultAccessToken =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkZjBmZTAzMS1jMTJkLTQ5OGQtYTkyYS0xODcyMjU3MTQzMmUiLCJpZCI6MTg2MDcxLCJpYXQiOjE3MDM0MDIwMzl9.DQzBf8T_0U92DwjBcYQqdgwhFs-Cx7EacplwoL_ypjY';
+  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
 
   useEffect(() => {
     // 创建一个 Cesium Viewer 实例
@@ -102,7 +101,7 @@ const InfoIndex: React.FC = () => {
   };
 
   // NOTE 根据中心点坐标生成 GeoHash
-  const [precisions, setPrecisions] = useState(5);
+  const [precisions, setPrecisions] = useState(5 as any);
   const inputNumberChange: InputNumberProps['onChange'] = (value) => {
     setPrecisions(value);
   };
@@ -226,7 +225,7 @@ const InfoIndex: React.FC = () => {
   }
 
   // 将范围分成6个子区域，并计算每个子区域的 GeoHash
-  function splitAndComputeGeohashes(rect, precision) {
+  function splitAndComputeGeohashes(rect: any, precision: number) {
     const { west, south, east, north } = rect;
     const lonStep = (east - west) / 3;
     const latStep = (north - south) / 2;
