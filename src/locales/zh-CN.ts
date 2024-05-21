@@ -15,6 +15,11 @@ export default {
   'menu.feature.AudioFeature.AudioVisible': '音频可视',
   'menu.feature.Map': '地图',
   'menu.feature.Map.AutonaviMap': '高德地图',
+  'menu.feature.Cesium': 'Cesium',
+  'menu.feature.Cesium.geoHash': 'GeoHash',
+  'menu.feature.Cesium.DirectionDistance': 'DirectionDistance',
+  'menu.feature.OpenLayers': 'OpenLayers',
+  'menu.feature.OpenLayers.InfoMap': 'InfoMap',
   // NOTE office
   'menu.Office': 'Office',
   'menu.Office.pdf': 'PDF',

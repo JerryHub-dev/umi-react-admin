@@ -4,12 +4,12 @@
 import { centerGeoHash, geohashBounds } from '@/utils/MapCompute/geoHash';
 import { ProCard } from '@ant-design/pro-components';
 import type { InputNumberProps } from 'antd';
-import { Button, InputNumber, Spin, message } from 'antd';
+import { Alert, Button, InputNumber, Spin, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useState } from 'react';
 
-const InfoIndex: React.FC = () => {
+const InfoGeoHash: React.FC = () => {
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -288,44 +288,49 @@ const InfoIndex: React.FC = () => {
   };
 
   return (
-    <ProCard>
-      {contextHolder}
-      {viewer === null && <Spin spinning={true} />}
-      <div id="cesiumContainer" />
-      <Button className="mt-2" onClick={() => handleRemoveAll()}>
-        清除所有
-      </Button>
-      <div className="mt-2">
-        <Button onClick={() => handleRange()}>视图范围内 geohash</Button>
-        {subAreas.map((area, index) => (
-          <span className="ml-2 text-red-600" key={index}>
-            {area.geohash}
+    <>
+      <Alert className="mb-2" message="空间点索引算法-GeoHash" type="success" />
+      <ProCard>
+        {contextHolder}
+        {viewer === null && <Spin spinning={true} />}
+        <div id="cesiumContainer" />
+        <Button className="mt-2" onClick={() => handleRemoveAll()}>
+          清除所有
+        </Button>
+        <div className="mt-2">
+          <Button onClick={() => handleRange()}>视图范围内 geohash</Button>
+          {subAreas.map((area, index) => (
+            <span className="ml-2 text-red-600" key={index}>
+              {area.geohash}
+            </span>
+          ))}
+        </div>
+        <div className="mt-2">
+          <Button onClick={() => getRectangle()}>获取视图范围</Button>
+          <div className="ml-4 text-red-600 text-success">{extent}</div>
+        </div>
+        <div className="mt-2">
+          <InputNumber
+            addonBefore={'精度'}
+            className="mr-2 w-[120px]"
+            min={1}
+            max={10}
+            value={precisions}
+            defaultValue={precisions}
+            onChange={inputNumberChange}
+          />
+          <Button onClick={() => handleCenterGeoHash()}>生成 GeoHash</Button>
+          <span className="ml-4 text-red-600 text-success">{centerHash}</span>
+        </div>
+        <div className="mt-2">
+          <Button onClick={() => getCenterPosition()}>获取中心点坐标</Button>
+          <span className="ml-4 text-red-600 text-success">
+            {centerPosition}
           </span>
-        ))}
-      </div>
-      <div className="mt-2">
-        <Button onClick={() => getRectangle()}>获取视图范围</Button>
-        <div className="ml-4 text-red-600 text-success">{extent}</div>
-      </div>
-      <div className="mt-2">
-        <InputNumber
-          addonBefore={'精度'}
-          className="mr-2 w-[120px]"
-          min={1}
-          max={10}
-          value={precisions}
-          defaultValue={precisions}
-          onChange={inputNumberChange}
-        />
-        <Button onClick={() => handleCenterGeoHash()}>生成 GeoHash</Button>
-        <span className="ml-4 text-red-600 text-success">{centerHash}</span>
-      </div>
-      <div className="mt-2">
-        <Button onClick={() => getCenterPosition()}>获取中心点坐标</Button>
-        <span className="ml-4 text-red-600 text-success">{centerPosition}</span>
-      </div>
-    </ProCard>
+        </div>
+      </ProCard>
+    </>
   );
 };
 
-export default InfoIndex;
+export default InfoGeoHash;

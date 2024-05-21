@@ -101,10 +101,34 @@ export const routes = [
             path: '/feature/Map/AutonaviMap',
             component: './Feature/Map/AutonaviMap',
           },
+        ],
+      },
+      {
+        name: 'Cesium',
+        path: '/feature/Cesium',
+        icon: 'DeploymentUnitOutlined',
+        routes: [
           {
-            name: 'Cesium',
-            path: '/feature/Map/Cesium',
-            component: './Feature/Map/Cesium',
+            name: 'geoHash',
+            path: '/feature/Cesium/geoHash',
+            component: './Feature/Map/Cesium/GeoHash',
+          },
+          {
+            name: 'DirectionDistance',
+            path: '/feature/Cesium/DirectionDistance',
+            component: './Feature/Map/Cesium/DirectionDistance',
+          },
+        ],
+      },
+      {
+        name: 'OpenLayers',
+        path: '/feature/OpenLayers',
+        icon: 'GlobalOutlined',
+        routes: [
+          {
+            name: 'InfoMap',
+            path: '/feature/OpenLayers/InfoMap',
+            component: './Feature/Map/OpenLayers/InfoMap',
           },
         ],
       },

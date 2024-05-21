@@ -15,6 +15,11 @@ export default {
   'menu.feature.AudioFeature.AudioVisible': 'AudioVisible',
   'menu.feature.Map': 'Map',
   'menu.feature.Map.AutonaviMap': 'AutonaviMap',
+  'menu.feature.Cesium': 'Cesium',
+  'menu.feature.Cesium.geoHash': 'GeoHash',
+  'menu.feature.Cesium.DirectionDistance': 'DirectionDistance',
+  'menu.feature.OpenLayers': 'OpenLayers',
+  'menu.feature.OpenLayers.InfoMap': 'InfoMap',
   // NOTE office
   'menu.Office': 'Office',
   'menu.Office.pdf': 'PDF',
