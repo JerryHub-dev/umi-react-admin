@@ -144,11 +144,8 @@ const InfoGeoHash: React.FC = () => {
           outlineColor: Cesium.Color.BLACK,
         },
       });
-      viewer.zoomTo(rectangle);
-      // viewer.camera.flyTo({
-      //   destination: rectangle,
-      //   duration: 1,
-      // });
+
+      viewer.zoomTo(rectangle, new Cesium.HeadingPitchRange(0, -0.5, 0));
     }, 100);
   };
 

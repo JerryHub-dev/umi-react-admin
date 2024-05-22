@@ -4,7 +4,7 @@ import { ProCard } from '@ant-design/pro-card';
 // import TileLayer from 'ol/layer/Tile';
 import 'ol/ol.css';
 // import OSM from 'ol/source/OSM';
-import { message } from 'antd';
+import { Button, message } from 'antd';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
@@ -44,11 +44,17 @@ const InfoMap = () => {
     return () => map.setTarget(undefined); // 清理 map 对象
   }, []);
 
+  const handleClick = () => {
+    console.log(map);
+  };
+
   return (
     <>
       <ProCard>
         {contextHolder}
-        {map && <span></span>}
+        <Button className="mb-2" onClick={() => handleClick()}>
+          click
+        </Button>
         <div id="map" style={{ width: '100%', height: '100vh' }} />
       </ProCard>
     </>
