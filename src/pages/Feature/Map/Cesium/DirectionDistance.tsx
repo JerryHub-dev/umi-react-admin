@@ -90,14 +90,14 @@ const DirectionDistance: React.FC = () => {
 
     endPointCartesians.push(endPointCartesians[0]);
 
-    viewer.entities.add({
+    let polygon = viewer.entities.add({
       polygon: {
         hierarchy: new Cesium.PolygonHierarchy(endPointCartesians),
         material: Cesium.Color.RED.withAlpha(0.5),
       },
     });
 
-    // viewer.zoomTo(polygon);
+    viewer.zoomTo(polygon);
   };
 
   // NOTE 每一个点的终点为下一个点的起点
@@ -144,12 +144,14 @@ const DirectionDistance: React.FC = () => {
     });
 
     pathPoints.push(startPoint); // 添加起始点以形成闭合路径
-    viewer.entities.add({
+    let polygon = viewer.entities.add({
       polygon: {
         hierarchy: pathPoints,
         material: Cesium.Color.RED.withAlpha(0.5),
       },
     });
+
+    viewer.zoomTo(polygon);
   };
 
   return (
