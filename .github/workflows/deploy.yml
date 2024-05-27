@@ -1,0 +1,31 @@
+name: Deploy to GitHub Pages # 自定义工作流名称
+
+on: # 触发条件
+  push: # 当推送时触发
+    branches: # 推送到哪些分支时触发
+      - master  # 当推送到 master 分支时，触发 deploy 构建
+
+jobs: # 一个工作流可以包含多个 job
+  build-and-deploy: # 自定义 job 名称
+    runs-on: ubuntu-latest # 运行环境
+
+    steps: # job 包含的步骤
+      - name: Checkout code # 步骤名称
+        uses: actions/checkout@v2 # 使用的 action
+
+      - name: Setup Node.js # 安装 Node.js
+        uses: actions/setup-node@v2 # 使用的 action
+        with: # action 参数
+          node-version: '14' # 安装 Node.js 版本
+
+      - name: Install dependencies # 安装依赖
+        run: npm install # 执行命令
+
+      - name: Build project # 构建项目
+        run: npm run build # 执行命令
+
+      - name: Deploy to GitHub Pages # 部署到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3 # 使用的 action
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist  # umijs 默认构建目录为 dist
