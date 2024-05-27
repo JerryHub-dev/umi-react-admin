@@ -16,7 +16,7 @@ jobs: # 一个工作流可以包含多个 job
       - name: Setup Node.js # 安装 Node.js
         uses: actions/setup-node@v2 # 使用的 action
         with: # action 参数
-          node-version: '14' # 安装 Node.js 版本
+          node-version: '18.10.0' # 设置 Node.js 版本
 
       - name: Install dependencies # 安装依赖
         run: npm install # 执行命令
