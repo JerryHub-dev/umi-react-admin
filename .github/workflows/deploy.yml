@@ -28,15 +28,8 @@ jobs: # 一个工作流可以包含多个 job
         run: pnpm build # 执行命令
 
       - name: Deploy to GitHub Pages # 部署到 GitHub Pages
-        env: # 环境变量
-          ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }} # 部署密钥
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.ACTIONS_DEPLOY_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git remote set-url origin git@github.com:JerryHub-dev/umi-react-admin.git
-          pnpm add gh-pages
-          npx gh-pages -d dist
+        uses: JamesIves/github-pages-deploy-action@4.1.4 # 使用的 action
+        with: # action 参数
+          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub Token
+          BRANCH: gh-pages # 部署到的分支
+          FOLDER: dist # 部署的文件夹
