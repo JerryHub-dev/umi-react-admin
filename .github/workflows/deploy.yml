@@ -11,12 +11,12 @@ jobs: # 一个工作流可以包含多个 job
 
     steps: # job 包含的步骤
       - name: Checkout code # 步骤名称
-        uses: actions/checkout@v2 # 使用的 action
+        uses: actions/checkout@v3 # 使用的 action
 
       - name: Setup Node.js # 安装 Node.js
-        uses: actions/setup-node@v2 # 使用的 action
+        uses: actions/setup-node@v3 # 使用的 action
         with: # action 参数
-          node-version: '18.10.0' # 设置 Node.js 版本
+          node-version: '20' # 设置 Node.js 版本
 
       - name: Install dependencies # 安装依赖
         run: npm install # 执行命令
@@ -25,7 +25,7 @@ jobs: # 一个工作流可以包含多个 job
         run: npm run build # 执行命令
 
       - name: Deploy to GitHub Pages # 部署到 GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3 # 使用的 action
+        uses: peaceiris/actions-gh-pages@v4 # 使用的 action
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist  # umijs 默认构建目录为 dist
