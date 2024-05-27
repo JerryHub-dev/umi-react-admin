@@ -6,7 +6,7 @@
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky install",
-    "preview": "pnpm build && pnpm max preview --port 8000",
+    "preview": "pnpm build && pnpm max preview --port 8001",
     "setup": "max setup",
     "start": "max dev"
   },

@@ -57,6 +57,7 @@ export default defineConfig({
   styledComponents: {},
   // 路由配置
   routes,
+  history: { type: 'hash' },
   favicons: ['/umi-react-admin/favicon.ico'],
   npmClient: 'pnpm',
   // 多语言配置 https://umijs.org/docs/max/i18n
