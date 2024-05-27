@@ -29,14 +29,23 @@ jobs: # 一个工作流可以包含多个 job
 
       - name: Deploy to GitHub Pages
         env:
-          ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-          PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISH_BRANCH: gh-pages
-          PUBLISH_DIR: ./dist
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          npx gh-pages -d dist
+          pnpm add gh-pages  # 安装 gh-pages 包
+          npx gh-pages -d dist -t $GITHUB_TOKEN
+
+      # - name: Deploy to GitHub Pages
+      #   env:
+      #     ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+      #     PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PUBLISH_BRANCH: gh-pages
+      #     PUBLISH_DIR: ./dist
+      #   run: |
+      #     git config --global user.name 'github-actions[bot]'
+      #     git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      #     npx gh-pages -d dist
 
       # - name: Deploy to GitHub Pages # 部署到 GitHub Pages
       #   uses: peaceiris/actions-gh-pages@v4 # 使用的 action
