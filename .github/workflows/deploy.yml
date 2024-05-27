@@ -27,28 +27,16 @@ jobs: # 一个工作流可以包含多个 job
       - name: Build project # 构建项目
         run: pnpm build # 执行命令
 
-      - name: Deploy to GitHub Pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy to GitHub Pages # 部署到 GitHub Pages
+        env: # 环境变量
+          ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }} # 部署密钥
         run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ACTIONS_DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          pnpm add gh-pages  # 安装 gh-pages 包
-          npx gh-pages -d dist -t $GITHUB_TOKEN
-
-      # - name: Deploy to GitHub Pages
-      #   env:
-      #     ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-      #     PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     PUBLISH_BRANCH: gh-pages
-      #     PUBLISH_DIR: ./dist
-      #   run: |
-      #     git config --global user.name 'github-actions[bot]'
-      #     git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-      #     npx gh-pages -d dist
-
-      # - name: Deploy to GitHub Pages # 部署到 GitHub Pages
-      #   uses: peaceiris/actions-gh-pages@v4 # 使用的 action
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_dir: ./dist  # umijs 默认构建目录为 dist
+          git remote set-url origin git@github.com:JerryHub-dev/umi-react-admin.git
+          pnpm add gh-pages
+          npx gh-pages -d dist
