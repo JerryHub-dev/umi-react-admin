@@ -49,6 +49,8 @@ export default defineConfig({
     default: 'zh-CN',
     baseSeparator: '-',
   },
+  base: '/umi-react-admin/',
+  publicPath: '/umi-react-admin/',
   tailwindcss: {},
   lessLoader: {
     modifyVars: {
