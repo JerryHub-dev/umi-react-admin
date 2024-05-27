@@ -25,7 +25,7 @@ export const request: RequestConfig = requestConfig;
 export const layout: RunTimeLayoutConfig = (initialState) => {
   return {
     title: 'React Admin',
-    logo: '/logo.svg',
+    logo: '/umi-react-admin/logo.svg',
     // 默认布局调整
     rightContentRender: () => <RightContent />,
     menuHeaderRender: undefined,

@@ -51,10 +51,10 @@ const RightContent = () => {
         title=""
         trigger="hover"
         placement="bottom"
-        className="flex justify-center items-center mr-5 "
+        className="flex items-center justify-center mr-5 "
         content={
           <div
-            className="hover:bg-zinc-200 py-1 px-2 rounded-md cursor-pointer w-24 text-center"
+            className="w-24 px-2 py-1 text-center rounded-md cursor-pointer hover:bg-zinc-200"
             onClick={() => {
               console.log('logout');
             }}
@@ -64,13 +64,13 @@ const RightContent = () => {
         }
       >
         <Avatar
-          className="w-7 h-7 bg-gray-300 flex justify-center items-center"
+          className="flex items-center justify-center bg-gray-300 w-7 h-7"
           icon={<UserOutlined className="text-xl" />}
         />
         <div className="ml-2">Admin</div>
       </Popover>
 
-      <span className="rounded-lg border-2 h-7 mr-5" />
+      <span className="mr-5 border-2 rounded-lg h-7" />
 
       {/* NOTE: 换肤 */}
       <Popover
@@ -81,7 +81,7 @@ const RightContent = () => {
           <div>
             {themeType.map((item, index) => (
               <div
-                className="hover:bg-zinc-200 py-1 px-2 rounded-md cursor-pointer w-24 text-center"
+                className="w-24 px-2 py-1 text-center rounded-md cursor-pointer hover:bg-zinc-200"
                 key={index}
                 onClick={() => {
                   messageApi.info(intl.formatMessage({ id: 'solution' }));
@@ -94,7 +94,7 @@ const RightContent = () => {
         }
       >
         <Button
-          className="flex justify-center items-center"
+          className="flex items-center justify-center"
           icon={<SkinOutlined />}
         />
       </Popover>
@@ -108,7 +108,7 @@ const RightContent = () => {
           <div>
             {localeTypeData.map((item, index) => (
               <div
-                className="hover:bg-zinc-200 py-1 px-2 rounded-md cursor-pointer w-24 text-center"
+                className="w-24 px-2 py-1 text-center rounded-md cursor-pointer hover:bg-zinc-200"
                 onClick={() => {
                   setLocale(item.value);
                   setLocaleType(item.value);
@@ -122,7 +122,7 @@ const RightContent = () => {
         }
       >
         <Button
-          className="flex justify-center items-center"
+          className="flex items-center justify-center"
           icon={<GlobalOutlined />}
         />
       </Popover>
@@ -132,7 +132,7 @@ const RightContent = () => {
         className="mr-6"
         icon={<GithubOutlined />}
         onClick={() => {
-          window.open('https://github.com/Jerry-0425/umi-react-admin');
+          window.open('https://github.com/JerryHub-dev/umi-react-admin');
         }}
       />
     </>
