@@ -13,7 +13,7 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 
 # 为 Nginx 配置文件添加执行权限
-RUN chmod +x /etc/nginx/nginx.conf
+# RUN chmod +x /etc/nginx/nginx.conf
 
 # 使用 Nginx 作为静态文件服务器
 CMD ["nginx", "-g", "daemon off;"]
