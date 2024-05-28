@@ -30,6 +30,6 @@ jobs: # 一个工作流可以包含多个 job
       - name: Deploy to GitHub Pages # 部署到 GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.4 # 使用的 action
         with: # action 参数
-          ACCESS_TOKEN: ${{ secrets.PAGE_TOKEN }} # GitHub Token
+          ACCESS_TOKEN: ${{ secrets.UMI_REACT_ADMIN_TOKEN }} # GitHub Token
           BRANCH: gh-pages # 部署到的分支
           FOLDER: dist # 部署的文件夹
