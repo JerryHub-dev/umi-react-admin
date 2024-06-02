@@ -3,6 +3,7 @@
   "author": "Jerry - li <lishuai4415@gmail.com>",
   "scripts": {
     "build": "max build",
+    "build:github": "max build",
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky install",

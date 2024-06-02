@@ -17,17 +17,17 @@ const DirectionDistance: React.FC = () => {
     const viewer = new Cesium.Viewer('cesiumContainer', {
       // 去除所有的控件
       animation: false, // 是否显示动画控件
-      baseLayerPicker: false, // 是否显示图层选择控件
-      fullscreenButton: false, // 是否显示全屏按钮
-      geocoder: false, // 是否显示地名查找控件
-      homeButton: false, // 是否显示Home按钮
+      // baseLayerPicker: false, // 是否显示图层选择控件
+      // fullscreenButton: false, // 是否显示全屏按钮
+      // geocoder: false, // 是否显示地名查找控件
+      // homeButton: false, // 是否显示Home按钮
       infoBox: false, // 是否显示信息框
-      sceneModePicker: false, // 是否显示3D/2D选择器
+      sceneModePicker: true, // 是否显示3D/2D选择器
       selectionIndicator: false, // 是否显示选取指示器组件
       timeline: false, // 是否显示时间轴
       navigationHelpButton: false, // 是否显示帮助信息按钮
       navigationInstructionsInitiallyVisible: false, // 是否显示导航指示
-      scene3DOnly: true, // 是否只显示3D
+      // scene3DOnly: true, // 是否只显示3D
       shouldAnimate: true, // 是否显示动画
       skyAtmosphere: false, // 是否显示大气层
       skyBox: false, // 是否显示天空盒

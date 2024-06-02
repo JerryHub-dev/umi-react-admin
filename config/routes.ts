@@ -118,6 +118,11 @@ export const routes = [
             path: '/feature/Cesium/DirectionDistance',
             component: './Feature/Map/Cesium/DirectionDistance',
           },
+          {
+            name: 'ThermalMap',
+            path: '/feature/Cesium/ThermalMap',
+            component: './Feature/Map/Cesium/ThermalMap',
+          },
         ],
       },
       {
