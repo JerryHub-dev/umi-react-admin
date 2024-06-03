@@ -892,36 +892,43 @@ type IconData = {
   longitude: number;
   latitude: number;
   label: string;
+  id: string;
 };
 export const iconData: IconData[] = [
   {
     longitude: 92.36114501953125,
     latitude: 35.658203125,
+    id: '1',
     label: 'A',
   },
   {
     longitude: 105.658203125,
     latitude: 40.658203125,
+    id: '2',
     label: 'B',
   },
   {
     longitude: 120.658203125,
     latitude: 35.658203125,
+    id: '3',
     label: 'C',
   },
   {
     longitude: 120.658203125,
     latitude: 25.658203125,
+    id: '4',
     label: 'D',
   },
   {
     longitude: 105.658203125,
     latitude: 25.658203125,
+    id: '5',
     label: 'E',
   },
   {
     longitude: 92.36114501953125,
     latitude: 25.658203125,
+    id: '6',
     label: 'F',
   },
 ];

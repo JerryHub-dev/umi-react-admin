@@ -89,6 +89,9 @@ dependencies:
   dayjs:
     specifier: ^1.11.11
     version: 1.11.11
+  heatmap.js:
+    specifier: ^2.0.5
+    version: 2.0.5
   ngeohash:
     specifier: ^0.6.3
     version: 0.6.3
@@ -9331,6 +9334,10 @@ packages:
   /he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
+    dev: false
+
+  /heatmap.js@2.0.5:
+    resolution: {integrity: sha512-CG2gYFP5Cv9IQCXEg3ZRxnJDyAilhWnQlAuHYGuWVzv6mFtQelS1bR9iN80IyDmFECbFPbg6I0LR5uAFHgCthw==}
     dev: false
 
   /history@4.10.1:
