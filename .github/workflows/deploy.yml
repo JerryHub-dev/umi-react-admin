@@ -4,6 +4,9 @@ on: # 触发条件
   push: # 当推送时触发
     branches: # 推送到哪些分支时触发
       - master  # 当推送到 master 分支时，触发 deploy 构建
+  pull_request: # 当 PR 时触发
+    branches: # PR 到哪些分支时触发
+      - master # 当 PR 到 master 分支时，触发 deploy 构建
 
 jobs: # 一个工作流可以包含多个 job
   build-and-deploy: # 自定义 job 名称

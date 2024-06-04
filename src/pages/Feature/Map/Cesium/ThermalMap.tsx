@@ -17,7 +17,7 @@ const ThermalMap = () => {
     const viewer = new Cesium.Viewer('cesiumContainer', {
       // 去除所有的控件
       animation: false, // 是否显示动画控件
-      // baseLayerPicker: false, // 是否显示图层选择控件
+      baseLayerPicker: false, // 是否显示图层选择控件
       // fullscreenButton: false, // 是否显示全屏按钮
       // geocoder: false, // 是否显示地名查找控件
       // homeButton: false, // 是否显示Home按钮
@@ -70,6 +70,13 @@ const ThermalMap = () => {
 
     setViewer(viewer);
 
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      handleIcon(viewer);
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      handleMouse(viewer);
+    }, 100);
+
     // 销毁
     return () => {
       viewer.destroy();
@@ -79,7 +86,7 @@ const ThermalMap = () => {
   // NOTE 鼠标事件
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [positionInfo, setPositionInfo] = useState({} as any);
-  const handleMouse = () => {
+  const handleMouse = (viewer) => {
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     // 鼠标点击事件
     handler.setInputAction((movement) => {
@@ -107,7 +114,7 @@ const ThermalMap = () => {
   };
 
   // NOTE 添加图标
-  const handleIcon = () => {
+  const handleIcon = (viewer) => {
     iconData.forEach((item) => {
       let entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
@@ -135,12 +142,6 @@ const ThermalMap = () => {
       entity.properties = {};
     });
   };
-
-  useEffect(() => {
-    if (!viewer) return;
-    handleMouse();
-    handleIcon();
-  }, [viewer]);
 
   // NOTE 渲染热力图
   const handleClick = () => {
@@ -228,50 +229,6 @@ const ThermalMap = () => {
     //     // 调整视角以查看热力图
     //     viewer.zoomTo(entity);
     // };
-
-    // // 1, 创建热力图 Canvas
-    // let canvas = document.createElement('canvas');
-    // canvas.width = 1000;
-    // canvas.height = 1000;
-    // let ctx = canvas.getContext('2d');
-    // ctx.fillStyle = '#fff';
-    // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // // 2, 绘制热力图
-    // let gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    // gradient.addColorStop(0, '#fff');
-    // gradient.addColorStop(1, '#000');
-    // ctx.fillStyle = gradient;
-    // ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // // 3, 绘制热力图数据
-    // for (let i = 0; i < obj.coverageData.arrayResult.length; i++) {
-    //   let data = obj.coverageData.arrayResult[i];
-    //   ctx.fillStyle = 'rgba(' + data.color + ', ' + data.leveldBm + ')';
-    //   ctx.fillRect(
-    //     (data.longitude * canvas.width) / 360,
-    //     (data.latitude * canvas.height) / 180,
-    //     1,
-    //     1,
-    //   );
-    // }
-
-    // // 4, 将 Canvas 转换为 Base64 数据
-    // let dataURL = canvas.toDataURL('image/png');
-
-    // // 5, 将 Base64 数据传递给 Cesium 中 addImageryProvider 方法 error TypeError: Cannot read properties of undefined (reading 'tileXYToRectangle')
-    // viewer.imageryLayers.addImageryProvider({
-    //   url: dataURL,
-    //   maximumLevel: 10,
-    //   credit: '',
-    //   rectangle: new Cesium.Rectangle(
-    //     -180,
-    //     -90,
-    //     180,
-    //     90,
-    //     Cesium.Ellipsoid.WGS84,
-    //   ),
-    // });
   };
 
   // NOTE 渲染热力图2
@@ -280,59 +237,78 @@ const ThermalMap = () => {
     console.log(obj);
     console.log(obj.coverageData.arrayResult);
 
-    let thermalData = obj.coverageData.arrayResult;
-    // 创建热力图图层
-    let heatMapLayer = new Cesium.PrimitiveCollection(); // 创建一个图元集合
-    viewer.scene.primitives.add(heatMapLayer); // 添加到场景中
+    const data = obj.coverageData.arrayResult;
 
-    // 循环遍历热力图数据并创建热力图要素
-    for (let i = 0; i < thermalData.length; i++) {
-      let heatMapData = thermalData[i]; // 获取热力图数据
-      let heatMapPositions = []; // 存储热力图数据的位置
-      let heatMapValues = []; // 存储热力图数据的值
+    // 创建一个空的CustomDataSource
+    const customDataSource = new Cesium.CustomDataSource('heatmap');
 
-      // 遍历热力图数据
-      for (let j = 0; j < heatMapData.length; j++) {
-        let dataPoint = heatMapData[j]; // 获取热力图数据点
-        // 创建热力图数据点的位置
-        let position = Cesium.Cartesian3.fromDegrees(
-          dataPoint.longitude,
-          dataPoint.latitude,
-        );
-        heatMapPositions.push(position); // 添加到位置数组中
-        heatMapValues.push(dataPoint.fieldStrength); // 添加到值数组中
-      }
-
-      // 创建热力图要素
-      let heatMapPrimitive = new Cesium.Primitive({
-        // 创建矩形几何实例
-        geometryInstances: new Cesium.GeometryInstance({
-          // 创建矩形几何实例
-          geometry: new Cesium.RectangleGeometry({
-            rectangle: Cesium.Rectangle.fromCartesianArray(heatMapPositions), // 矩形的位置
-            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT, // 顶点格式
-          }),
-          id: 'heatMapPrimitive_' + i, // 实例的 ID
-          // 创建矩形几何实例的属性
-          attributes: {
-            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-              new Cesium.Color(1.0, 0.0, 0.0, 0.5), // 矩形的颜色
-            ),
+    // 将数据添加到CustomDataSource中
+    data.forEach((arr) => {
+      arr.forEach((point) => {
+        customDataSource.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(
+            point.longitude,
+            point.latitude,
+          ),
+          point: {
+            pixelSize: 10,
+            color: Cesium.Color.RED.withAlpha(point.fieldStrength / 100), // 根据磁场强度设置透明度
           },
-        }),
-        // 创建矩形几何实例的外观
-        appearance: new Cesium.PerInstanceColorAppearance({
-          flat: true, // 是否平整化
-          translucent: true, // 是否半透明
-        }),
+        });
       });
+    });
 
-      // 添加热力图要素到图层
-      heatMapLayer.add(heatMapPrimitive);
-    }
+    // 添加CustomDataSource到viewer
+    viewer.dataSources.add(customDataSource);
+
+    // 缩放到热力图区域
+    viewer.zoomTo(customDataSource);
+
+    // 创建热力图的shader
+    const heatmapShader = `
+      czm_material czm_getMaterial(czm_materialInput materialInput)
+      {
+          // 计算颜色和透明度
+          czm_material material = czm_getDefaultMaterial(materialInput);
+          float intensity = materialInput.strength;
+          material.diffuse = vec3(intensity, 0.0, 0.0);
+          material.alpha = intensity;
+          return material;
+      }
+    `;
+
+    // 创建热力图材质
+    const heatmapMaterial = new Cesium.Material({
+      fabric: {
+        type: 'Heatmap',
+        uniforms: {
+          color: new Cesium.Color(1.0, 0.0, 0.0, 0.5),
+        },
+        source: heatmapShader,
+      },
+    });
+
+    // 将材质应用于每个点
+    customDataSource.entities.values.forEach((entity) => {
+      entity.point.material = heatmapMaterial;
+    });
   };
 
-  //
+  // NOTE 渲染热力图4
+  const handleClick3 = () => {
+    let obj = JSON.parse(JSON.stringify(thermal));
+    let arrayResult = obj.coverageData.arrayResult.flat();
+    console.log(arrayResult);
+
+    const data = arrayResult;
+    console.log(data);
+  };
+
+  // NOTE 清楚所有地图数据
+  const handleClear = () => {
+    viewer.dataSources.removeAll();
+    viewer.entities.removeAll();
+  };
 
   return (
     <>
@@ -343,10 +319,13 @@ const ThermalMap = () => {
           渲染热力图数据 base64
         </Button>
         <Button className="mb-2 ml-2" onClick={() => handleClick2()}>
-          渲染热力图数据 result
+          渲染热力图数据 data
         </Button>
-        <Button className="mb-2 ml-2" onClick={() => handleIcon()}>
-          icon
+        <Button className="mb-2 ml-2" onClick={() => handleClick3()}>
+          渲染热力图数据 data3
+        </Button>
+        <Button className="mb-2 ml-2" onClick={() => handleClear()}>
+          清除地图数据
         </Button>
         <div id="cesiumContainer" style={{ width: '100%', height: '100vh' }} />
         {/* <div id="cesiumContainer" /> */}
