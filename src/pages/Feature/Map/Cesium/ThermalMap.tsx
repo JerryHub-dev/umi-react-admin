@@ -234,74 +234,35 @@ const ThermalMap = () => {
   // NOTE 渲染热力图2
   const handleClick2 = () => {
     let obj = JSON.parse(JSON.stringify(thermal));
-    console.log(obj);
-    console.log(obj.coverageData.arrayResult);
+    let arrayResult = obj.coverageData.arrayResult.flat();
 
-    const data = obj.coverageData.arrayResult;
+    const data = arrayResult;
 
-    // 创建一个空的CustomDataSource
-    const customDataSource = new Cesium.CustomDataSource('heatmap');
+    const dataPoints = data;
 
-    // 将数据添加到CustomDataSource中
-    data.forEach((arr) => {
-      arr.forEach((point) => {
-        customDataSource.entities.add({
-          position: Cesium.Cartesian3.fromDegrees(
-            point.longitude,
-            point.latitude,
-          ),
-          point: {
-            pixelSize: 10,
-            color: Cesium.Color.RED.withAlpha(point.fieldStrength / 100), // 根据磁场强度设置透明度
-          },
-        });
+    function getColorForStrength(value) {
+      if (value <= 25) return Cesium.Color.BLUE.withAlpha(0.5); // 蓝色
+      if (value <= 40) return Cesium.Color.GREEN.withAlpha(0.5); // 绿色
+      if (value <= 75) return Cesium.Color.YELLOW.withAlpha(0.5); // 黄色
+      if (value <= 100) return Cesium.Color.RED.withAlpha(0.5); // 红色
+      return Cesium.Color.RED.withAlpha(0.5);
+    }
+
+    dataPoints.forEach((point) => {
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(
+          point.longitude,
+          point.latitude,
+        ),
+        point: {
+          pixelSize: 10,
+          color: getColorForStrength(point.fieldStrength),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        },
       });
     });
 
-    // 添加CustomDataSource到viewer
-    viewer.dataSources.add(customDataSource);
-
-    // 缩放到热力图区域
-    viewer.zoomTo(customDataSource);
-
-    // 创建热力图的shader
-    const heatmapShader = `
-      czm_material czm_getMaterial(czm_materialInput materialInput)
-      {
-          // 计算颜色和透明度
-          czm_material material = czm_getDefaultMaterial(materialInput);
-          float intensity = materialInput.strength;
-          material.diffuse = vec3(intensity, 0.0, 0.0);
-          material.alpha = intensity;
-          return material;
-      }
-    `;
-
-    // 创建热力图材质
-    const heatmapMaterial = new Cesium.Material({
-      fabric: {
-        type: 'Heatmap',
-        uniforms: {
-          color: new Cesium.Color(1.0, 0.0, 0.0, 0.5),
-        },
-        source: heatmapShader,
-      },
-    });
-
-    // 将材质应用于每个点
-    customDataSource.entities.values.forEach((entity) => {
-      entity.point.material = heatmapMaterial;
-    });
-  };
-
-  // NOTE 渲染热力图4
-  const handleClick3 = () => {
-    let obj = JSON.parse(JSON.stringify(thermal));
-    let arrayResult = obj.coverageData.arrayResult.flat();
-    console.log(arrayResult);
-
-    const data = arrayResult;
-    console.log(data);
+    viewer.zoomTo(viewer.entities);
   };
 
   // NOTE 清楚所有地图数据
@@ -319,16 +280,19 @@ const ThermalMap = () => {
           渲染热力图数据 base64
         </Button>
         <Button className="mb-2 ml-2" onClick={() => handleClick2()}>
-          渲染热力图数据 data
-        </Button>
-        <Button className="mb-2 ml-2" onClick={() => handleClick3()}>
-          渲染热力图数据 data3
+          渲染点云效果
         </Button>
         <Button className="mb-2 ml-2" onClick={() => handleClear()}>
           清除地图数据
         </Button>
         <div id="cesiumContainer" style={{ width: '100%', height: '100vh' }} />
         {/* <div id="cesiumContainer" /> */}
+        <canvas
+          id="heatmapCanvas"
+          width="1024"
+          height="512"
+          style={{ display: 'none' }}
+        />
         <Modal
           title=""
           open={isModalOpen}
