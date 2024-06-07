@@ -4,7 +4,7 @@ export default {
   'menu.NotAccessible': 'NotAccessible',
   // NOTE 功能
   'menu.feature': 'feature',
-  'menu.feature.formily': 'formily designable',
+  // 'menu.feature.formily': 'formily designable',
   'menu.feature.fullCalendar': 'calendar',
   'menu.feature.RichTextEditing': 'RichTextEditing',
   'menu.feature.DndKit': 'DndKit',

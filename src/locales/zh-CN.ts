@@ -4,7 +4,7 @@ export default {
   'menu.NotAccessible': '无权限访问',
   // NOTE 功能
   'menu.feature': '功能页',
-  'menu.feature.formily': 'Formily 设计器',
+  // 'menu.feature.formily': 'Formily 设计器',
   'menu.feature.fullCalendar': '日历',
   'menu.feature.RichTextEditing': '富文本',
   'menu.feature.DndKit': '拖动',
