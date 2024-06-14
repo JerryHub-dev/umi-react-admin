@@ -111,6 +111,24 @@ const ThermalMap = () => {
         setIsModalOpen(true);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    let currentEntity = null;
+    // 监听鼠标移入事件
+    handler.setInputAction(function (movement) {
+      let pickedObject = viewer.scene.pick(movement.endPosition);
+      if (Cesium.defined(pickedObject) && pickedObject.id) {
+        pickedObject.id.label.text =
+          '更新后的标签' + pickedObject.id.properties.text._value;
+        currentEntity = pickedObject.id;
+      }
+
+      if (!Cesium.defined(pickedObject) || !pickedObject.id) {
+        if (currentEntity) {
+          currentEntity.label.text = currentEntity.properties.text._value;
+          currentEntity = null;
+        }
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
   };
 
   // NOTE 添加图标
@@ -139,7 +157,9 @@ const ThermalMap = () => {
         },
       });
       // 额外参数
-      entity.properties = {};
+      entity.properties = {
+        text: item.label,
+      };
     });
   };
 
