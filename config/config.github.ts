@@ -1,5 +1,5 @@
 import { defineConfig } from '@umijs/max';
-// import path from 'path';
+import path from 'path';
 // import { routes } from './routes';
 
 export default defineConfig({
