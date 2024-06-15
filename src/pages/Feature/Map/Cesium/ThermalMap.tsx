@@ -116,7 +116,11 @@ const ThermalMap = () => {
     // 监听鼠标移入事件
     handler.setInputAction(function (movement) {
       let pickedObject = viewer.scene.pick(movement.endPosition);
-      if (Cesium.defined(pickedObject) && pickedObject.id) {
+      if (
+        Cesium.defined(pickedObject) &&
+        pickedObject.id &&
+        pickedObject.id.label
+      ) {
         pickedObject.id.label.text =
           '更新后的标签' + pickedObject.id.properties.text._value;
         currentEntity = pickedObject.id;

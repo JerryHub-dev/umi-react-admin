@@ -7,6 +7,9 @@ on: # 触发条件
   pull_request: # 当 PR 时触发
     branches: # PR 到哪些分支时触发
       - master # 当 PR 到 master 分支时，触发 deploy 构建
+  workflow_dispatch: # 手动触发
+    branches: # 手动触发时，触发 deploy 构建
+      - master # 手动触发时，触发 deploy 构建
 
 jobs: # 一个工作流可以包含多个 job
   build-and-deploy: # 自定义 job 名称
@@ -28,7 +31,7 @@ jobs: # 一个工作流可以包含多个 job
         run: pnpm install # 执行命令
 
       - name: Build project # 构建项目
-        run: pnpm build # 执行命令
+        run: pnpm build:github # 执行命令
 
       - name: Deploy to GitHub Pages # 部署到 GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.4 # 使用的 action

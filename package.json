@@ -3,13 +3,14 @@
   "author": "Jerry - li <lishuai4415@gmail.com>",
   "scripts": {
     "build": "max build",
-    "build:github": "max build",
+    "build:github": "cross-env UMI_ENV=github max build",
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky install",
     "preview": "pnpm build && pnpm max preview --port 8001",
     "setup": "max setup",
-    "start": "max dev"
+    "start": "cross-env max dev",
+    "start:github": "cross-env UMI_ENV=github max dev"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,css,less}": [
@@ -57,6 +58,7 @@
   "devDependencies": {
     "@types/react": "^18.2.18",
     "@types/react-dom": "^18.2.7",
+    "cross-env": "^7.0.3",
     "husky": "^8.0.3",
     "lint-staged": "^13.2.3",
     "prettier": "^3.0.1",
