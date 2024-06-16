@@ -19,6 +19,7 @@ export default {
   'menu.feature.Cesium.geoHash': 'GeoHash',
   'menu.feature.Cesium.DirectionDistance': 'DirectionDistance',
   'menu.feature.Cesium.ThermalMap': '热力图',
+  'menu.feature.Cesium.Trajectory': '轨迹',
   'menu.feature.OpenLayers': 'OpenLayers',
   'menu.feature.OpenLayers.InfoMap': 'InfoMap',
   // NOTE office

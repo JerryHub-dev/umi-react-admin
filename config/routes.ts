@@ -123,6 +123,11 @@ export const routes = [
             path: '/feature/Cesium/ThermalMap',
             component: './Feature/Map/Cesium/ThermalMap',
           },
+          {
+            name: 'Trajectory',
+            path: '/feature/Cesium/Trajectory',
+            component: './Feature/Map/Cesium/Trajectory',
+          },
         ],
       },
       {

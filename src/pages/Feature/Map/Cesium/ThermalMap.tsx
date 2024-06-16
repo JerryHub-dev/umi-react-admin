@@ -10,7 +10,7 @@ const ThermalMap = () => {
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
 
-  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
+  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
 
   useEffect(() => {
     // 创建一个 Cesium Viewer 实例
@@ -309,8 +309,8 @@ const ThermalMap = () => {
         <Button className="mb-2 ml-2" onClick={() => handleClear()}>
           清除地图数据
         </Button>
-        <div id="cesiumContainer" style={{ width: '100%', height: '100vh' }} />
-        {/* <div id="cesiumContainer" /> */}
+        {/* <div id="cesiumContainer" style={{ width: '100%', height: '100vh' }} /> */}
+        <div id="cesiumContainer" />
         <canvas
           id="heatmapCanvas"
           width="1024"
