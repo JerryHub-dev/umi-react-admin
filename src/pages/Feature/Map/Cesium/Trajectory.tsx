@@ -50,7 +50,7 @@ const Trajectory: React.FC = () => {
 
   // NOTE 绘制开始
   const [drawing, setDrawing] = useState(false); // 是否绘制中
-  const [positions, setPositions] = useState([] as any); // 绘制的点
+  const [positions, setPositions] = useState([] as any); // 绘制点的 cesium 坐标
   //   Cesiumjs 在umijs 中如何绘制多线段?
   // 1, 点击按钮开始绘制多线段
   // 2, 点击地图后, 在点击处绘制圆形的形状
@@ -99,18 +99,10 @@ const Trajectory: React.FC = () => {
         // 连接上一个点和当前点
         if (positions.length >= 1) {
           let lastCartesian = positions[positions.length - 1]; // 上一个点
-          // let polyline = viewer.entities.add({
-          //   polyline: {
-          //     positions: [lastCartesian, cartesian],
-          //     width: 2,
-          //     material: new Cesium.PolylineDashMaterialProperty({
-          //       color: Cesium.Color.YELLOW,
-          //     }),
-          //   },
-          // });
           // 绘制实线
           viewer.entities.add({
             polyline: {
+              // positions: [lastCartesian, cartesian],
               positions: new Cesium.CallbackProperty(() => {
                 // 实时更新
                 return [lastCartesian, cartesian]; // 返回两个点
@@ -152,7 +144,7 @@ const Trajectory: React.FC = () => {
         height: heightString,
       };
     });
-    console.log('positionsGeo: ', positionsGeo);
+    console.log('positionsGeo: ', positionsGeo); // 经纬度
     // 清空绘制的点
     setPositions([]);
   };
@@ -180,13 +172,6 @@ const Trajectory: React.FC = () => {
               开始绘制
             </Button>
           )}
-          {/* <Button
-            id="startDrawing"
-            className="text-cyan-50 hover:text-gray-900"
-            onClick={() => handlerTrigger()}
-          >
-            {drawing ? '绘制完成' : '开始绘制'}
-          </Button> */}
         </div>
       </ProCard>
     </>
