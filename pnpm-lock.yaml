@@ -95,12 +95,6 @@ importers:
       dayjs:
         specifier: ^1.11.11
         version: 1.11.11
-      heatmap.js:
-        specifier: ^2.0.5
-        version: 2.0.5
-      ngeohash:
-        specifier: ^0.6.3
-        version: 0.6.3
       ol:
         specifier: ^9.2.2
         version: 9.2.2
@@ -4190,9 +4184,6 @@ packages:
   heatmap.js-fixed@2.0.2:
     resolution: {integrity: sha512-BAx6zoxmGuwieIQsddaVlZXguZ0iSdghNLsVY0O9u5lFsIzJWZ1hu4I+ECGkruiYcIBh4htilyO+q8K8DJ8FWA==}
 
-  heatmap.js@2.0.5:
-    resolution: {integrity: sha512-CG2gYFP5Cv9IQCXEg3ZRxnJDyAilhWnQlAuHYGuWVzv6mFtQelS1bR9iN80IyDmFECbFPbg6I0LR5uAFHgCthw==}
-
   history@4.10.1:
     resolution: {integrity: sha512-36nwAD620w12kuzPAsyINPWJqlNbij+hpK1k9XRloDtym8mxzGYl2c17LnV6IAGB2Dmg4tEa7G7DlawS0+qjew==}
 
@@ -5042,10 +5033,6 @@ packages:
 
   next-tick@1.1.0:
     resolution: {integrity: sha512-CXdUiJembsNjuToQvxayPZF9Vqht7hewsvy2sOWafLvi2awflj9mOC6bHIg50orX8IJvWKY9wYQ/zB2kogPslQ==}
-
-  ngeohash@0.6.3:
-    resolution: {integrity: sha512-kltF0cOxgx1AbmVzKxYZaoB0aj7mOxZeHaerEtQV0YaqnkXNq26WWqMmJ6lTqShYxVRWZ/mwvvTrNeOwdslWiw==}
-    engines: {node: '>=v0.2.0'}
 
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
@@ -13057,8 +13044,6 @@ snapshots:
 
   heatmap.js-fixed@2.0.2: {}
 
-  heatmap.js@2.0.5: {}
-
   history@4.10.1:
     dependencies:
       '@babel/runtime': 7.24.5
@@ -13891,8 +13876,6 @@ snapshots:
   neo-async@2.6.2: {}
 
   next-tick@1.1.0: {}
-
-  ngeohash@0.6.3: {}
 
   no-case@3.0.4:
     dependencies:

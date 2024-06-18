@@ -47,8 +47,6 @@
     "cesium": "^1.112.0",
     "cesiumjs-heat": "^1.0.7",
     "dayjs": "^1.11.11",
-    "heatmap.js": "^2.0.5",
-    "ngeohash": "^0.6.3",
     "ol": "^9.2.2",
     "react-pdf": "^7.3.3",
     "signature_pad": "^4.1.6",

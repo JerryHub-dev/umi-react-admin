@@ -1,3 +1,4 @@
+import { iconData } from '@/utils/MapCompute/dataEnd';
 import { ProCard } from '@ant-design/pro-components';
 import { Alert, Button } from 'antd';
 import * as Cesium from 'cesium';
@@ -42,49 +43,81 @@ const Trajectory: React.FC = () => {
 
     setViewer(viewer);
 
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      handlerIcon(viewer);
+    }, 100);
+
     // 销毁
     return () => {
       viewer.destroy();
     };
   }, []);
 
+  const handlerIcon = (viewer: any) => {
+    // 添加图标
+    let item = iconData[0];
+    let entity = viewer.entities.add({
+      id: item.id,
+      position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
+      billboard: {
+        image: require('@/assets/Detection.png'),
+        scale: 0.3,
+      },
+    });
+    entity.properties = {
+      text: item.label,
+    };
+  };
+
   // NOTE 绘制开始
-  const [drawing, setDrawing] = useState(false); // 是否绘制中
-  const [positions, setPositions] = useState([] as any); // 绘制点的 cesium 坐标
-  //   Cesiumjs 在umijs 中如何绘制多线段?
-  // 1, 点击按钮开始绘制多线段
-  // 2, 点击地图后, 在点击处绘制圆形的形状
-  // 3, 完成第二步后, 上一个点和鼠标移动改为虚线
-  // 4, 点击第二个点后, 使用实线连接上一个点和当前点
+  const [drawing, setDrawing] = useState(false);
+  const drawingRef = React.useRef(false);
+  const positionsArrRef = React.useRef([]);
+  const positionsGeoRef = React.useRef([]);
+  const handlerRef = React.useRef(null as any);
   const handlerDraw = () => {
     // 1, 点击按钮开始绘制
+    drawingRef.current = true;
     setDrawing(true);
     viewer.cesiumWidget._element.style.cursor = 'crosshair'; // 鼠标样式为十字
 
+    // 获取所有实体
+    let entities = viewer.entities.values;
+    let entity = entities.find((item) => item.properties.text._value === 'A');
+    console.log(entity);
+    // 计算entity的经纬度
+    let cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(
+      entity.position._value,
+    );
+    let lng = Cesium.Math.toDegrees(cartographic.longitude);
+    let lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+    // 计算entity笛卡尔坐标系 xy 坐标
+    let position = Cesium.Cartesian3.fromDegrees(lng, lat);
+    positionsArrRef.current = [position];
+    positionsGeoRef.current = [{ longitude: lng, latitude: lat }];
+
     // 2, 点击地图后, 在点击处绘制圆形的形状, 并且在地图上显示坐标
-    let handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas); // 鼠标事件处理器
-    handler.setInputAction((movement: any) => {
+    handlerRef.current = new Cesium.ScreenSpaceEventHandler(
+      viewer.scene.canvas,
+    ); // 鼠标事件处理器
+
+    handlerRef.current.setInputAction((movement: any) => {
+      console.log(1111111111111111);
+      // 获取鼠标位置的笛卡尔坐标
       let cartesian = viewer.camera.pickEllipsoid(
-        movement.position,
-        viewer.scene.globe.ellipsoid,
-      ); // 获取鼠标位置的笛卡尔坐标
-      if (cartesian) {
+        movement.position, // 鼠标位置
+        viewer.scene.globe.ellipsoid, // 椭球体
+      );
+
+      if (cartesian && drawingRef.current) {
+        console.log('22222222222222222222222222222222');
         let cartographic = Cesium.Cartographic.fromCartesian(cartesian); // 笛卡尔坐标转经纬度
-        let longitudeString = Cesium.Math.toDegrees(
-          cartographic.longitude,
-        ).toFixed(2); // 经度
-        let latitudeString = Cesium.Math.toDegrees(
-          cartographic.latitude,
-        ).toFixed(2); // 纬度
+        let longitudeString = Cesium.Math.toDegrees(cartographic.longitude); // 经度
+        let latitudeString = Cesium.Math.toDegrees(cartographic.latitude); // 纬度
         let heightString = cartographic.height.toFixed(2); // 高度
-        console.log(
-          '经度: ',
-          longitudeString,
-          '纬度: ',
-          latitudeString,
-          '高度: ',
-          heightString,
-        );
+        console.log(longitudeString, latitudeString, heightString);
 
         // 绘制圆形
         viewer.entities.add({
@@ -97,8 +130,9 @@ const Trajectory: React.FC = () => {
         });
 
         // 连接上一个点和当前点
-        if (positions.length >= 1) {
-          let lastCartesian = positions[positions.length - 1]; // 上一个点
+        if (positionsArrRef.current.length >= 1) {
+          let lastCartesian =
+            positionsArrRef.current[positionsArrRef.current.length - 1]; // 上一个点
           // 绘制实线
           viewer.entities.add({
             polyline: {
@@ -117,8 +151,11 @@ const Trajectory: React.FC = () => {
         }
 
         // 5, 存储点的数组
-        positions.push(cartesian);
-        setPositions(positions);
+        positionsArrRef.current = [...positionsArrRef.current, cartesian];
+        positionsGeoRef.current = [
+          ...positionsGeoRef.current,
+          { longitude: longitudeString, latitude: latitudeString },
+        ];
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
   };
@@ -126,27 +163,18 @@ const Trajectory: React.FC = () => {
   // NOTE 绘制完成回调
   const handlerDrawOk = () => {
     setDrawing(false);
+    drawingRef.current = false;
     viewer.cesiumWidget._element.style.cursor = 'default'; // 鼠标样式为默认
-    console.log('positions: ', positions);
-    // 更改 positions 为经纬度
-    let positionsGeo = positions.map((position) => {
-      let cartographic = Cesium.Cartographic.fromCartesian(position);
-      let longitudeString = Cesium.Math.toDegrees(
-        cartographic.longitude,
-      ).toFixed(2); // 经度
-      let latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(
-        2,
-      ); // 纬度
-      let heightString = cartographic.height.toFixed(2); // 高度
-      return {
-        longitude: longitudeString,
-        latitude: latitudeString,
-        height: heightString,
-      };
-    });
-    console.log('positionsGeo: ', positionsGeo); // 经纬度
-    // 清空绘制的点
-    setPositions([]);
+
+    handlerRef.current.removeInputAction(
+      Cesium.ScreenSpaceEventType.LEFT_CLICK,
+    );
+
+    console.log('positionsArrRef', positionsArrRef.current);
+    console.log('positionsGeoRef', positionsGeoRef.current);
+
+    positionsArrRef.current = [];
+    positionsGeoRef.current = [];
   };
 
   return (

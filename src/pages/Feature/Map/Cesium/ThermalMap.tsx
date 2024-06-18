@@ -5,6 +5,7 @@ import { Alert, Button, Modal, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useState } from 'react';
+import simpleheat from 'simpleheat';
 
 const ThermalMap = () => {
   const [viewer, setViewer] = useState(null as any);
@@ -276,7 +277,7 @@ const ThermalMap = () => {
           point.latitude,
         ),
         point: {
-          pixelSize: 10,
+          pixelSize: 30, // 像素大小
           color: getColorForStrength(point.fieldStrength),
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
@@ -303,17 +304,6 @@ const ThermalMap = () => {
       });
       topPoint.push(positions[0]);
       bottomPoint.push(positions[positions.length - 1]);
-
-      // // 连接线
-      // if (positions.length > 1) {
-      //   viewer.entities.add({
-      //     polyline: {
-      //       positions: positions,
-      //       width: 2,
-      //       material: Cesium.Color.RED,
-      //     },
-      //   });
-      // }
     });
 
     // 连接 bottomPoint 中的每个点
@@ -328,15 +318,82 @@ const ThermalMap = () => {
     }
   };
 
+  const createHeatmapCanvas = (data, width, height) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const context = canvas.getContext('2d');
+
+    // 这里可以引入热力图库，例如 simpleheat
+    const heat = simpleheat(canvas);
+    heat.radius(20, 10);
+
+    // 数据转换：将经纬度转换为画布上的 x 和 y 坐标
+    const points = data.map((point) => {
+      const pos = Cesium.Cartesian3.fromDegrees(
+        point.longitude,
+        point.latitude,
+      );
+      const canvasPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
+        viewer.scene,
+        pos,
+      );
+      // heat.add([canvasPos.x, canvasPos.y, point.fieldStrength]);
+      return [canvasPos.x, canvasPos.y, point.fieldStrength];
+    });
+
+    // 添加点到热力图并绘制
+    heat.data(points); // 添加数据
+    heat.draw();
+
+    return canvas;
+  };
+
   // NOTE 渲染热力图3
   const handleClick3 = () => {
     // 热力图要绘制的区域的经纬度范围
-    // let longitude = 106.65;
-    // let latitude = 29.69;
+    let longitude = 106.65;
+    let latitude = 29.69;
 
     let dataPoints = data.flat();
-    // let dataPoints = data;
-    handlerBottomPoint(dataPoints); // 绘制底部点
+    handlerBottomPoint(data); // 绘制底部点
+
+    // 创建一个 Canvas 元素
+    const canvas = createHeatmapCanvas(
+      dataPoints,
+      viewer.canvas.width,
+      viewer.canvas.height,
+    );
+
+    const entity = viewer.entities.add({
+      rectangle: {
+        // coordinates: Cesium.Rectangle.fromDegrees(west, south, east, north),
+        coordinates: Cesium.Rectangle.fromDegrees(
+          longitude - 0.1,
+          latitude - 0.1,
+          longitude + 0.3,
+          latitude + 0.3,
+        ),
+        material: new Cesium.ImageMaterialProperty({
+          // image: canvas,
+          image: canvas.toDataURL(), // 确保使用 toDataURL
+          transparent: true,
+        }),
+      },
+    });
+
+    // viewer.zoomTo(entity);
+
+    // 相机范围改变时，重新绘制热力图
+    viewer.camera.moveEnd.addEventListener(() => {
+      const canvas = createHeatmapCanvas(
+        dataPoints,
+        viewer.canvas.width,
+        viewer.canvas.height,
+      );
+      entity.rectangle.material.image = canvas.toDataURL();
+    });
 
     // 创建一个 Canvas 元素
     // let canvas = document.createElement('canvas');
