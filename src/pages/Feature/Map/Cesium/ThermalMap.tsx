@@ -4,8 +4,12 @@ import { ProCard } from '@ant-design/pro-components';
 import { Alert, Button, Modal, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import { useEffect, useState } from 'react';
-import simpleheat from 'simpleheat';
+import h337 from 'heatmap.js';
+import { useEffect, useRef, useState } from 'react';
+// import simpleheat from 'simpleheat';
+// import createCesiumHeatmap from 'cesium-heatmap';
+// import { createCesiumHeatmap } from 'cesium-heatmap';
+import * as heatmapLib from 'cesium-heatmap';
 
 const ThermalMap = () => {
   const [viewer, setViewer] = useState(null as any);
@@ -14,6 +18,7 @@ const ThermalMap = () => {
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
 
   useEffect(() => {
+    console.log('11111', heatmapLib);
     // 创建一个 Cesium Viewer 实例
     const viewer = new Cesium.Viewer('cesiumContainer', {
       // 去除所有的控件
@@ -51,28 +56,16 @@ const ThermalMap = () => {
     setData(arrayResult);
 
     // 2, 添加一个点击事件来显示位置坐标：
-    viewer.screenSpaceEventHandler.setInputAction(
-      function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
-        const cartesian = viewer.camera.pickEllipsoid(
-          movement.position,
-          viewer.scene.globe.ellipsoid,
-        );
-        if (cartesian) {
-          const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-          const longitudeString = Cesium.Math.toDegrees(
-            cartographic.longitude,
-          ).toFixed(2);
-          const latitudeString = Cesium.Math.toDegrees(
-            cartographic.latitude,
-          ).toFixed(2);
-          messageApi.info(
-            `Longitude: ${longitudeString}, Latitude: ${latitudeString}`,
-          );
-          // alert(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
-        }
-      },
-      Cesium.ScreenSpaceEventType.LEFT_CLICK,
-    );
+    viewer.screenSpaceEventHandler.setInputAction(function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
+      const cartesian = viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+        const latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+        messageApi.info(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+        // alert(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     setViewer(viewer);
 
@@ -110,9 +103,7 @@ const ThermalMap = () => {
           return;
         }
         let pickedPosition = pickedObject.id.position;
-        let cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(
-          pickedPosition._value,
-        );
+        let cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(pickedPosition._value);
         let lng = Cesium.Math.toDegrees(cartographic.longitude);
         let lat = Cesium.Math.toDegrees(cartographic.latitude);
         console.log(lng, lat);
@@ -125,13 +116,8 @@ const ThermalMap = () => {
     // 监听鼠标移入事件
     handler.setInputAction(function (movement) {
       let pickedObject = viewer.scene.pick(movement.endPosition);
-      if (
-        Cesium.defined(pickedObject) &&
-        pickedObject.id &&
-        pickedObject.id.label
-      ) {
-        pickedObject.id.label.text =
-          '更新后的标签' + pickedObject.id.properties.text._value;
+      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.label) {
+        pickedObject.id.label.text = '更新后的标签' + pickedObject.id.properties.text._value;
         currentEntity = pickedObject.id;
       }
 
@@ -168,12 +154,7 @@ const ThermalMap = () => {
           horizontalOrigin: Cesium.HorizontalOrigin.CENTER, // 水平对齐方式
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM, // 垂直对齐方式
           pixelOffset: new Cesium.Cartesian2(0, 55), // 偏移量
-          pixelOffsetScaleByDistance: new Cesium.NearFarScalar(
-            1.5e2,
-            1.5,
-            8.0e6,
-            0.5,
-          ), // 偏移量随距离变化
+          pixelOffsetScaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 8.0e6, 0.5), // 偏移量随距离变化
         },
       });
       // 额外参数
@@ -235,18 +216,7 @@ const ThermalMap = () => {
         name: 'Heatmap', // 实体的名称
         rectangle: {
           // coordinates: Cesium.Rectangle.fromDegrees(-100.0, 20.0, -90.0, 30.0), // 矩形的坐标
-          // coordinates: Cesium.Rectangle.fromDegrees(
-          //   longitude - 0.1,
-          //   latitude - 0.1,
-          //   longitude + 0.1,
-          //   latitude + 0.1,
-          // ),
-          coordinates: Cesium.Rectangle.fromDegrees(
-            longitude - 0.1,
-            latitude - 0.1,
-            longitude + 0.3,
-            latitude + 0.3,
-          ),
+          coordinates: Cesium.Rectangle.fromDegrees(longitude - 0.1, latitude - 0.1, longitude + 0.1, latitude + 0.1),
           material: new Cesium.ImageMaterialProperty({
             image: img, // 图像对象
             transparent: true, // 是否透明
@@ -272,12 +242,9 @@ const ThermalMap = () => {
 
     dataPoints.forEach((point) => {
       viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(
-          point.longitude,
-          point.latitude,
-        ),
+        position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude),
         point: {
-          pixelSize: 30, // 像素大小
+          pixelSize: 5, // 像素大小
           color: getColorForStrength(point.fieldStrength),
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
@@ -296,10 +263,7 @@ const ThermalMap = () => {
       let positions = [];
       // 每次
       item.forEach((point) => {
-        let cartesian = Cesium.Cartesian3.fromDegrees(
-          point.longitude,
-          point.latitude,
-        ); // 经纬度转笛卡尔坐标
+        let cartesian = Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude); // 经纬度转笛卡尔坐标
         positions.push(cartesian);
       });
       topPoint.push(positions[0]);
@@ -318,192 +282,109 @@ const ThermalMap = () => {
     }
   };
 
-  const createHeatmapCanvas = (data, width, height) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const context = canvas.getContext('2d');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const createHeatmapLayer = (viewer, data) => {
+    const heatmapContainer = document.createElement('div');
+    heatmapContainer.style.width = `${viewer.canvas.width}px`;
+    heatmapContainer.style.height = `${viewer.canvas.height}px`;
+    heatmapContainer.style.position = 'absolute';
+    heatmapContainer.style.top = '0';
+    heatmapContainer.style.left = '0';
+    heatmapContainer.style.pointerEvents = 'none';
+    viewer.container.appendChild(heatmapContainer);
 
-    // 这里可以引入热力图库，例如 simpleheat
-    const heat = simpleheat(canvas);
-    heat.radius(20, 10);
-
-    // 数据转换：将经纬度转换为画布上的 x 和 y 坐标
-    const points = data.map((point) => {
-      const pos = Cesium.Cartesian3.fromDegrees(
-        point.longitude,
-        point.latitude,
-      );
-      const canvasPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
-        viewer.scene,
-        pos,
-      );
-      // heat.add([canvasPos.x, canvasPos.y, point.fieldStrength]);
-      return [canvasPos.x, canvasPos.y, point.fieldStrength];
+    // 创建热力图
+    const heatmap = h337.create({
+      container: heatmapContainer,
+      radius: 20, // 半径
+      maxOpacity: 0.8, // 最大透明度
+      minOpacity: 0, // 最小透明度
+      blur: 0.75, // 模糊度
     });
 
-    // 添加点到热力图并绘制
-    heat.data(points); // 添加数据
-    heat.draw();
+    // 设置热力图数据
+    const heatmapData = {
+      max: 100,
+      data: data.map((point) => {
+        const cartesian = Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude);
+        const canvasPosition = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, cartesian);
+        return {
+          x: canvasPosition.x,
+          y: canvasPosition.y,
+          value: point.fieldStrength,
+        };
+      }),
+    };
 
-    return canvas;
+    heatmap.setData(heatmapData); // 设置热力图数据
+
+    // 每帧渲染时更新热力图数据
+    viewer.scene.postRender.addEventListener(() => {
+      heatmap.setData({
+        max: 100,
+        data: data.map((point) => {
+          const cartesian = Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude);
+          // 将笛卡尔坐标转换为画布坐标
+          const canvasPosition = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, cartesian);
+          return {
+            x: canvasPosition.x,
+            y: canvasPosition.y,
+            value: point.fieldStrength,
+          };
+        }),
+      });
+    });
   };
 
+  const heatmap = useRef(null);
+
   // NOTE 渲染热力图3
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const createAndAddHeatmap = () => {
+    if (!viewer) return;
+
+    const bounds = {
+      west: Cesium.Math.toRadians(-115.0),
+      east: Cesium.Math.toRadians(-112.0),
+      south: Cesium.Math.toRadians(36.0),
+      north: Cesium.Math.toRadians(40.0),
+    };
+
+    const heatmapOptions = {
+      maxOpacity: 0.6,
+      minOpacity: 0.1,
+      blur: 0.75,
+      radius: 50,
+    };
+
+    if (heatmap.current) {
+      heatmap.current.destroy();
+    }
+
+    // heatmap.current = createCesiumHeatmap(viewer, bounds, heatmapOptions);
+    heatmap.current = heatmapLib.create(viewer, bounds, heatmapOptions);
+
+    data.flat().forEach((point) => {
+      // 数据 fieldStrength 更名为 value
+      const { latitude, longitude, fieldStrength: value } = point;
+      heatmap.current.addDataPoint(latitude, longitude, value);
+    });
+
+    heatmap.current.update();
+  };
   const handleClick3 = () => {
     // 热力图要绘制的区域的经纬度范围
-    let longitude = 106.65;
-    let latitude = 29.69;
+    // let longitude = 106.65;
+    // let latitude = 29.69;
 
-    let dataPoints = data.flat();
+    // let dataPoints = data.flat();
     handlerBottomPoint(data); // 绘制底部点
 
-    // 创建一个 Canvas 元素
-    const canvas = createHeatmapCanvas(
-      dataPoints,
-      viewer.canvas.width,
-      viewer.canvas.height,
-    );
-
-    const entity = viewer.entities.add({
-      rectangle: {
-        // coordinates: Cesium.Rectangle.fromDegrees(west, south, east, north),
-        coordinates: Cesium.Rectangle.fromDegrees(
-          longitude - 0.1,
-          latitude - 0.1,
-          longitude + 0.3,
-          latitude + 0.3,
-        ),
-        material: new Cesium.ImageMaterialProperty({
-          // image: canvas,
-          image: canvas.toDataURL(), // 确保使用 toDataURL
-          transparent: true,
-        }),
-      },
-    });
-
-    // viewer.zoomTo(entity);
+    // createHeatmapLayer(viewer, dataPoints);
+    // createAndAddHeatmap();
 
     // 相机范围改变时，重新绘制热力图
-    viewer.camera.moveEnd.addEventListener(() => {
-      const canvas = createHeatmapCanvas(
-        dataPoints,
-        viewer.canvas.width,
-        viewer.canvas.height,
-      );
-      entity.rectangle.material.image = canvas.toDataURL();
-    });
-
-    // 创建一个 Canvas 元素
-    // let canvas = document.createElement('canvas');
-    // // canvas.width = window.innerWidth; // 设置 Canvas 元素的宽度为浏览器窗口的宽度
-    // // canvas.height = window.innerHeight; // 设置 Canvas 元素的高度为浏览器窗口的高度
-
-    // // 画布宽度设置为 cesium 容器的宽度
-    // canvas.width = viewer.canvas.width;
-    // canvas.height = viewer.canvas.height;
-    // let context = canvas.getContext('2d');
-
-    // // 使用透明度为 0.1 的白色填充整个 Canvas 元素
-    // context.fillStyle = 'rgba(255, 255, 255, 0.5)';
-
-    // // context.fillRect(0, 0, canvas.width, canvas.height); // 填充整个 Canvas 元素
-    // context.clearRect(0, 0, canvas.width, canvas.height); // 清除整个 Canvas 元素
-
-    // // 绘制热力图
-    // dataPoints.forEach((point) => {
-    //   const x = (point.longitude + 180) * (canvas.width / 360);
-    //   const y = (90 - point.latitude) * (canvas.height / 180);
-
-    //   // let x = point.longitude * 20037508.34 / 180;
-    //   // let R = Math.log(Math.tan((90 + point.latitude) * Math.PI / 360)) / (Math.PI / 180);
-    //   // let y = R * 20037508.34 / 180;
-
-    //   // 绘制多种颜色, 根据强度值来决定颜色
-    //   if (point.fieldStrength <= 25) {
-    //     context.fillStyle = 'rgba(0, 0, 255, 0.1)'; // 蓝色
-    //   } else if (point.fieldStrength <= 40) {
-    //     context.fillStyle = 'rgba(0, 255, 0, 0.1)'; // 绿色
-    //   } else if (point.fieldStrength <= 75) {
-    //     context.fillStyle = 'rgba(255, 255, 0, 0.1)'; // 黄色
-    //   } else if (point.fieldStrength <= 100) {
-    //     context.fillStyle = 'rgba(255, 0, 255, 0.1)'; // 红色
-    //   } else {
-    //     context.fillStyle = 'rgba(0, 0, 255, 0.1)'; // 蓝色
-    //     // context.fillStyle = 'rgba(255, 0, 255, 0.1)'; // 红色
-    //   }
-
-    //   // x, y 为矩形的左上角坐标 (x, y), 10, 10 为矩形的宽度和高度
-    //   // context.fillRect(x, y, 0.5, 0.5); // 绘制一个矩形
-
-    //   context.fillRect(x, y, 0.5, 0.5);
-
-    //   // 绘制一个矩形
-    //   // context.fillStyle = 'rgba(255, 0, 255, 0.1)';
-    //   // context.fillRect(800, 800, 200, 100);
-    // });
-
-    // // 将 Canvas 元素转换为 Base64 数据
-    // let base64Image = canvas.toDataURL('image/png');
-    // console.log(base64Image); // base64 图片数据
-
-    // // 将 Base64 数据转换为 Blob 对象
-    // function base64ToBlob(base64, mime) {
-    //   // eslint-disable-next-line no-param-reassign
-    //   mime = mime || ''; // 如果 mime 类型为空，默认为 image/png
-    //   let sliceSize = 1024; // 以 1024 字节为一个单位
-    //   let byteChars = atob(base64.split(',')[1]); // base64 数据
-    //   let byteArrays = []; // 存储生成的 Blob 对象
-
-    //   // 将 base64 数据转换为二进制数据
-    //   for (let offset = 0; offset < byteChars.length; offset += sliceSize) {
-    //     let slice = byteChars.slice(offset, offset + sliceSize); // 从 base64 数据中截取一部分
-    //     let byteNumbers = new Array(slice.length); // 存储转换后的二进制数据
-
-    //     // 将 base64 数据转换为二进制数据
-    //     for (let i = 0; i < slice.length; i++) {
-    //       byteNumbers[i] = slice.charCodeAt(i); // 获取每个字符的 Unicode 编码
-    //     }
-    //     let byteArray = new Uint8Array(byteNumbers); // 转换为二进制数据
-    //     byteArrays.push(byteArray); // 存储二进制数据
-    //   }
-
-    //   return new Blob(byteArrays, { type: mime }); // 生成 Blob 对象
-    // }
-
-    // // 将 Base64 数据转换为 Blob 对象
-    // // let blob = base64ToBlob(base64Image, 'image/png');
-    // let blob = base64ToBlob(base64Image, 'image/png');
-    // let url = URL.createObjectURL(blob); // 生成一个临时的 URL
-
-    // // 创建一个 HTMLImageElement
-    // let img = new Image(); // 创建一个图像对象
-    // img.src = url; // 设置图像的 URL
-
-    // // 图像加载完成后的回调函数
-    // img.onload = function () {
-    //   // 当图像加载完成后，将其应用为纹理
-    //   let entity = viewer.entities.add({
-    //     name: 'Heatmap', // 实体的名称
-    //     rectangle: {
-    //       // coordinates: Cesium.Rectangle.fromDegrees(-100.0, 20.0, -90.0, 30.0), // 矩形的坐标
-    //       coordinates: Cesium.Rectangle.fromDegrees(-180, -90, 180, 90),
-    //       // coordinates: Cesium.Rectangle.fromDegrees(
-    //       //   longitude - 0.1,
-    //       //   latitude - 0.1,
-    //       //   longitude + 0.3,
-    //       //   latitude + 0.3,
-    //       // ),
-    //       material: new Cesium.ImageMaterialProperty({
-    //         image: img, // 图像对象
-    //         transparent: true, // 是否透明
-    //       }),
-    //     },
-    //   });
-    //   // 调整视角以查看热力图
-    //   viewer.zoomTo(entity);
-    // };
+    viewer.camera.moveEnd.addEventListener(() => {});
   };
 
   // NOTE 清楚所有地图数据

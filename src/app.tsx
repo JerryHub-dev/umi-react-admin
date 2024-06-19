@@ -1,14 +1,14 @@
 // 运行时配置
 import RightContent from '@/layouts/RightContent';
 import { appList } from '@/layouts/_defaultProps';
-import type {
-  RequestConfig,
-  RunTimeLayoutConfig,
-  RuntimeAntdConfig,
-} from '@umijs/max';
+import type { RequestConfig, RunTimeLayoutConfig, RuntimeAntdConfig } from '@umijs/max';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { getInitialState as libGetInitialState } from './utils/Auth/initalState';
 import { requestConfig } from './utils/requestConfig';
+
+// NOTE cesium-heatmap 插件需要全局引入 Cesium 库
+import * as Cesium from 'cesium';
+window.Cesium = Cesium;
 
 // NOTE:全局初始化数据配置，用于 Layout 用户信息和权限初始化
 // 更多信息见文档：https://umijs.org/docs/api/runtime-config#getinitialstate
