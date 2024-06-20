@@ -6,7 +6,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import React, { useEffect, useState } from 'react';
 
 const Trajectory: React.FC = () => {
-  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
+  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
   const [viewer, setViewer] = useState(null as any);
 
   useEffect(() => {

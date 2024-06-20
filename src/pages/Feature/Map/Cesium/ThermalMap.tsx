@@ -10,7 +10,7 @@ const ThermalMap = () => {
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
   const [data, setData] = useState([] as any);
-  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
+  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
 
   useEffect(() => {
     // 创建一个 Cesium Viewer 实例
