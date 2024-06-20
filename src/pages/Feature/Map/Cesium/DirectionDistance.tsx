@@ -9,7 +9,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import React, { useEffect, useState } from 'react';
 
 const DirectionDistance: React.FC = () => {
-  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
+  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
   const [viewer, setViewer] = useState(null as any);
 
   useEffect(() => {
@@ -60,11 +60,7 @@ const DirectionDistance: React.FC = () => {
 
     let earthRadius = Cesium.Ellipsoid.WGS84.maximumRadius; // 地球半径
 
-    let fixedPositions = Cesium.Cartographic.fromDegrees(
-      startLongitude,
-      startLatitude,
-      startHeight,
-    ); // 起点
+    let fixedPositions = Cesium.Cartographic.fromDegrees(startLongitude, startLatitude, startHeight); // 起点
     let fixedCartesian = Cesium.Cartographic.toCartesian(fixedPositions); // 起点的笛卡尔坐标
 
     // 生成路径
@@ -79,10 +75,8 @@ const DirectionDistance: React.FC = () => {
 
       // 计算终点的笛卡尔坐标
       let endpointCartesian = Cesium.Cartesian3.fromRadians(
-        Cesium.Cartographic.fromCartesian(fixedCartesian).longitude +
-          (distance / earthRadius) * Math.cos(direction),
-        Cesium.Cartographic.fromCartesian(fixedCartesian).latitude +
-          (distance / earthRadius) * Math.sin(direction),
+        Cesium.Cartographic.fromCartesian(fixedCartesian).longitude + (distance / earthRadius) * Math.cos(direction),
+        Cesium.Cartographic.fromCartesian(fixedCartesian).latitude + (distance / earthRadius) * Math.sin(direction),
         Cesium.Cartographic.fromCartesian(fixedCartesian).height,
       );
       endPointCartesians.push(endpointCartesian);
@@ -106,11 +100,7 @@ const DirectionDistance: React.FC = () => {
     let startLatitude = 39.9093;
     let startHeight = 0;
 
-    let startPoint = Cesium.Cartesian3.fromDegrees(
-      startLongitude,
-      startLatitude,
-      startHeight,
-    );
+    let startPoint = Cesium.Cartesian3.fromDegrees(startLongitude, startLatitude, startHeight);
 
     let data = dataPath;
 
@@ -124,11 +114,9 @@ const DirectionDistance: React.FC = () => {
       // 计算终点的笛卡尔坐标
       let newPoint = Cesium.Cartesian3.fromRadians(
         Cesium.Cartographic.fromCartesian(currentPoint).longitude +
-          (distance / Cesium.Ellipsoid.WGS84.maximumRadius) *
-            Math.cos(direction),
+          (distance / Cesium.Ellipsoid.WGS84.maximumRadius) * Math.cos(direction),
         Cesium.Cartographic.fromCartesian(currentPoint).latitude +
-          (distance / Cesium.Ellipsoid.WGS84.maximumRadius) *
-            Math.sin(direction),
+          (distance / Cesium.Ellipsoid.WGS84.maximumRadius) * Math.sin(direction),
         Cesium.Cartographic.fromCartesian(currentPoint).height,
       );
       pathPoints.push(newPoint); // 添加新点
@@ -165,10 +153,7 @@ const DirectionDistance: React.FC = () => {
           </Button>
         </Tooltip>
 
-        <Tooltip
-          className="ml-2"
-          title="根据方向(度)和距离(km)生成路径 (每一个点的终点为下一个点的起点)"
-        >
+        <Tooltip className="ml-2" title="根据方向(度)和距离(km)生成路径 (每一个点的终点为下一个点的起点)">
           <Button onClick={() => handlePointPath()} className="mt-2">
             每一个点的终点为下一个点的起点
           </Button>

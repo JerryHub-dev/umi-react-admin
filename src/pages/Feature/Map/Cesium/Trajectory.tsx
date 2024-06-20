@@ -6,7 +6,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import React, { useEffect, useState } from 'react';
 
 const Trajectory: React.FC = () => {
-  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
+  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
   const [viewer, setViewer] = useState(null as any);
 
   useEffect(() => {
@@ -73,8 +73,8 @@ const Trajectory: React.FC = () => {
   // NOTE 绘制开始
   const [drawing, setDrawing] = useState(false);
   const drawingRef = React.useRef(false);
-  const positionsArrRef = React.useRef([]);
-  const positionsGeoRef = React.useRef([]);
+  const positionsArrRef = React.useRef([] as any[]);
+  const positionsGeoRef = React.useRef([] as any[]);
   const handlerRef = React.useRef(null as any);
   const handlerDraw = () => {
     // 1, 点击按钮开始绘制
@@ -84,12 +84,10 @@ const Trajectory: React.FC = () => {
 
     // 获取所有实体
     let entities = viewer.entities.values;
-    let entity = entities.find((item) => item.properties.text._value === 'A');
+    let entity = entities.find((item: any) => item.properties.text._value === 'A');
     console.log(entity);
     // 计算entity的经纬度
-    let cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(
-      entity.position._value,
-    );
+    let cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(entity.position._value);
     let lng = Cesium.Math.toDegrees(cartographic.longitude);
     let lat = Cesium.Math.toDegrees(cartographic.latitude);
 
@@ -99,9 +97,7 @@ const Trajectory: React.FC = () => {
     positionsGeoRef.current = [{ longitude: lng, latitude: lat }];
 
     // 2, 点击地图后, 在点击处绘制圆形的形状, 并且在地图上显示坐标
-    handlerRef.current = new Cesium.ScreenSpaceEventHandler(
-      viewer.scene.canvas,
-    ); // 鼠标事件处理器
+    handlerRef.current = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas); // 鼠标事件处理器
 
     handlerRef.current.setInputAction((movement: any) => {
       console.log(1111111111111111);
@@ -131,8 +127,7 @@ const Trajectory: React.FC = () => {
 
         // 连接上一个点和当前点
         if (positionsArrRef.current.length >= 1) {
-          let lastCartesian =
-            positionsArrRef.current[positionsArrRef.current.length - 1]; // 上一个点
+          let lastCartesian = positionsArrRef.current[positionsArrRef.current.length - 1]; // 上一个点
           // 绘制实线
           viewer.entities.add({
             polyline: {
@@ -166,9 +161,7 @@ const Trajectory: React.FC = () => {
     drawingRef.current = false;
     viewer.cesiumWidget._element.style.cursor = 'default'; // 鼠标样式为默认
 
-    handlerRef.current.removeInputAction(
-      Cesium.ScreenSpaceEventType.LEFT_CLICK,
-    );
+    handlerRef.current.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     console.log('positionsArrRef', positionsArrRef.current);
     console.log('positionsGeoRef', positionsGeoRef.current);
@@ -184,19 +177,11 @@ const Trajectory: React.FC = () => {
         <div id="cesiumContainer" className="static" />
         <div className="absolute top-8 left-8">
           {drawing ? (
-            <Button
-              id="startDrawing"
-              className="text-cyan-50 hover:text-gray-900"
-              onClick={() => handlerDrawOk()}
-            >
+            <Button id="startDrawing" className="text-cyan-50 hover:text-gray-900" onClick={() => handlerDrawOk()}>
               绘制完成
             </Button>
           ) : (
-            <Button
-              id="startDrawing"
-              className="text-cyan-50 hover:text-gray-900"
-              onClick={() => handlerDraw()}
-            >
+            <Button id="startDrawing" className="text-cyan-50 hover:text-gray-900" onClick={() => handlerDraw()}>
               开始绘制
             </Button>
           )}

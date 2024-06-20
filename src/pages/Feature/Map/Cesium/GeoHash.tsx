@@ -13,7 +13,7 @@ const InfoGeoHash: React.FC = () => {
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
 
-  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
+  Cesium.Ion.defaultAccessToken = process.env.CESIUM_ION_TOKEN as string;
 
   useEffect(() => {
     // 创建一个 Cesium Viewer 实例
@@ -48,28 +48,16 @@ const InfoGeoHash: React.FC = () => {
     viewer.camera.flyTo(initView);
 
     // 2, 添加一个点击事件来显示位置坐标：
-    viewer.screenSpaceEventHandler.setInputAction(
-      function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
-        const cartesian = viewer.camera.pickEllipsoid(
-          movement.position,
-          viewer.scene.globe.ellipsoid,
-        );
-        if (cartesian) {
-          const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-          const longitudeString = Cesium.Math.toDegrees(
-            cartographic.longitude,
-          ).toFixed(2);
-          const latitudeString = Cesium.Math.toDegrees(
-            cartographic.latitude,
-          ).toFixed(2);
-          messageApi.info(
-            `Longitude: ${longitudeString}, Latitude: ${latitudeString}`,
-          );
-          // alert(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
-        }
-      },
-      Cesium.ScreenSpaceEventType.LEFT_CLICK,
-    );
+    viewer.screenSpaceEventHandler.setInputAction(function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
+      const cartesian = viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+        const latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+        messageApi.info(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+        // alert(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     // 监听相机高度变化
     viewer.camera.moveEnd.addEventListener(() => {
@@ -164,18 +152,10 @@ const InfoGeoHash: React.FC = () => {
     let northwest = Cesium.Rectangle.northwest(extent);
 
     setExtent(`
-      西北角/左上角: ${Cesium.Math.toDegrees(
-        northwest.longitude,
-      )}, ${Cesium.Math.toDegrees(northwest.latitude)}
-      东北角/右上角: ${Cesium.Math.toDegrees(
-        northeast.longitude,
-      )}, ${Cesium.Math.toDegrees(northeast.latitude)}
-      东南角/右下角: ${Cesium.Math.toDegrees(
-        southeast.longitude,
-      )}, ${Cesium.Math.toDegrees(southeast.latitude)}
-      西南角/左下角: ${Cesium.Math.toDegrees(
-        southwest.longitude,
-      )}, ${Cesium.Math.toDegrees(southwest.latitude)}
+      西北角/左上角: ${Cesium.Math.toDegrees(northwest.longitude)}, ${Cesium.Math.toDegrees(northwest.latitude)}
+      东北角/右上角: ${Cesium.Math.toDegrees(northeast.longitude)}, ${Cesium.Math.toDegrees(northeast.latitude)}
+      东南角/右下角: ${Cesium.Math.toDegrees(southeast.longitude)}, ${Cesium.Math.toDegrees(southeast.latitude)}
+      西南角/左下角: ${Cesium.Math.toDegrees(southwest.longitude)}, ${Cesium.Math.toDegrees(southwest.latitude)}
     `);
 
     // 根据当前视图四个方位每个角的经纬度, 如何获取这四个经纬度范围内的 geohash
@@ -249,12 +229,7 @@ const InfoGeoHash: React.FC = () => {
         // 在 Cesium 中绘制子区域
         viewer.entities.add({
           rectangle: {
-            coordinates: Cesium.Rectangle.fromDegrees(
-              subWest,
-              subSouth,
-              subEast,
-              subNorth,
-            ),
+            coordinates: Cesium.Rectangle.fromDegrees(subWest, subSouth, subEast, subNorth),
             material: Cesium.Color.RED.withAlpha(0.3),
             outline: true,
             outlineColor: Cesium.Color.BLACK,
@@ -321,9 +296,7 @@ const InfoGeoHash: React.FC = () => {
         </div>
         <div className="mt-2">
           <Button onClick={() => getCenterPosition()}>获取中心点坐标</Button>
-          <span className="ml-4 text-red-600 text-success">
-            {centerPosition}
-          </span>
+          <span className="ml-4 text-red-600 text-success">{centerPosition}</span>
         </div>
       </ProCard>
     </>
