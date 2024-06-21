@@ -62,77 +62,74 @@ const Unit = () => {
   }, [viewer]);
 
   // NOTE 绘制矩形区域
-  const squareRef = useRef(false);
+  const handlerRef = useRef() as any;
   const FnSquareRegion = () => {
-    squareRef.current = !squareRef.current;
-    if (squareRef.current) {
-      viewer.cesiumWidget._element.style.cursor = 'crosshair'; // 光标变为十字
-      let drawingMode = false;
-      let firstPoint: any; // 第一个点
-      let rectangleEntity: any; // 矩形实体
-      const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
-      let lastUpdate = Date.now();
-      const updateInterval = 100; // 更新间隔（毫秒）
+    viewer.cesiumWidget._element.style.cursor = 'crosshair'; // 光标变为十字
+    let drawingMode = false;
+    let firstPoint: any; // 第一个点
+    let rectangleEntity: any; // 矩形实体
+    handlerRef.current = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+    let lastUpdate = Date.now();
+    const updateInterval = 100; // 更新间隔（毫秒）
 
-      // 监听点击事件以绘制正方形
-      handler.setInputAction((click: any) => {
-        // 获取点击位置的经纬度坐标
-        const earthPosition = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
-        if (!earthPosition) return;
+    // 监听点击事件以绘制正方形
+    handlerRef.current.setInputAction((click: any) => {
+      // 获取点击位置的经纬度坐标
+      const earthPosition = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+      if (!earthPosition) return;
 
-        if (!drawingMode) {
-          // 开始绘制
-          drawingMode = true;
-          // 记录第一个点
-          firstPoint = Cesium.Cartographic.fromCartesian(earthPosition);
+      if (!drawingMode) {
+        // 开始绘制
+        drawingMode = true;
+        // 记录第一个点
+        firstPoint = Cesium.Cartographic.fromCartesian(earthPosition);
 
-          // 创建矩形实体
-          rectangleEntity = viewer.entities.add({
-            rectangle: {
-              coordinates: new Cesium.CallbackProperty(() => {
-                if (firstPoint && drawingMode) {
-                  const rectangle = Cesium.Rectangle.fromCartographicArray([firstPoint, firstPoint]);
-                  return rectangle;
-                }
-              }, false), // 计算属性
-              material: Cesium.Color.YELLOW.withAlpha(0.2), // 材质
-              outline: true, // 是否显示轮廓
-              outlineColor: Cesium.Color.YELLOW, // 轮廓颜色
-              outlineWidth: 2, // 轮廓宽度
-              height: 0, // 高度
-            },
-          });
-        } else {
-          // 结束绘制
-          squareRef.current = false;
-          viewer.cesiumWidget._element.style.cursor = ''; // 光标恢复
-          drawingMode = false;
-          // 计算第二个点
-          rectangleEntity.rectangle.coordinates = Cesium.Rectangle.fromCartographicArray([
-            firstPoint,
-            Cesium.Cartographic.fromCartesian(earthPosition),
-          ]);
-          rectangleEntity.rectangle.material = Cesium.Color.BLACK.withAlpha(0.2); // 黑色
-          rectangleEntity.rectangle.outlineColor = Cesium.Color.BLACK; // 黑色
-          // 清空所有点
-          firstPoint = undefined;
-          rectangleEntity = undefined;
-        }
-      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        // 创建矩形实体
+        rectangleEntity = viewer.entities.add({
+          rectangle: {
+            coordinates: new Cesium.CallbackProperty(() => {
+              if (firstPoint && drawingMode) {
+                const rectangle = Cesium.Rectangle.fromCartographicArray([firstPoint, firstPoint]);
+                return rectangle;
+              }
+            }, false), // 计算属性
+            material: Cesium.Color.YELLOW.withAlpha(0.2), // 材质
+            outline: true, // 是否显示轮廓
+            outlineColor: Cesium.Color.YELLOW, // 轮廓颜色
+            outlineWidth: 2, // 轮廓宽度
+            height: 0, // 高度
+          },
+        });
+      } else {
+        // 结束绘制
+        viewer.cesiumWidget._element.style.cursor = ''; // 光标恢复
+        drawingMode = false;
+        // 计算第二个点
+        rectangleEntity.rectangle.coordinates = Cesium.Rectangle.fromCartographicArray([
+          firstPoint,
+          Cesium.Cartographic.fromCartesian(earthPosition),
+        ]);
+        rectangleEntity.rectangle.material = Cesium.Color.BLACK.withAlpha(0.2); // 黑色
+        rectangleEntity.rectangle.outlineColor = Cesium.Color.BLACK; // 黑色
 
-      // 监听鼠标移动
-      handler.setInputAction((movement: any) => {
-        // 如果正在绘制并且有第一个点，并且距离上次更新时间大于间隔时间，则更新
-        if (drawingMode && firstPoint && Date.now() - lastUpdate > updateInterval) {
-          lastUpdate = Date.now(); // 更新时间
-          const endPosition = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid); // 获取鼠标位置的笛卡尔坐标
-          if (!endPosition) return;
+        // 销毁事件
+        handlerRef.current.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        handlerRef.current.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-          const endPoint = Cesium.Cartographic.fromCartesian(endPosition); // 转换为经纬度坐标
-          rectangleEntity.rectangle.coordinates = Cesium.Rectangle.fromCartographicArray([firstPoint, endPoint]); // 更新矩形坐标
-        }
-      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    }
+    // 监听鼠标移动
+    handlerRef.current.setInputAction((movement: any) => {
+      // 如果正在绘制并且有第一个点，并且距离上次更新时间大于间隔时间，则更新
+      if (drawingMode && firstPoint && Date.now() - lastUpdate > updateInterval) {
+        lastUpdate = Date.now(); // 更新时间
+        const endPosition = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid); // 获取鼠标位置的笛卡尔坐标
+        if (!endPosition) return;
+
+        const endPoint = Cesium.Cartographic.fromCartesian(endPosition); // 转换为经纬度坐标
+        rectangleEntity.rectangle.coordinates = Cesium.Rectangle.fromCartographicArray([firstPoint, endPoint]); // 更新矩形坐标
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
   };
 
   return (
@@ -145,9 +142,9 @@ const Unit = () => {
           <Button className="w-8 h-8 p-0" onClick={() => FnSquareRegion()}>
             <GatewayOutlined className="text-lg text-center align-middle text-sky-400 hover:text-sky-400 " />
           </Button>
-          {/* <Button className="w-8 h-8 p-0 m-2" onClick={() => FnSquareRegion1()}>
+          <Button className="w-8 h-8 p-0 m-2" onClick={() => {}}>
             <GatewayOutlined className="text-lg text-center align-middle text-sky-400 hover:text-sky-400 " />
-          </Button> */}
+          </Button>
         </div>
       </ProCard>
     </>
