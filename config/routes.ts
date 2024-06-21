@@ -128,6 +128,11 @@ export const routes = [
             path: '/feature/Cesium/Trajectory',
             component: './Feature/Map/Cesium/Trajectory',
           },
+          {
+            name: 'Unit',
+            path: '/feature/Cesium/Unit',
+            component: './Feature/Map/Cesium/Unit',
+          },
         ],
       },
       {

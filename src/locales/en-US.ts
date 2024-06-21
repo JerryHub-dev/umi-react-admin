@@ -20,6 +20,7 @@ export default {
   'menu.feature.Cesium.DirectionDistance': 'DirectionDistance',
   'menu.feature.Cesium.ThermalMap': 'ThermalMap',
   'menu.feature.Cesium.Trajectory': 'Trajectory',
+  'menu.feature.Cesium.Unit': 'Unit',
   'menu.feature.OpenLayers': 'OpenLayers',
   'menu.feature.OpenLayers.InfoMap': 'InfoMap',
   // NOTE office
