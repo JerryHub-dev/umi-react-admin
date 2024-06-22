@@ -1,3 +1,5 @@
+import { getEntitiesInRectangle } from '@/utils/MapCompute/cesiumCompute.ts';
+import { iconData } from '@/utils/MapCompute/dataEnd';
 import { GatewayOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';
 import { Button, message } from 'antd';
@@ -7,10 +9,43 @@ import { useEffect, useRef, useState } from 'react';
 
 const Unit = () => {
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [messageApi, contextHolder] = message.useMessage();
   const [viewer, setViewer] = useState(null as any);
   const viewerRef = useRef(viewer);
+
+  // NOTE 添加图标
+  const handleIcon = (viewer: any) => {
+    iconData.forEach((item) => {
+      let entity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
+        id: item.id,
+        billboard: {
+          image: require('@/assets/Detection.png'),
+          // width: 40,
+          // height: 40,
+          scale: 0.3,
+        },
+        label: {
+          text: item.label, // 文本内容
+          font: '14px sans-serif', // 字体大小
+          backgroundColor: Cesium.Color.fromCssColorString('#0094ff'), // 背景颜色
+          showBackground: true, // 是否显示背景
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE, // 样式
+          fillColor: Cesium.Color.WHITE, // 填充颜色
+          outlineColor: Cesium.Color.BLACK, // 边框颜色
+          outlineWidth: 2, // 边框宽度
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER, // 水平对齐方式
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM, // 垂直对齐方式
+          pixelOffset: new Cesium.Cartesian2(0, 55), // 偏移量
+          pixelOffsetScaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 8.0e6, 0.5), // 偏移量随距离变化
+        },
+      });
+      // 额外参数
+      entity.properties = {
+        text: item.label,
+      };
+    });
+  };
 
   // NOTE 初始化 Cesium
   useEffect(() => {
@@ -48,7 +83,9 @@ const Unit = () => {
     setViewer(viewer);
     viewerRef.current = viewer;
 
-    setTimeout(() => {}, 100);
+    setTimeout(() => {
+      handleIcon(viewer);
+    }, 100);
 
     // 销毁 Cesium
     return () => {
@@ -112,6 +149,17 @@ const Unit = () => {
         rectangleEntity.rectangle.material = Cesium.Color.BLACK.withAlpha(0.2); // 黑色
         rectangleEntity.rectangle.outlineColor = Cesium.Color.BLACK; // 黑色
 
+        // 获取矩形的坐标
+        const rectangle = rectangleEntity.rectangle.coordinates.getValue(); // 获取矩形坐标
+        const west = Cesium.Math.toDegrees(rectangle.west); // 转换为经度
+        const south = Cesium.Math.toDegrees(rectangle.south); // 转换为纬度
+        const east = Cesium.Math.toDegrees(rectangle.east); // 转换为经度
+        const north = Cesium.Math.toDegrees(rectangle.north); // 转换为纬度
+        messageApi.success(`${west},${south},${east},${north}`);
+
+        const entitiesInside = getEntitiesInRectangle(viewer, rectangle);
+        console.log('矩形实体内的实体', entitiesInside);
+
         // 销毁事件
         handlerRef.current.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
         handlerRef.current.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -142,9 +190,9 @@ const Unit = () => {
           <Button className="w-8 h-8 p-0" onClick={() => FnSquareRegion()}>
             <GatewayOutlined className="text-lg text-center align-middle text-sky-400 hover:text-sky-400 " />
           </Button>
-          <Button className="w-8 h-8 p-0 m-2" onClick={() => {}}>
+          {/* <Button className="w-8 h-8 p-0 m-2" onClick={() => {}}>
             <GatewayOutlined className="text-lg text-center align-middle text-sky-400 hover:text-sky-400 " />
-          </Button>
+          </Button> */}
         </div>
       </ProCard>
     </>
