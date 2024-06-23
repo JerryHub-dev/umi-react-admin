@@ -1,4 +1,4 @@
-import { getEntitiesInRectangle } from '@/utils/MapCompute/cesiumCompute.ts';
+import { getEntitiesInRectangle } from '@/utils/MapCompute/cesiumCompute';
 import { iconData } from '@/utils/MapCompute/dataEnd';
 import { GatewayOutlined } from '@ant-design/icons';
 import { ProCard } from '@ant-design/pro-components';

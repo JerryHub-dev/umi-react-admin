@@ -235,12 +235,21 @@ const ThermalMap = () => {
     }
 
     dataPoints.forEach((point: any) => {
+      // 聚合
+      viewer.entities.cluster = {
+        enabled: true, // 是否启用聚合
+        pixelRange: 50, // 聚合像素范围
+        minimumClusterSize: 10, // 最小聚合大小
+        clusterBillboards: true, // 是否聚合图标
+        clusterLabels: true, // 是否聚合标签
+        clusterPoints: true, // 是否聚合点
+      };
       viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude),
         point: {
           pixelSize: 5, // 像素大小
           color: getColorForStrength(point.fieldStrength),
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, // 高度参考
         },
       });
     });
