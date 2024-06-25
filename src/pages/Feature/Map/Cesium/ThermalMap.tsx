@@ -244,15 +244,40 @@ const ThermalMap = () => {
         clusterLabels: true, // 是否聚合标签
         clusterPoints: true, // 是否聚合点
       };
-      viewer.entities.add({
+      let entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude),
+        name: point.fieldStrength, // 实体的名称
         point: {
           pixelSize: 5, // 像素大小
           color: getColorForStrength(point.fieldStrength),
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, // 高度参考
         },
       });
+      entity.properties = {
+        fieldStrength: point.fieldStrength,
+      };
     });
+    let infoDiv = document.createElement('div');
+    document.body.appendChild(infoDiv);
+    infoDiv.style.position = 'absolute';
+    infoDiv.style.background = 'white';
+    infoDiv.style.padding = '5px';
+    infoDiv.style.display = 'none';
+
+    // 鼠标放到点上时根据点的名称显示信息
+    viewer.screenSpaceEventHandler.setInputAction(function onMouseMove(movement: any) {
+      let pickedObject = viewer.scene.pick(movement.endPosition);
+      if (Cesium.defined(pickedObject) && Cesium.defined(pickedObject.id) && pickedObject.id.properties.fieldStrength) {
+        let name = pickedObject.id.name;
+
+        infoDiv.style.display = 'block';
+        infoDiv.style.left = movement.endPosition.x + 10 + 'px';
+        infoDiv.style.top = movement.endPosition.y + 10 + 'px';
+        infoDiv.textContent = name;
+      } else {
+        infoDiv.style.display = 'none';
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     viewer.zoomTo(viewer.entities);
   };

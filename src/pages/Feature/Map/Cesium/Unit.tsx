@@ -83,6 +83,18 @@ const Unit = () => {
     setViewer(viewer);
     viewerRef.current = viewer;
 
+    // 2, 添加一个点击事件来显示位置坐标：
+    viewer.screenSpaceEventHandler.setInputAction(function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
+      const cartesian = viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+        const latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+        messageApi.info(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+        // alert(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
     setTimeout(() => {
       handleIcon(viewer);
     }, 100);
@@ -156,6 +168,25 @@ const Unit = () => {
         const east = Cesium.Math.toDegrees(rectangle.east); // 转换为经度
         const north = Cesium.Math.toDegrees(rectangle.north); // 转换为纬度
         messageApi.success(`${west},${south},${east},${north}`);
+        console.log('左上角:', west, north, '右下角:', east, south);
+        // 获取矩形四个角的经纬度坐标
+        const southwest = new Cesium.Cartographic(rectangle.west, rectangle.south); // 西南角, 左下角
+        const northwest = new Cesium.Cartographic(rectangle.west, rectangle.north); // 西北角, 左上角
+        const northeast = new Cesium.Cartographic(rectangle.east, rectangle.north); // 东北角, 右上角
+        const southeast = new Cesium.Cartographic(rectangle.east, rectangle.south); // 东南角, 右下角
+        // console.log('矩形四个角的经纬度坐标', southwest, northwest, northeast, southeast);
+        console.log(
+          `左上角: ${Cesium.Math.toDegrees(northwest.longitude)}, ${Cesium.Math.toDegrees(northwest.latitude)}`,
+        );
+        console.log(
+          `右上角: ${Cesium.Math.toDegrees(northeast.longitude)}, ${Cesium.Math.toDegrees(northeast.latitude)}`,
+        );
+        console.log(
+          `左下角: ${Cesium.Math.toDegrees(southwest.longitude)}, ${Cesium.Math.toDegrees(southwest.latitude)}`,
+        );
+        console.log(
+          `右下角: ${Cesium.Math.toDegrees(southeast.longitude)}, ${Cesium.Math.toDegrees(southeast.latitude)}`,
+        );
 
         const entitiesInside = getEntitiesInRectangle(viewer, rectangle);
         console.log('矩形实体内的实体', entitiesInside);
