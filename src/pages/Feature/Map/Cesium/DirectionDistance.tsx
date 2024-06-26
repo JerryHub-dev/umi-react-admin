@@ -1,8 +1,14 @@
 /**
  * DirectionDistance.tsx
  */
-import { handlerDirectionDistance, handlerPointNew } from '@/utils/MapCompute/cesiumCompute';
+import {
+  handlerDirectionDistance,
+  handlerDistanceKm,
+  handlerPointNew,
+  handlerPolygonPath,
+} from '@/utils/MapCompute/cesiumCompute';
 import { dataPath } from '@/utils/MapCompute/dataEnd';
+import { demodulationResultList, interceptResultList, locationResultList } from '@/utils/MapCompute/exportJson';
 import { ProCard } from '@ant-design/pro-components';
 import { Alert, Button, Tooltip } from 'antd';
 import * as Cesium from 'cesium';
@@ -88,6 +94,87 @@ const DirectionDistance: React.FC = () => {
     viewer.zoomTo(polygon);
   };
 
+  // NOTE 经纬度渲染
+  const handlerLatLon = () => {
+    let intercept = JSON.parse(JSON.stringify(interceptResultList));
+    let location = JSON.parse(JSON.stringify(locationResultList));
+    let demodulation = JSON.parse(JSON.stringify(demodulationResultList));
+
+    let interceptList = handlerPolygonPath(intercept);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: interceptList,
+        width: 2,
+        // 内部填充颜色 透明度
+        material: Cesium.Color.RED.withAlpha(0.5),
+        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
+        //   color: Cesium.Color.RED,
+        // }),
+      },
+    });
+
+    let locationList = handlerPolygonPath(location);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: locationList,
+        width: 2,
+        // 内部填充颜色 透明度
+        material: Cesium.Color.BLUE.withAlpha(0.5),
+        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
+        //   color: Cesium.Color.BLUE,
+        // }),
+      },
+    });
+
+    let demodulationList = handlerPolygonPath(demodulation);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: demodulationList,
+        width: 2,
+        // 内部填充颜色 透明度
+        material: Cesium.Color.GREEN.withAlpha(0.5),
+        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
+        //   color: Cesium.Color.GREEN,
+        // }),
+      },
+    });
+  };
+
+  // NOTE 方向距离渲染
+  const handlerDistance = () => {
+    let intercept = JSON.parse(JSON.stringify(interceptResultList));
+    let location = JSON.parse(JSON.stringify(locationResultList));
+    let demodulation = JSON.parse(JSON.stringify(demodulationResultList));
+
+    let startLongitude = 116.3974;
+    let startLatitude = 39.9093;
+    let startHeight = 0;
+
+    let startPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, intercept);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: startPoint,
+        material: Cesium.Color.RED.withAlpha(0.5),
+      },
+    });
+
+    let endPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, location);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: endPoint,
+        material: Cesium.Color.BLUE.withAlpha(0.5),
+      },
+    });
+
+    let demodulationPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, demodulation);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: demodulationPoint,
+        material: Cesium.Color.GREEN.withAlpha(0.5),
+      },
+    });
+  };
+
   return (
     <>
       <Alert className="mb-2" message="方向距离算法" type="success" />
@@ -104,6 +191,13 @@ const DirectionDistance: React.FC = () => {
             每一个点的终点为下一个点的起点
           </Button>
         </Tooltip>
+
+        <Button className="mt-2 ml-2" onClick={() => handlerLatLon()}>
+          经纬度渲染
+        </Button>
+        <Button className="mt-2 ml-2" onClick={() => handlerDistance()}>
+          方向距离渲染
+        </Button>
       </ProCard>
     </>
   );

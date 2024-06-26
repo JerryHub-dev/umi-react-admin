@@ -1,4 +1,4 @@
-import { handlerDistanceKm, handlerPolygonPath } from '@/utils/MapCompute/cesiumCompute';
+import { handlerComputePoint, handlerDistanceKm, handlerPolygonPath } from '@/utils/MapCompute/cesiumCompute';
 import { iconData } from '@/utils/MapCompute/dataEnd';
 import { demodulationResultList, interceptResultList, locationResultList } from '@/utils/MapCompute/exportJson';
 import { ProCard } from '@ant-design/pro-components';
@@ -165,31 +165,9 @@ const Trajectory: React.FC = () => {
 
     console.log('positionsArrRef', positionsArrRef.current);
     console.log('positionsGeoRef', positionsGeoRef.current);
-    // 计算 positionsGeoRef 中每个点的距离, 如果距离大于 1000 米,则生成一个新的点
-    let dataPath = [];
-    for (let i = 0; i < positionsGeoRef.current.length - 1; i++) {
-      let start = positionsGeoRef.current[i];
-      let end = positionsGeoRef.current[i + 1];
-      // 计算两点之间的距离
-      let distance = Cesium.Cartesian3.distance(
-        Cesium.Cartesian3.fromDegrees(start.longitude, start.latitude),
-        Cesium.Cartesian3.fromDegrees(end.longitude, end.latitude),
-      );
-      if (distance > 1000) {
-        // 该段距离大于 1000 米, 每 1000 米生成一个新的经纬度点
-        let count = Math.floor(distance / 1000); // 向下取整
-        let step = 1000; // 步长
-        // 生成新的点
-        for (let j = 0; j < count; j++) {
-          let longitude = start.longitude + ((end.longitude - start.longitude) * step) / distance; // 计算经度
-          let latitude = start.latitude + ((end.latitude - start.latitude) * step) / distance; // 计算纬度
-          dataPath.push({ longitude, latitude }); // 添加新的点
-          step += 1000; // 步长递增
-        }
-        // 添加最后一个点
-        dataPath.push(end);
-      }
-    }
+
+    let dataPath = handlerComputePoint(positionsGeoRef.current, 1000);
+
     console.log('dataPath', dataPath);
     // 连接 dataPath 中的点, 成为一条路径
     dataPath.forEach((item) => {

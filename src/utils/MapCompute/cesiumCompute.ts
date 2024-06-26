@@ -166,3 +166,37 @@ export function handlerPointNew(startLongitude: number, startLatitude: number, s
 
   return pathPoints;
 }
+
+/**
+ * 计算两点之间的距离, 如果距离大于 distanceMi 设定的米,则生成一个新的点
+ * @param data 位置数据(经纬度)
+ * @param distanceMi 生成新点的距离
+ * @returns 新的位置数据
+ */
+export const handlerComputePoint = (data: any, distanceMi: number) => {
+  let dataPath = [];
+  for (let i = 0; i < data.length - 1; i++) {
+    let start = data[i];
+    let end = data[i + 1];
+    // 计算两点之间的距离
+    let distance = Cesium.Cartesian3.distance(
+      Cesium.Cartesian3.fromDegrees(start.longitude, start.latitude),
+      Cesium.Cartesian3.fromDegrees(end.longitude, end.latitude),
+    );
+    if (distance > 1000) {
+      // 该段距离大于 1000 米, 每 1000 米生成一个新的经纬度点
+      let count = Math.floor(distance / distanceMi); // 向下取整
+      let step = 1000; // 步长
+      // 生成新的点
+      for (let j = 0; j < count; j++) {
+        let longitude = start.longitude + ((end.longitude - start.longitude) * step) / distance; // 计算经度
+        let latitude = start.latitude + ((end.latitude - start.latitude) * step) / distance; // 计算纬度
+        dataPath.push({ longitude, latitude }); // 添加新的点
+        step += 1000; // 步长递增
+      }
+      // 添加最后一个点
+      dataPath.push(end);
+    }
+  }
+  return dataPath;
+};
