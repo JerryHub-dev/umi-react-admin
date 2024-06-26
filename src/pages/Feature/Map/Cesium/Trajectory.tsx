@@ -1,4 +1,6 @@
+import { handlerDistanceKm, handlerPolygonPath } from '@/utils/MapCompute/cesiumCompute';
 import { iconData } from '@/utils/MapCompute/dataEnd';
+import { demodulationResultList, interceptResultList, locationResultList } from '@/utils/MapCompute/exportJson';
 import { ProCard } from '@ant-design/pro-components';
 import { Alert, Button } from 'antd';
 import * as Cesium from 'cesium';
@@ -100,7 +102,6 @@ const Trajectory: React.FC = () => {
     handlerRef.current = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas); // 鼠标事件处理器
 
     handlerRef.current.setInputAction((movement: any) => {
-      console.log(1111111111111111);
       // 获取鼠标位置的笛卡尔坐标
       let cartesian = viewer.camera.pickEllipsoid(
         movement.position, // 鼠标位置
@@ -108,7 +109,6 @@ const Trajectory: React.FC = () => {
       );
 
       if (cartesian && drawingRef.current) {
-        console.log('22222222222222222222222222222222');
         let cartographic = Cesium.Cartographic.fromCartesian(cartesian); // 笛卡尔坐标转经纬度
         let longitudeString = Cesium.Math.toDegrees(cartographic.longitude); // 经度
         let latitudeString = Cesium.Math.toDegrees(cartographic.latitude); // 纬度
@@ -119,8 +119,8 @@ const Trajectory: React.FC = () => {
         viewer.entities.add({
           position: cartesian,
           ellipse: {
-            semiMinorAxis: 30000.0,
-            semiMajorAxis: 30000.0,
+            semiMinorAxis: 30.0,
+            semiMajorAxis: 30.0,
             material: new Cesium.Color(1.0, 1.0, 1.0, 0.5),
           },
         });
@@ -165,9 +165,126 @@ const Trajectory: React.FC = () => {
 
     console.log('positionsArrRef', positionsArrRef.current);
     console.log('positionsGeoRef', positionsGeoRef.current);
+    // 计算 positionsGeoRef 中每个点的距离, 如果距离大于 1000 米,则生成一个新的点
+    let dataPath = [];
+    for (let i = 0; i < positionsGeoRef.current.length - 1; i++) {
+      let start = positionsGeoRef.current[i];
+      let end = positionsGeoRef.current[i + 1];
+      // 计算两点之间的距离
+      let distance = Cesium.Cartesian3.distance(
+        Cesium.Cartesian3.fromDegrees(start.longitude, start.latitude),
+        Cesium.Cartesian3.fromDegrees(end.longitude, end.latitude),
+      );
+      if (distance > 1000) {
+        // 该段距离大于 1000 米, 每 1000 米生成一个新的经纬度点
+        let count = Math.floor(distance / 1000); // 向下取整
+        let step = 1000; // 步长
+        // 生成新的点
+        for (let j = 0; j < count; j++) {
+          let longitude = start.longitude + ((end.longitude - start.longitude) * step) / distance; // 计算经度
+          let latitude = start.latitude + ((end.latitude - start.latitude) * step) / distance; // 计算纬度
+          dataPath.push({ longitude, latitude }); // 添加新的点
+          step += 1000; // 步长递增
+        }
+        // 添加最后一个点
+        dataPath.push(end);
+      }
+    }
+    console.log('dataPath', dataPath);
+    // 连接 dataPath 中的点, 成为一条路径
+    dataPath.forEach((item) => {
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
+        billboard: {
+          image: require('@/assets/Detection.png'),
+          scale: 0.3,
+        },
+      });
+    });
+
+    dataPath = [];
 
     positionsArrRef.current = [];
     positionsGeoRef.current = [];
+  };
+
+  const handlerLatLon = () => {
+    let intercept = JSON.parse(JSON.stringify(interceptResultList));
+    let location = JSON.parse(JSON.stringify(locationResultList));
+    let demodulation = JSON.parse(JSON.stringify(demodulationResultList));
+
+    let interceptList = handlerPolygonPath(intercept);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: interceptList,
+        width: 2,
+        // 内部填充颜色 透明度
+        material: Cesium.Color.RED.withAlpha(0.5),
+        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
+        //   color: Cesium.Color.RED,
+        // }),
+      },
+    });
+
+    let locationList = handlerPolygonPath(location);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: locationList,
+        width: 2,
+        // 内部填充颜色 透明度
+        material: Cesium.Color.BLUE.withAlpha(0.5),
+        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
+        //   color: Cesium.Color.BLUE,
+        // }),
+      },
+    });
+
+    let demodulationList = handlerPolygonPath(demodulation);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: demodulationList,
+        width: 2,
+        // 内部填充颜色 透明度
+        material: Cesium.Color.GREEN.withAlpha(0.5),
+        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
+        //   color: Cesium.Color.GREEN,
+        // }),
+      },
+    });
+  };
+
+  const handlerDistance = () => {
+    let intercept = JSON.parse(JSON.stringify(interceptResultList));
+    let location = JSON.parse(JSON.stringify(locationResultList));
+    let demodulation = JSON.parse(JSON.stringify(demodulationResultList));
+
+    let startLongitude = 116.3974;
+    let startLatitude = 39.9093;
+    let startHeight = 0;
+
+    let startPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, intercept);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: startPoint,
+        material: Cesium.Color.RED.withAlpha(0.5),
+      },
+    });
+
+    let endPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, location);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: endPoint,
+        material: Cesium.Color.BLUE.withAlpha(0.5),
+      },
+    });
+
+    let demodulationPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, demodulation);
+    viewer.entities.add({
+      polygon: {
+        hierarchy: demodulationPoint,
+        material: Cesium.Color.GREEN.withAlpha(0.5),
+      },
+    });
   };
 
   return (
@@ -186,6 +303,12 @@ const Trajectory: React.FC = () => {
             </Button>
           )}
         </div>
+        <Button className="mt-2" onClick={() => handlerLatLon()}>
+          经纬度渲染
+        </Button>
+        <Button className="mt-2 ml-2" onClick={() => handlerDistance()}>
+          方向距离渲染
+        </Button>
       </ProCard>
     </>
   );

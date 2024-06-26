@@ -1,6 +1,7 @@
 /**
  * DirectionDistance.tsx
  */
+import { handlerDirectionDistance, handlerPointNew } from '@/utils/MapCompute/cesiumCompute';
 import { dataPath } from '@/utils/MapCompute/dataEnd';
 import { ProCard } from '@ant-design/pro-components';
 import { Alert, Button, Tooltip } from 'antd';
@@ -58,35 +59,11 @@ const DirectionDistance: React.FC = () => {
     let startLatitude = 39.9093;
     let startHeight = 0;
 
-    let earthRadius = Cesium.Ellipsoid.WGS84.maximumRadius; // 地球半径
-
-    let fixedPositions = Cesium.Cartographic.fromDegrees(startLongitude, startLatitude, startHeight); // 起点
-    let fixedCartesian = Cesium.Cartographic.toCartesian(fixedPositions); // 起点的笛卡尔坐标
-
-    // 生成路径
-    let data = dataPath;
-
-    let endPointCartesians: any[] = [];
-    // let currentCartesian = fixedCartesian;
-
-    data.forEach((item) => {
-      let direction = Cesium.Math.toRadians(item.direction); // 方向角度
-      let distance = item.distance * 1000; // 距离
-
-      // 计算终点的笛卡尔坐标
-      let endpointCartesian = Cesium.Cartesian3.fromRadians(
-        Cesium.Cartographic.fromCartesian(fixedCartesian).longitude + (distance / earthRadius) * Math.cos(direction),
-        Cesium.Cartographic.fromCartesian(fixedCartesian).latitude + (distance / earthRadius) * Math.sin(direction),
-        Cesium.Cartographic.fromCartesian(fixedCartesian).height,
-      );
-      endPointCartesians.push(endpointCartesian);
-    });
-
-    endPointCartesians.push(endPointCartesians[0]);
+    let startPoint = handlerDirectionDistance(startLongitude, startLatitude, startHeight, dataPath);
 
     let polygon = viewer.entities.add({
       polygon: {
-        hierarchy: new Cesium.PolygonHierarchy(endPointCartesians),
+        hierarchy: startPoint,
         material: Cesium.Color.RED.withAlpha(0.5),
       },
     });
@@ -100,38 +77,7 @@ const DirectionDistance: React.FC = () => {
     let startLatitude = 39.9093;
     let startHeight = 0;
 
-    let startPoint = Cesium.Cartesian3.fromDegrees(startLongitude, startLatitude, startHeight);
-
-    let data = dataPath;
-
-    let pathPoints: any[] = [startPoint]; // 路径点
-    let currentPoint = startPoint; // 当前点
-
-    data.forEach((item) => {
-      let direction = Cesium.Math.toRadians(item.direction); // 方向角度
-      let distance = item.distance * 1000; // 距离
-
-      // 计算终点的笛卡尔坐标
-      let newPoint = Cesium.Cartesian3.fromRadians(
-        Cesium.Cartographic.fromCartesian(currentPoint).longitude +
-          (distance / Cesium.Ellipsoid.WGS84.maximumRadius) * Math.cos(direction),
-        Cesium.Cartographic.fromCartesian(currentPoint).latitude +
-          (distance / Cesium.Ellipsoid.WGS84.maximumRadius) * Math.sin(direction),
-        Cesium.Cartographic.fromCartesian(currentPoint).height,
-      );
-      pathPoints.push(newPoint); // 添加新点
-      currentPoint = newPoint; // 更新当前点
-    });
-
-    viewer.entities.add({
-      polyline: {
-        positions: pathPoints,
-        width: 2,
-        material: Cesium.Color.RED,
-      },
-    });
-
-    pathPoints.push(startPoint); // 添加起始点以形成闭合路径
+    let pathPoints = handlerPointNew(startLongitude, startLatitude, startHeight, dataPath);
     let polygon = viewer.entities.add({
       polygon: {
         hierarchy: pathPoints,
