@@ -195,9 +195,12 @@ const DirectionDistance: React.FC = () => {
         <Button className="mt-2 ml-2" onClick={() => handlerLatLon()}>
           经纬度渲染
         </Button>
-        <Button className="mt-2 ml-2" onClick={() => handlerDistance()}>
-          方向距离渲染
-        </Button>
+
+        <Tooltip title="根据方向(度)和距离(km)生成路径 (起始点为固定点路径完成连接终点)">
+          <Button className="mt-2 ml-2" onClick={() => handlerDistance()}>
+            方向距离渲染
+          </Button>
+        </Tooltip>
       </ProCard>
     </>
   );

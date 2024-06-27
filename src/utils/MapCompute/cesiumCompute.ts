@@ -183,16 +183,16 @@ export const handlerComputePoint = (data: any, distanceMi: number) => {
       Cesium.Cartesian3.fromDegrees(start.longitude, start.latitude),
       Cesium.Cartesian3.fromDegrees(end.longitude, end.latitude),
     );
-    if (distance > 1000) {
+    if (distance > distanceMi) {
       // 该段距离大于 1000 米, 每 1000 米生成一个新的经纬度点
       let count = Math.floor(distance / distanceMi); // 向下取整
-      let step = 1000; // 步长
+      let step = distanceMi; // 步长
       // 生成新的点
       for (let j = 0; j < count; j++) {
         let longitude = start.longitude + ((end.longitude - start.longitude) * step) / distance; // 计算经度
         let latitude = start.latitude + ((end.latitude - start.latitude) * step) / distance; // 计算纬度
         dataPath.push({ longitude, latitude }); // 添加新的点
-        step += 1000; // 步长递增
+        step += distanceMi; // 步长递增
       }
       // 添加最后一个点
       dataPath.push(end);

@@ -1,7 +1,9 @@
-import { handlerComputePoint, handlerDistanceKm, handlerPolygonPath } from '@/utils/MapCompute/cesiumCompute';
+import { handlerComputePoint } from '@/utils/MapCompute/cesiumCompute';
 import { iconData } from '@/utils/MapCompute/dataEnd';
 import { demodulationResultList, interceptResultList, locationResultList } from '@/utils/MapCompute/exportJson';
 import { ProCard } from '@ant-design/pro-components';
+// import * as turf from '@turf/turf';
+// import turf from '/public/js/turf.min.js';
 import { Alert, Button } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -10,6 +12,8 @@ import React, { useEffect, useState } from 'react';
 const Trajectory: React.FC = () => {
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
   const [viewer, setViewer] = useState(null as any);
+  let turf = window.turf;
+  console.log(turf);
 
   useEffect(() => {
     // 创建一个 Cesium Viewer 实例
@@ -186,83 +190,165 @@ const Trajectory: React.FC = () => {
     positionsGeoRef.current = [];
   };
 
+  function mergePolygons(polygonArrays: any) {
+    console.log('Input polygonArrays:', JSON.stringify(polygonArrays, null, 2));
+
+    if (!Array.isArray(polygonArrays) || polygonArrays.length === 0) {
+      throw new Error('Input must be a non-empty array of polygon coordinates.');
+    }
+
+    function isValidPoint(p: any) {
+      return (
+        p &&
+        typeof p.longitude === 'number' &&
+        typeof p.latitude === 'number' &&
+        !isNaN(p.longitude) &&
+        !isNaN(p.latitude)
+      );
+    }
+
+    function pointsEqual(p1: any, p2: any) {
+      return p1.longitude === p2.longitude && p1.latitude === p2.latitude;
+    }
+
+    const validPolygons = polygonArrays
+      .map((polygon, index) => {
+        if (!Array.isArray(polygon) || polygon.length < 3) {
+          console.warn(`Polygon at index ${index} is invalid (less than 3 points). Skipping.`);
+          return null;
+        }
+
+        // Filter valid points and remove consecutive duplicates
+        const validPoints = polygon.filter((p, i, arr) => isValidPoint(p) && (i === 0 || !pointsEqual(p, arr[i - 1])));
+
+        if (validPoints.length < 3) {
+          console.warn(`Polygon at index ${index} has less than 3 valid unique points. Skipping.`);
+          return null;
+        }
+
+        // Ensure the polygon is closed
+        if (!pointsEqual(validPoints[0], validPoints[validPoints.length - 1])) {
+          validPoints.push(validPoints[0]);
+        }
+
+        console.log(`Processed polygon ${index}:`, JSON.stringify(validPoints, null, 2));
+        return validPoints;
+      })
+      .filter(Boolean);
+
+    console.log('Valid polygons:', JSON.stringify(validPolygons, null, 2));
+
+    if (validPolygons.length === 0) {
+      throw new Error('No valid polygons to merge.');
+    }
+
+    const turfPolygons: any = validPolygons
+      .map((polygon: any, index: number) => {
+        try {
+          const coordinates = polygon.map((p: any) => [p.longitude, p.latitude]);
+          console.log(`Creating turf polygon ${index} with coordinates:`, JSON.stringify(coordinates));
+          return turf.polygon([coordinates]);
+        } catch (error) {
+          console.error(`Error creating turf polygon ${index}:`, error);
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    console.log('Created turf polygons:', turfPolygons.length);
+
+    if (turfPolygons.length === 0) {
+      throw new Error('Failed to create valid turf polygons.');
+    }
+
+    if (turfPolygons.length === 1) {
+      console.log('Only one valid polygon, no merging needed.');
+      const coordinates = turfPolygons[0].geometry.coordinates[0];
+      return coordinates.map((coord: any) => ({
+        longitude: coord[0],
+        latitude: coord[1],
+      }));
+    }
+
+    try {
+      console.log('Combining polygons using turf.combine');
+      const featureCollection: any = turf.featureCollection(turfPolygons);
+      const combined = turf.combine(featureCollection);
+      console.log('Combined result:', JSON.stringify(combined));
+
+      if (!combined || !combined.features || combined.features.length === 0) {
+        throw new Error('Combination resulted in no features');
+      }
+
+      // Get the first (and hopefully only) feature from the combination
+      const mergedPolygon = combined.features[0];
+
+      if (!mergedPolygon || !mergedPolygon.geometry || !mergedPolygon.geometry.coordinates) {
+        throw new Error('Invalid merged polygon structure');
+      }
+
+      // Handle potential MultiPolygon result
+      const coordinates =
+        mergedPolygon.geometry.type === 'MultiPolygon'
+          ? mergedPolygon.geometry.coordinates[0][0] // Take the outer ring of the first polygon
+          : mergedPolygon.geometry.coordinates[0];
+
+      return coordinates.map((coord: any) => ({
+        longitude: coord[0],
+        latitude: coord[1],
+      }));
+    } catch (error: any) {
+      console.error('Error during polygon combination:', error);
+      throw new Error(`Failed to merge polygons: ${error.message}`);
+    }
+  }
+
+  // NOTE 相交合并/包含去重, 组成新的路径渲染
   const handlerLatLon = () => {
     let intercept = JSON.parse(JSON.stringify(interceptResultList));
     let location = JSON.parse(JSON.stringify(locationResultList));
     let demodulation = JSON.parse(JSON.stringify(demodulationResultList));
 
-    let interceptList = handlerPolygonPath(intercept);
-    viewer.entities.add({
-      polygon: {
-        hierarchy: interceptList,
-        width: 2,
-        // 内部填充颜色 透明度
-        material: Cesium.Color.RED.withAlpha(0.5),
-        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
-        //   color: Cesium.Color.RED,
-        // }),
-      },
+    // 使用示例
+    // const polygonArrays = [
+    //   [{longitude: -75.0, latitude: 40.0}, {longitude: -74.0, latitude: 41.0}, {longitude: -73.0, latitude: 40.0}],
+    //   [{longitude: -74.5, latitude: 40.5}, {longitude: -73.5, latitude: 41.5}, {longitude: -72.5, latitude: 40.5}]
+    // ];
+
+    let interceptPath = [] as any[];
+    intercept.forEach((item: any) => {
+      interceptPath.push({ longitude: item.longitude, latitude: item.latitude });
     });
+    interceptPath.push({ longitude: intercept[0].longitude, latitude: intercept[0].latitude });
 
-    let locationList = handlerPolygonPath(location);
-    viewer.entities.add({
-      polygon: {
-        hierarchy: locationList,
-        width: 2,
-        // 内部填充颜色 透明度
-        material: Cesium.Color.BLUE.withAlpha(0.5),
-        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
-        //   color: Cesium.Color.BLUE,
-        // }),
-      },
+    let locationPath = [] as any[];
+    location.forEach((item: any) => {
+      locationPath.push({ longitude: item.longitude, latitude: item.latitude });
     });
+    locationPath.push({ longitude: location[0].longitude, latitude: location[0].latitude });
 
-    let demodulationList = handlerPolygonPath(demodulation);
-    viewer.entities.add({
-      polygon: {
-        hierarchy: demodulationList,
-        width: 2,
-        // 内部填充颜色 透明度
-        material: Cesium.Color.GREEN.withAlpha(0.5),
-        // material: new Cesium.PolylineDashMaterialProperty({ // 虚线材质
-        //   color: Cesium.Color.GREEN,
-        // }),
-      },
+    let demodulationPath = [] as any[];
+    demodulation.forEach((item: any) => {
+      demodulationPath.push({ longitude: item.longitude, latitude: item.latitude });
     });
-  };
+    demodulationPath.push({ longitude: demodulationPath[0].longitude, latitude: demodulationPath[0].latitude }); // 添加第一个点, 形成闭合路径
 
-  const handlerDistance = () => {
-    let intercept = JSON.parse(JSON.stringify(interceptResultList));
-    let location = JSON.parse(JSON.stringify(locationResultList));
-    let demodulation = JSON.parse(JSON.stringify(demodulationResultList));
+    let polygonArrays = [interceptPath, locationPath, demodulationPath];
+    console.log('polygonArrays', polygonArrays);
+    try {
+      const mergedPolygon = mergePolygons(polygonArrays);
+      console.log('Merged polygon:', JSON.stringify(mergedPolygon, null, 2));
 
-    let startLongitude = 116.3974;
-    let startLatitude = 39.9093;
-    let startHeight = 0;
-
-    let startPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, intercept);
-    viewer.entities.add({
-      polygon: {
-        hierarchy: startPoint,
-        material: Cesium.Color.RED.withAlpha(0.5),
-      },
-    });
-
-    let endPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, location);
-    viewer.entities.add({
-      polygon: {
-        hierarchy: endPoint,
-        material: Cesium.Color.BLUE.withAlpha(0.5),
-      },
-    });
-
-    let demodulationPoint = handlerDistanceKm(startLongitude, startLatitude, startHeight, demodulation);
-    viewer.entities.add({
-      polygon: {
-        hierarchy: demodulationPoint,
-        material: Cesium.Color.GREEN.withAlpha(0.5),
-      },
-    });
+      // 在 Cesium 中显示合并后的多边形
+      viewer.entities.add({
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(mergedPolygon.flatMap((p: any) => [p.longitude, p.latitude])),
+          material: Cesium.Color.RED.withAlpha(0.5),
+        },
+      });
+    } catch (error) {
+      console.error('Error merging polygons:', error);
+    }
   };
 
   return (
@@ -282,10 +368,7 @@ const Trajectory: React.FC = () => {
           )}
         </div>
         <Button className="mt-2" onClick={() => handlerLatLon()}>
-          经纬度渲染
-        </Button>
-        <Button className="mt-2 ml-2" onClick={() => handlerDistance()}>
-          方向距离渲染
+          相交合并渲染
         </Button>
       </ProCard>
     </>
