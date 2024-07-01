@@ -202,13 +202,24 @@ export const handlerComputePoint = (data: any, distanceMi: number) => {
   return dataPath;
 };
 
-export function mergePolygons(polygonArrays: any) {
-  console.log('Input polygonArrays:', JSON.stringify(polygonArrays, null, 2));
+/**
+ * 几何图形合并 (turf.combine)
+ * @param polygonArrays 闭合的多边形数组
+ * @returns 合并后的多边形
+ */
+type Point = {
+  longitude: number;
+  latitude: number;
+};
+export function mergePolygons(polygonArrays: Point[][]) {
+  console.log('输入polygonArrays:', JSON.stringify(polygonArrays, null, 2)); // 输入的多边形数组
 
+  // 检查输入是否有效
   if (!Array.isArray(polygonArrays) || polygonArrays.length === 0) {
-    throw new Error('Input must be a non-empty array of polygon coordinates.');
+    throw new Error('输入必须是多边形坐标的非空数组。');
   }
 
+  // 检查多边形是否有效
   function isValidPoint(p: any) {
     return (
       p &&
@@ -219,62 +230,68 @@ export function mergePolygons(polygonArrays: any) {
     );
   }
 
+  // 检查两个点是否相等
   function pointsEqual(p1: any, p2: any) {
     return p1.longitude === p2.longitude && p1.latitude === p2.latitude;
   }
 
+  // 过滤有效的多边形
   const validPolygons = polygonArrays
     .map((polygon, index) => {
       if (!Array.isArray(polygon) || polygon.length < 3) {
-        console.warn(`Polygon at index ${index} is invalid (less than 3 points). Skipping.`);
+        console.warn(`索引处的多边形 ${index} 无效(低于3个点)。跳过。`);
         return null;
       }
 
-      // Filter valid points and remove consecutive duplicates
+      // 过滤有效点并删除连续重复项
       const validPoints = polygon.filter((p, i, arr) => isValidPoint(p) && (i === 0 || !pointsEqual(p, arr[i - 1])));
 
+      // 确保多边形是闭合的
       if (validPoints.length < 3) {
-        console.warn(`Polygon at index ${index} has less than 3 valid unique points. Skipping.`);
+        console.warn(`索引处的多边形 ${index} 具有少于3个有效唯一点。跳过。`);
         return null;
       }
 
-      // Ensure the polygon is closed
+      // 确保多边形关闭
       if (!pointsEqual(validPoints[0], validPoints[validPoints.length - 1])) {
         validPoints.push(validPoints[0]);
       }
 
-      console.log(`Processed polygon ${index}:`, JSON.stringify(validPoints, null, 2));
+      console.log(`处理多边形 ${index}:`, JSON.stringify(validPoints, null, 2));
       return validPoints;
     })
     .filter(Boolean);
 
-  console.log('Valid polygons:', JSON.stringify(validPolygons, null, 2));
+  console.log('有效的多边形:', JSON.stringify(validPolygons, null, 2));
 
   if (validPolygons.length === 0) {
-    throw new Error('No valid polygons to merge.');
+    throw new Error('没有要合并的有效多边形。');
   }
 
+  // 创建 turf 多边形
   const turfPolygons: any = validPolygons
     .map((polygon: any, index: number) => {
       try {
         const coordinates = polygon.map((p: any) => [p.longitude, p.latitude]);
-        console.log(`Creating turf polygon ${index} with coordinates:`, JSON.stringify(coordinates));
+        console.log(`创建 turf 多边形 ${index} 坐标:`, JSON.stringify(coordinates));
         return turf.polygon([coordinates]);
       } catch (error) {
-        console.error(`Error creating turf polygon ${index}:`, error);
+        console.error(`创建 turf 多边形错误 ${index}:`, error);
         return null;
       }
     })
     .filter(Boolean);
 
-  console.log('Created turf polygons:', turfPolygons.length);
+  console.log('创建草皮多边形:', turfPolygons.length);
 
+  // 检查是否有有效的 turf 多边形
   if (turfPolygons.length === 0) {
-    throw new Error('Failed to create valid turf polygons.');
+    throw new Error('未能创建有效的 turf 多边形。');
   }
 
+  // 如果只有一个多边形，不需要合并
   if (turfPolygons.length === 1) {
-    console.log('Only one valid polygon, no merging needed.');
+    console.log('只有一个有效的多边形，不需要合并。');
     const coordinates = turfPolygons[0].geometry.coordinates[0];
     return coordinates.map((coord: any) => ({
       longitude: coord[0],
@@ -282,35 +299,38 @@ export function mergePolygons(polygonArrays: any) {
     }));
   }
 
+  // 尝试合并多边形
   try {
-    console.log('Combining polygons using turf.combine');
+    console.log('使用 turf.combine 组合多边形');
     const featureCollection: any = turf.featureCollection(turfPolygons);
     const combined = turf.combine(featureCollection);
-    console.log('Combined result:', JSON.stringify(combined));
+    console.log('合并后的结果:', JSON.stringify(combined));
 
     if (!combined || !combined.features || combined.features.length === 0) {
-      throw new Error('Combination resulted in no features');
+      throw new Error('组合导致没有功能');
     }
 
-    // Get the first (and hopefully only) feature from the combination
+    // 从组合中获得第一个(希望是唯一的)特性
     const mergedPolygon = combined.features[0];
 
+    // 提取多边形坐标
     if (!mergedPolygon || !mergedPolygon.geometry || !mergedPolygon.geometry.coordinates) {
-      throw new Error('Invalid merged polygon structure');
+      throw new Error('无效的合并多边形结构');
     }
 
-    // Handle potential MultiPolygon result
+    // 处理潜在的 MultiPolygon 结果
     const coordinates =
       mergedPolygon.geometry.type === 'MultiPolygon'
-        ? mergedPolygon.geometry.coordinates[0][0] // Take the outer ring of the first polygon
+        ? mergedPolygon.geometry.coordinates[0][0] // 取第一个多边形的外圈
         : mergedPolygon.geometry.coordinates[0];
 
+    // 返回多边形坐标
     return coordinates.map((coord: any) => ({
       longitude: coord[0],
       latitude: coord[1],
     }));
   } catch (error: any) {
-    console.error('Error during polygon combination:', error);
-    throw new Error(`Failed to merge polygons: ${error.message}`);
+    console.error('多边形组合时出错:', error);
+    throw new Error(`合并多边形失败: ${error.message}`);
   }
 }

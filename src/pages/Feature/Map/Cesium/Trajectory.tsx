@@ -60,6 +60,7 @@ const Trajectory: React.FC = () => {
     };
   }, []);
 
+  // NOTE 添加图标
   const handlerIcon = (viewer: any) => {
     // 添加图标
     let item = iconData[0];
@@ -220,21 +221,21 @@ const Trajectory: React.FC = () => {
     });
     demodulationPath.push({ longitude: demodulationPath[0].longitude, latitude: demodulationPath[0].latitude }); // 添加第一个点, 形成闭合路径
 
-    let polygonArrays = [interceptPath, locationPath, demodulationPath];
+    let polygonArrays = [interceptPath, locationPath, demodulationPath]; // 三个路径组成的多边形数组
     console.log('polygonArrays', polygonArrays);
     try {
       const mergedPolygon = mergePolygons(polygonArrays);
-      console.log('Merged polygon:', JSON.stringify(mergedPolygon, null, 2));
+      console.log('合并后的多边形:', JSON.stringify(mergedPolygon, null, 2));
 
       // 在 Cesium 中显示合并后的多边形
       viewer.entities.add({
         polygon: {
-          hierarchy: Cesium.Cartesian3.fromDegreesArray(mergedPolygon.flatMap((p: any) => [p.longitude, p.latitude])),
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(mergedPolygon.flatMap((p: any) => [p.longitude, p.latitude])), // 传入的是一个数组
           material: Cesium.Color.RED.withAlpha(0.5),
         },
       });
     } catch (error) {
-      console.error('Error merging polygons:', error);
+      console.error('合并多边形错误:', error);
     }
   };
 
