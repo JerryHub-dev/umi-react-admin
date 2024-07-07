@@ -203,9 +203,10 @@ export const handlerComputePoint = (data: any, distanceMi: number) => {
 };
 
 /**
- * 几何图形合并 (turf.combine)
- * @param polygonArrays 闭合的多边形数组
- * @returns 合并后的多边形
+ * 合并多边形数组。
+ * @param polygonArrays 多边形数组，每个多边形由一组点坐标表示。
+ * @returns 合并后的多边形坐标数组。
+ * @throws 如果输入无效或无法合并多边形，则抛出错误。
  */
 type Point = {
   longitude: number;
