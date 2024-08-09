@@ -26,6 +26,12 @@ export default defineConfig({
     CESIUM_ION_TOKEN:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkZjBmZTAzMS1jMTJkLTQ5OGQtYTkyYS0xODcyMjU3MTQzMmUiLCJpZCI6MTg2MDcxLCJpYXQiOjE3MDM0MDIwMzl9.DQzBf8T_0U92DwjBcYQqdgwhFs-Cx7EacplwoL_ypjY',
   },
+  headScripts: [
+    {
+      src: '/js/clarity.js',
+      async: true,
+    },
+  ],
   jsMinifier: 'terser',
   // 开启 valtio 数据流方案 https://umijs.org/docs/max/valtio
   valtio: {},
