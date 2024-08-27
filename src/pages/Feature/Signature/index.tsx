@@ -29,9 +29,7 @@ export default function Signature() {
       backgroundColor: 'rgb(255, 255, 255)', // necessary for saving image as JPEG; can be removed is only saving as PNG or SVG
     });
 
-    let savePngButton = document.getElementById(
-      'save-png',
-    ) as HTMLButtonElement;
+    let savePngButton = document.getElementById('save-png') as HTMLButtonElement;
     savePngButton.addEventListener('click', function () {
       if (signaturePad.isEmpty()) {
         return alert('请先提供签名.');
@@ -42,9 +40,7 @@ export default function Signature() {
       window.open(data);
     });
 
-    let saveJpegButton = document.getElementById(
-      'save-jpeg',
-    ) as HTMLButtonElement;
+    let saveJpegButton = document.getElementById('save-jpeg') as HTMLButtonElement;
     saveJpegButton.addEventListener('click', function () {
       if (signaturePad.isEmpty()) {
         return alert('请先提供签名.');
@@ -55,9 +51,7 @@ export default function Signature() {
       window.open(data);
     });
 
-    let saveSvgButton = document.getElementById(
-      'save-svg',
-    ) as HTMLButtonElement;
+    let saveSvgButton = document.getElementById('save-svg') as HTMLButtonElement;
     saveSvgButton.addEventListener('click', function () {
       if (signaturePad.isEmpty()) {
         return alert('请先提供签名.');
@@ -96,7 +90,7 @@ export default function Signature() {
 
   return (
     <SignatureStyle>
-      <ProCard className="shadow-2xl h-full">
+      <ProCard className="h-full shadow-2xl">
         <div className="wrapper">
           <canvas
             id="signature-pad"
@@ -105,7 +99,7 @@ export default function Signature() {
           ></canvas>
         </div>
 
-        <div className="mt-8 flex justify-between mb-28">
+        <div className="flex justify-between max-w-3xl mt-8 min-w-96 mb-28">
           <Button id="save-png">保存为 PNG</Button>
           <Button id="save-jpeg">保存为 JPEG</Button>
           <Button id="save-svg">保存为 SVG</Button>
