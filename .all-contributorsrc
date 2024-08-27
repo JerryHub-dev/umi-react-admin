@@ -1,26 +1,36 @@
 {
-  "files": [
-    "README.md"
-  ],
+  "projectName": "JerryHub-dev/umi-react-admin",
+  "projectOwner": "JerryHub-dev",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": ["README.md"],
   "imageSize": 100,
-  "commit": false,
-  "commitType": "docs",
-  "commitConvention": "angular",
+  "commit": true,
+  "commitConvention": "none",
   "contributors": [
     {
       "login": "cc9971",
       "name": "chen",
       "avatar_url": "https://avatars.githubusercontent.com/u/85613959?v=4",
       "profile": "https://github.com/cc9971",
-      "contributions": [
-        "code"
-      ]
+      "contributions": ["code"]
+    },
+    {
+      "login": "kingling-abb",
+      "name": "kingling-abb",
+      "avatar_url": "https://avatars.githubusercontent.com/u/153783999?v=4",
+      "profile": "https://github.com/kingling-abb",
+      "contributions": ["code"]
+    },
+    {
+      "login": "JerryHub-dev",
+      "name": "LiShuai (阿木)",
+      "avatar_url": "https://avatars.githubusercontent.com/u/75985761?v=4",
+      "profile": "https://github.com/JerryHub-dev",
+      "contributions": ["code"]
     }
   ],
   "contributorsPerLine": 7,
-  "skipCi": true,
-  "repoType": "github",
-  "repoHost": "https://github.com",
-  "projectName": "umi-react-admin",
-  "projectOwner": "JerryHub-dev"
+  "linkToUsage": true
 }
+
