@@ -110,7 +110,7 @@ const ThermalMap = () => {
     // 监听鼠标移入事件
     handler.setInputAction(function (movement: { endPosition: any }) {
       let pickedObject = viewer.scene.pick(movement.endPosition);
-      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.label) {
+      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.label && pickedObject.id.properties) {
         pickedObject.id.label.text = '更新后的标签' + pickedObject.id.properties.text._value;
         currentEntity = pickedObject.id;
       }
@@ -155,6 +155,47 @@ const ThermalMap = () => {
       entity.properties = {
         text: item.label,
       };
+    });
+  };
+
+  // NOTE 两个实体距离计算
+  const handlePrimary = () => {
+    let box1 = iconData[0];
+    let box2 = iconData[1];
+
+    // box1 和 box2 连线
+    // 创建一条线
+    viewer.entities.add({
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArray([box1.longitude, box1.latitude, box2.longitude, box2.latitude]),
+        width: 3,
+        material: Cesium.Color.RED,
+      },
+    });
+
+    // 计算 box1 和 box2 的距离
+    let distance = Cesium.Cartesian3.distance(
+      Cesium.Cartesian3.fromDegrees(box1.longitude, box1.latitude),
+      Cesium.Cartesian3.fromDegrees(box2.longitude, box2.latitude),
+    );
+
+    // 创建一个文本标签
+    viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(box1.longitude, box1.latitude),
+      label: {
+        text: `距离：${distance.toFixed(2)} 米`, // 文本内容
+        font: '14px sans-serif', // 字体大小
+        backgroundColor: Cesium.Color.fromCssColorString('#0094ff'), // 背景颜色
+        showBackground: true, // 是否显示背景
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE, // 样式
+        fillColor: Cesium.Color.WHITE, // 填充颜色
+        outlineColor: Cesium.Color.BLACK, // 边框颜色
+        outlineWidth: 2, // 边框宽度
+        horizontalOrigin: Cesium.HorizontalOrigin.CENTER, // 水平对齐方式
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM, // 垂直对齐方式
+        pixelOffset: new Cesium.Cartesian2(0, -55), // 偏移量
+        pixelOffsetScaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 8.0e6, 0.5), // 偏移量随距离变化
+      },
     });
   };
 
@@ -330,7 +371,10 @@ const ThermalMap = () => {
       <Alert message="热力图" type="success" showIcon className="mb-2" />
       <ProCard>
         {contextHolder}
-        <Button className="mb-2" onClick={() => handleClick()}>
+        <Button className="mb-2" onClick={() => handlePrimary()}>
+          距离计算
+        </Button>
+        <Button className="mb-2 ml-2" onClick={() => handleClick()}>
           渲染热力图数据 base64
         </Button>
         <Button className="mb-2 ml-2" onClick={() => handleClick2()}>
