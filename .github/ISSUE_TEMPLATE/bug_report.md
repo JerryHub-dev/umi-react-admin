@@ -1,5 +1,3 @@
-# .github/ISSUE_TEMPLATE/bug_report.md
-
 ---
 name: 错误报告
 about: 向我们报告一个Bug以帮助我们改进
