@@ -68,7 +68,7 @@ const Unit = () => {
       skyAtmosphere: false, // 是否显示大气层
       skyBox: false, // 是否显示天空盒
       vrButton: false, // 是否显示VR按钮
-      sceneMode: Cesium.SceneMode.SCENE2D, // 2D 模式
+      // sceneMode: Cesium.SceneMode.SCENE2D, // 2D 模式
     });
     // 1, 去除版权信息
     (viewer.cesiumWidget.creditContainer as HTMLElement).style.display = 'none';

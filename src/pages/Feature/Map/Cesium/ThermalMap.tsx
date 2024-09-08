@@ -32,7 +32,7 @@ const ThermalMap = () => {
       skyAtmosphere: false, // 是否显示大气层
       skyBox: false, // 是否显示天空盒
       vrButton: false, // 是否显示VR按钮
-      sceneMode: Cesium.SceneMode.SCENE2D, // 2D 模式
+      // sceneMode: Cesium.SceneMode.SCENE2D, // 2D 模式
     });
 
     // 1, 去除版权信息
@@ -351,6 +351,7 @@ const ThermalMap = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleClick3 = () => {
     // 热力图要绘制的区域的经纬度范围
     // let longitude = 106.65;
@@ -380,9 +381,9 @@ const ThermalMap = () => {
         <Button className="mb-2 ml-2" onClick={() => handleClick2()}>
           渲染点云效果
         </Button>
-        <Button className="mb-2 ml-2" onClick={() => handleClick3()}>
+        {/* <Button className="mb-2 ml-2" onClick={() => handleClick3()}>
           渲染热力图数据2
-        </Button>
+        </Button> */}
         <Button className="mb-2 ml-2" onClick={() => handleClear()}>
           清除地图数据
         </Button>
