@@ -4,12 +4,13 @@ import { demodulationResultList, interceptResultList, locationResultList } from 
 import { ProCard } from '@ant-design/pro-components';
 // import * as turf from '@turf/turf';
 // import turf from '/public/js/turf.min.js';
-import { Alert, Button } from 'antd';
+import { Alert, Button, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import React, { useEffect, useState } from 'react';
 
 const Trajectory: React.FC = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
   const [viewer, setViewer] = useState(null as any);
   // let turf = window.turf;
@@ -156,6 +157,8 @@ const Trajectory: React.FC = () => {
           ...positionsGeoRef.current,
           { longitude: longitudeString, latitude: latitudeString },
         ];
+        console.log('绘制中', positionsArrRef.current);
+        console.log('绘制中', positionsGeoRef.current);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
   };
@@ -173,17 +176,26 @@ const Trajectory: React.FC = () => {
 
     let dataPath = handlerComputePoint(positionsGeoRef.current, 1000);
 
-    console.log('dataPath', dataPath);
-    // 连接 dataPath 中的点, 成为一条路径
-    dataPath.forEach((item) => {
-      viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
-        billboard: {
-          image: require('@/assets/Detection.png'),
-          scale: 0.3,
-        },
+    console.log('绘制完成距离计算路径', dataPath);
+
+    if (dataPath.length > 1000) {
+      messageApi.open({
+        type: 'warning',
+        content: '绘制点过多, 请缩小范围!',
       });
-    });
+      return;
+    } else {
+      // 连接 dataPath 中的点, 成为一条路径
+      dataPath.forEach((item) => {
+        viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
+          billboard: {
+            image: require('@/assets/Detection.png'),
+            scale: 0.3,
+          },
+        });
+      });
+    }
 
     dataPath = [];
 
@@ -241,6 +253,7 @@ const Trajectory: React.FC = () => {
 
   return (
     <>
+      {contextHolder}
       <Alert className="mb-2" message="轨迹" type="success" />
       <ProCard>
         <div id="cesiumContainer" className="static" />
