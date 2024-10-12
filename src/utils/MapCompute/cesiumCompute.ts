@@ -335,3 +335,120 @@ export function mergePolygons(polygonArrays: Point[][]) {
     throw new Error(`合并多边形失败: ${error.message}`);
   }
 }
+
+/**
+ * 凸包算法：使用 Graham Scan 算法计算所有点的凸包，这将给出包含所有点的最小凸多边形。
+ * 多边形简化：在计算凸包后，我们应用了一个简化步骤，移除共线或几乎共线的点，只保留形状所需的必要点。
+ * 直接处理所有点：我们不再单独处理每个多边形，而是将所有点集中在一起处理，这简化了过程并确保我们得到真正的外围轮廓。
+ * 错误处理：保留了对输入的验证，确保我们有足够的有效点来创建多边形。
+ * 日志输出：添加了更多的日志输出，以便跟踪处理过程和结果。
+ *
+ * @param polygonArrays 多边形数组，包含多个多边形的坐标点 [[{ longitude: number, latitude: number}], [...], ...]
+ * @returns 合并后的多边形路径，经过凸包计算和简化处理 [{ longitude: number, latitude: number }, ...]
+ * @throws 如果输入不是有效的多边形数组或没有足够的有效点来创建多边形，则抛出错误
+ */
+
+export function mergePolygonsPath(polygonArrays: any) {
+  console.log(`开始合并过程 ${polygonArrays.length} 多边形`);
+
+  if (!Array.isArray(polygonArrays) || polygonArrays.length === 0) {
+    throw new Error('输入必须是多边形坐标的非空数组.');
+  }
+
+  function isValidPoint(p: any) {
+    return (
+      p &&
+      typeof p.longitude === 'number' &&
+      typeof p.latitude === 'number' &&
+      !isNaN(p.longitude) &&
+      !isNaN(p.latitude)
+    );
+  }
+
+  function pointsEqual(p1: any, p2: any) {
+    return Math.abs(p1.longitude - p2.longitude) < 1e-8 && Math.abs(p1.latitude - p2.latitude) < 1e-8;
+  }
+
+  // 验证和清理输入多边形
+  const allPoints = polygonArrays.flatMap((polygon, index) => {
+    if (!Array.isArray(polygon) || polygon.length < 3) {
+      console.warn(`在索引多边形 ${index} 无效(低于3分)。跳过.`);
+      return [];
+    }
+
+    return polygon.filter(isValidPoint);
+  });
+
+  console.log(`初始处理后的总积分: ${allPoints.length}`);
+
+  if (allPoints.length < 3) {
+    throw new Error('没有足够的有效点来创建多边形。');
+  }
+
+  // 计算凸包
+  function computeConvexHull(points: any) {
+    // 按字典顺序排序点
+    points.sort((a: any, b: any) => a.longitude - b.longitude || a.latitude - b.latitude);
+
+    const lower = [];
+    for (let i = 0; i < points.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], points[i]) <= 0) {
+        lower.pop();
+      }
+      lower.push(points[i]);
+    }
+
+    const upper = [];
+    for (let i = points.length - 1; i >= 0; i--) {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], points[i]) <= 0) {
+        upper.pop();
+      }
+      upper.push(points[i]);
+    }
+
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+  }
+
+  function cross(o: any, a: any, b: any) {
+    return (
+      (a.longitude - o.longitude) * (b.latitude - o.latitude) - (a.latitude - o.latitude) * (b.longitude - o.longitude)
+    );
+  }
+
+  const convexHull = computeConvexHull(allPoints);
+
+  // Ensure the polygon is closed
+  if (!pointsEqual(convexHull[0], convexHull[convexHull.length - 1])) {
+    convexHull.push(convexHull[0]);
+  }
+
+  console.log(`凸包计算 ${convexHull.length} 点`);
+
+  // 简化凸包，去掉不必要的点
+  function simplifyPolygon(points: any, epsilon = 1e-8) {
+    if (points.length <= 4) return points; // Can't simplify further
+
+    const result = [points[0]];
+    for (let i = 1; i < points.length - 1; i++) {
+      const prev = points[i - 1];
+      const current = points[i];
+      const next = points[i + 1];
+
+      if (Math.abs(cross(prev, current, next)) > epsilon) {
+        result.push(current);
+      }
+    }
+    result.push(points[points.length - 1]);
+    return result;
+  }
+
+  const simplifiedHull = simplifyPolygon(convexHull);
+
+  console.log(`最后的多边形有 ${simplifiedHull.length} 点`);
+
+  return simplifiedHull;
+}

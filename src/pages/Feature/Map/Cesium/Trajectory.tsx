@@ -1,12 +1,14 @@
-import { handlerComputePoint, mergePolygons } from '@/utils/MapCompute/cesiumCompute';
+import { handlerComputePoint, mergePolygons, mergePolygonsPath } from '@/utils/MapCompute/cesiumCompute';
 import { iconData } from '@/utils/MapCompute/dataEnd';
 import { demodulationResultList, interceptResultList, locationResultList } from '@/utils/MapCompute/exportJson';
 import { ProCard } from '@ant-design/pro-components';
 // import * as turf from '@turf/turf';
 // import turf from '/public/js/turf.min.js';
+import { pathPointData } from '@/utils/MapCompute/ngeohash/pathPointData';
 import { Alert, Button, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
+// import RBush from 'rbush';
 import React, { useEffect, useState } from 'react';
 
 const Trajectory: React.FC = () => {
@@ -215,18 +217,21 @@ const Trajectory: React.FC = () => {
     //   [{longitude: -74.5, latitude: 40.5}, {longitude: -73.5, latitude: 41.5}, {longitude: -72.5, latitude: 40.5}]
     // ];
 
+    // 数组1
     let interceptPath = [] as any[];
     intercept.forEach((item: any) => {
       interceptPath.push({ longitude: item.longitude, latitude: item.latitude });
     });
     interceptPath.push({ longitude: intercept[0].longitude, latitude: intercept[0].latitude });
 
+    // 数组2
     let locationPath = [] as any[];
     location.forEach((item: any) => {
       locationPath.push({ longitude: item.longitude, latitude: item.latitude });
     });
     locationPath.push({ longitude: location[0].longitude, latitude: location[0].latitude });
 
+    // 数组3
     let demodulationPath = [] as any[];
     demodulation.forEach((item: any) => {
       demodulationPath.push({ longitude: item.longitude, latitude: item.latitude });
@@ -235,6 +240,18 @@ const Trajectory: React.FC = () => {
 
     let polygonArrays = [interceptPath, locationPath, demodulationPath]; // 三个路径组成的多边形数组
     console.log('polygonArrays', polygonArrays);
+
+    // 全部渲染不做合并测试
+    polygonArrays.forEach((item) => {
+      viewer.entities.add({
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(item.flatMap((p: any) => [p.longitude, p.latitude])), // 传入的是一个数组
+          material: Cesium.Color.RED.withAlpha(0.3),
+        },
+      });
+    });
+
+    // 合并多边形
     try {
       const mergedPolygon = mergePolygons(polygonArrays);
       console.log('合并后的多边形:', JSON.stringify(mergedPolygon, null, 2));
@@ -243,12 +260,49 @@ const Trajectory: React.FC = () => {
       viewer.entities.add({
         polygon: {
           hierarchy: Cesium.Cartesian3.fromDegreesArray(mergedPolygon.flatMap((p: any) => [p.longitude, p.latitude])), // 传入的是一个数组
+          // material: Cesium.Color.RED.withAlpha(0.5),
+          material: Cesium.Color.YELLOW.withAlpha(0.3),
+          height: 50000,
+        },
+      });
+    } catch (error) {
+      console.error('合并多边形错误:', error);
+    }
+  };
+
+  // NOTE 相交合并/包含去重, 组成新的路径渲染 200+ (214)
+  const handlerMergeNum = () => {
+    let polygonArrays = pathPointData;
+    try {
+      const mergedPolygon = mergePolygonsPath(polygonArrays);
+      console.log('Merged polygon:', JSON.stringify(mergedPolygon, null, 2));
+
+      // 在 Cesium 中显示合并后的多边形
+      viewer.entities.add({
+        polygon: {
+          // hierarchy: Cesium.Cartesian3.fromDegreesArray(mergedPolygon.flatMap((p) => [p.longitude, p.latitude])),
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(mergedPolygon.flatMap((p: any) => [p.longitude, p.latitude])),
           material: Cesium.Color.RED.withAlpha(0.5),
         },
       });
     } catch (error) {
       console.error('合并多边形错误:', error);
     }
+  };
+
+  // NOTE 不合并渲染 200+ (214)
+  const handlerFalseMerge = () => {
+    // 全部渲染不做合并
+    console.log(pathPointData[0].length);
+    pathPointData.forEach((item, index) => {
+      viewer.entities.add({
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(item.flatMap((p: any) => [p.longitude, p.latitude])), // 传入的是一个数组
+          material: Cesium.Color.RED.withAlpha(0.3),
+          height: index * 1000,
+        },
+      });
+    });
   };
 
   return (
@@ -269,7 +323,16 @@ const Trajectory: React.FC = () => {
           )}
         </div>
         <Button className="mt-2" onClick={() => handlerLatLon()}>
-          相交合并渲染
+          多边形合并渲染(turf 计算)
+        </Button>
+        <Button className="mt-2 ml-2" onClick={() => handlerMergeNum()}>
+          多边形合并渲染 200+ (凸包算法)
+        </Button>
+        {/* <Button className="mt-2 ml-2" onClick={() => handlerAlphaMerge()}>
+          相交合并渲染 200+ (算法)
+        </Button> */}
+        <Button className="mt-2 ml-2" onClick={() => handlerFalseMerge()}>
+          多边形不合并渲染 200+
         </Button>
       </ProCard>
     </>
