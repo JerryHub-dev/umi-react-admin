@@ -133,6 +133,11 @@ export const routes = [
             path: '/feature/Cesium/Unit',
             component: './Feature/Map/Cesium/Unit',
           },
+          {
+            name: 'HaiAirPosture',
+            path: '/feature/Cesium/HaiAirPosture',
+            component: './Feature/Map/Cesium/HaiAirPosture',
+          },
         ],
       },
       {

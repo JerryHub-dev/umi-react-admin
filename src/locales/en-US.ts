@@ -23,6 +23,7 @@ export default {
   'menu.feature.Cesium.Unit': 'Unit',
   'menu.feature.OpenLayers': 'OpenLayers',
   'menu.feature.OpenLayers.InfoMap': 'InfoMap',
+  'menu.feature.OpenLayers.HaiAirPosture': 'HaiAirPosture',
   // NOTE office
   'menu.Office': 'Office',
   'menu.Office.pdf': 'PDF',

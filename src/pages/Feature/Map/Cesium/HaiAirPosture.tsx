@@ -1,0 +1,124 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import thermal from '@/utils/MapCompute/ThermalMapData.json';
+import { iconData } from '@/utils/MapCompute/dataEnd';
+import { ProCard } from '@ant-design/pro-components';
+import { message } from 'antd';
+import * as Cesium from 'cesium';
+import 'cesium/Build/Cesium/Widgets/widgets.css';
+import { useEffect, useState } from 'react';
+
+const HaiAirPosture = () => {
+  const [viewer, setViewer] = useState(null as any);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [data, setData] = useState([]);
+  Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
+
+  // NOTE 添加图标
+  const handleIcon = (viewer: any) => {
+    iconData.forEach((item) => {
+      let entity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(item.longitude, item.latitude),
+        id: item.id,
+        billboard: {
+          image: require('@/assets/Detection.png'),
+          // width: 40,
+          // height: 40,
+          scale: 0.3,
+        },
+        label: {
+          text: item.label, // 文本内容
+          font: '14px sans-serif', // 字体大小
+          backgroundColor: Cesium.Color.fromCssColorString('#0094ff'), // 背景颜色
+          showBackground: true, // 是否显示背景
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE, // 样式
+          fillColor: Cesium.Color.WHITE, // 填充颜色
+          outlineColor: Cesium.Color.BLACK, // 边框颜色
+          outlineWidth: 2, // 边框宽度
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER, // 水平对齐方式
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM, // 垂直对齐方式
+          pixelOffset: new Cesium.Cartesian2(0, 55), // 偏移量
+          pixelOffsetScaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 8.0e6, 0.5), // 偏移量随距离变化
+        },
+      });
+      // 额外参数
+      entity.properties = {
+        text: item.label,
+      };
+    });
+  };
+
+  const handlePolygon = (viewer: any) => {
+    console.log(data);
+  };
+
+  useEffect(() => {
+    // 创建一个 Cesium Viewer 实例
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      // 去除所有的控件
+      animation: false, // 是否显示动画控件
+      baseLayerPicker: false, // 是否显示图层选择控件
+      // fullscreenButton: false, // 是否显示全屏按钮
+      // geocoder: false, // 是否显示地名查找控件
+      // homeButton: false, // 是否显示Home按钮
+      infoBox: false, // 是否显示信息框
+      sceneModePicker: true, // 是否显示3D/2D选择器
+      selectionIndicator: false, // 是否显示选取指示器组件
+      timeline: false, // 是否显示时间轴
+      navigationHelpButton: false, // 是否显示帮助信息按钮
+      navigationInstructionsInitiallyVisible: false, // 是否显示导航指示
+      // scene3DOnly: true, // 是否只显示3D
+      shouldAnimate: true, // 是否显示动画
+      skyAtmosphere: false, // 是否显示大气层
+      skyBox: false, // 是否显示天空盒
+      vrButton: false, // 是否显示VR按钮
+      // sceneMode: Cesium.SceneMode.SCENE2D, // 2D 模式
+    });
+
+    // 1, 去除版权信息
+    (viewer.cesiumWidget.creditContainer as HTMLElement).style.display = 'none';
+
+    // 修改 homeButton 的位置
+    let initView = {
+      destination: Cesium.Cartesian3.fromDegrees(116.3974, 39.9093, 15000000),
+    };
+    // viewer.camera.setView(initView);
+    viewer.camera.flyTo(initView);
+
+    let obj = JSON.parse(JSON.stringify(thermal));
+    let arrayResult = obj.coverageData.arrayResult;
+    setData(arrayResult);
+
+    // 2, 添加一个点击事件来显示位置坐标：
+    viewer.screenSpaceEventHandler.setInputAction(function onLeftClick(movement: { position: Cesium.Cartesian2 }) {
+      const cartesian = viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+        const latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+        messageApi.info(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+        // alert(`Longitude: ${longitudeString}, Latitude: ${latitudeString}`);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    setViewer(viewer);
+
+    handleIcon(viewer);
+    handlePolygon(viewer);
+
+    // 销毁
+    return () => {
+      viewer.destroy();
+    };
+  }, []);
+
+  return (
+    <>
+      <ProCard>
+        {contextHolder}
+        <div id="cesiumContainer" />
+      </ProCard>
+    </>
+  );
+};
+
+export default HaiAirPosture;
