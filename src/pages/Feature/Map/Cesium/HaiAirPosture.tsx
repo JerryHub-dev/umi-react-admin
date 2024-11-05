@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import thermal from '@/utils/MapCompute/ThermalMapData.json';
 import { iconData } from '@/utils/MapCompute/dataEnd';
 import { ProCard } from '@ant-design/pro-components';
@@ -8,8 +7,10 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useState } from 'react';
 
 const HaiAirPosture = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewer, setViewer] = useState(null as any);
   const [messageApi, contextHolder] = message.useMessage();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [data, setData] = useState([]);
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
 
@@ -47,8 +48,36 @@ const HaiAirPosture = () => {
     });
   };
 
-  const handlePolygon = (viewer: any) => {
-    console.log(data);
+  // NOTE 添加线
+  const handlePolyline = (viewer: any) => {
+    let data: any = [
+      {
+        longitude: 117.33,
+        latitude: 37.52,
+      },
+      {
+        longitude: 129.34,
+        latitude: 39.02,
+      },
+      {
+        longitude: 126.47,
+        latitude: 29.75,
+      },
+      {
+        longitude: 116.72,
+        latitude: 29.54,
+      },
+    ];
+
+    data.push({ longitude: data[0].longitude, latitude: data[0].latitude });
+
+    viewer.entities.add({
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArray(data.flatMap((item: any) => [item.longitude, item.latitude])),
+        width: 2,
+        material: Cesium.Color.RED,
+      },
+    });
   };
 
   useEffect(() => {
@@ -103,7 +132,7 @@ const HaiAirPosture = () => {
     setViewer(viewer);
 
     handleIcon(viewer);
-    handlePolygon(viewer);
+    handlePolyline(viewer);
 
     // 销毁
     return () => {
