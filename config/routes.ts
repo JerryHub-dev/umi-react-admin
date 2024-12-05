@@ -68,10 +68,28 @@ export const routes = [
         icon: 'EditOutlined',
       },
       {
+        name: 'Html2Canvas',
+        path: '/feature/Html2Canvas',
+        component: './Feature/Html2Canvas',
+        icon: 'ScissorOutlined',
+      },
+      {
         name: 'VideoPlayer',
         path: '/feature/VideoPlayer',
         component: './Feature/VideoPlayer',
         icon: 'VideoCameraAddOutlined',
+      },
+      {
+        name: 'D3',
+        path: '/feature/D3',
+        icon: 'DotChartOutlined',
+        routes: [
+          {
+            name: 'Frequency',
+            path: '/feature/D3/Frequency',
+            component: './Feature/D3/Frequency',
+          },
+        ],
       },
       {
         name: 'AudioFeature',
