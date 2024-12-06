@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk=self.webpackChunk||[]).push([[6294],{99080:function(n,e,r){r.r(e);var s=r(2087),c=(r(93236),r(62086));e.default=function(){return(0,c.jsx)(c.Fragment,{children:(0,c.jsx)(s.Z,{children:(0,c.jsx)("div",{children:"Html2Canvas"})})})}}}]);
