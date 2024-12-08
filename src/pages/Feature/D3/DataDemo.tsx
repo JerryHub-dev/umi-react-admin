@@ -217,7 +217,7 @@ const Frequency = () => {
       .style('padding', '12px')
       .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
       .style('font-size', '12px')
-      .style('z-index', '9999')
+      .style('z-index', '1000')
       .style('max-width', '300px');
 
     // 创建频率查找函数
@@ -363,80 +363,36 @@ ${JSON.stringify(match.customInfo, null, 2)}
           .style('cursor', 'pointer')
           .attr('opacity', 0.7);
 
-        // 3. 重新实现事件处理
+        // 创建矩形并绑定事件
+
+        // 添加交互
         rect
           .on('mouseover', function () {
             d3.select(this).attr('opacity', 0.9);
           })
           .on('mouseout', function () {
             d3.select(this).attr('opacity', 0.7);
-            tooltip.style('visibility', 'hidden');
           })
           .on('click', function (event) {
-            console.log('click', event);
-            event.stopPropagation(); // 阻止事件冒泡
+            if (!tooltip) return;
 
-            const matches = findMatchingFrequencies(freq.range[0]);
-
-            if (matches && matches.length > 0) {
-              const content = matches
-                .map(
-                  (match) => `
-          <div style="margin-bottom: 8px;">
-            <div style="font-weight: bold; color: #333; margin-bottom: 4px;">
-              ${match.typeName} - ${match.frequencyName}
-            </div>
-            <div style="color: #666; margin-bottom: 4px;">
-              频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
-            </div>
-            <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap; font-size: 12px;">
-${JSON.stringify(match.customInfo, null, 2)}
-            </pre>
-          </div>
-        `,
-                )
-                .join('<hr style="margin: 8px 0; border: none; border-top: 1px solid #eee;">');
-
-              tooltip
-                .style('visibility', 'visible')
-                .style('left', `${event.pageX + 10}px`)
-                .style('top', `${event.pageY + 10}px`)
-                .html(content);
-            }
+            tooltip
+              .style('visibility', 'visible')
+              .style('left', `${event.pageX + 10}px`)
+              .style('top', `${event.pageY + 10}px`).html(`
+                <div>
+                  <div style="font-weight: bold; margin-bottom: 4px;">
+                    ${typeData.typeName} - ${freq.frequencyName}
+                  </div>
+                  <div style="margin-bottom: 4px;">
+                    频率范围: ${formatFrequency(freq.range[0])} - ${formatFrequency(freq.range[1])}
+                  </div>
+                  <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
+${JSON.stringify(freq.customInfo, null, 2)}
+                  </pre>
+                </div>
+              `);
           });
-
-        // 4. 添加点击其他区域隐藏 tooltip
-        d3.select('body').on('click', () => {
-          tooltip.style('visibility', 'hidden');
-        });
-
-        //         rect
-        //           .on('mouseover', function () {
-        //             d3.select(this).attr('opacity', 0.9);
-        //           })
-        //           .on('mouseout', function () {
-        //             d3.select(this).attr('opacity', 0.7);
-        //           })
-        //           .on('click', function (event) {
-        //             if (!tooltip) return;
-
-        //             tooltip
-        //               .style('visibility', 'visible')
-        //               .style('left', `${event.pageX + 10}px`)
-        //               .style('top', `${event.pageY + 10}px`).html(`
-        //                 <div>
-        //                   <div style="font-weight: bold; margin-bottom: 4px;">
-        //                     ${typeData.typeName} - ${freq.frequencyName}
-        //                   </div>
-        //                   <div style="margin-bottom: 4px;">
-        //                     频率范围: ${formatFrequency(freq.range[0])} - ${formatFrequency(freq.range[1])}
-        //                   </div>
-        //                   <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
-        // ${JSON.stringify(freq.customInfo, null, 2)}
-        //                   </pre>
-        //                 </div>
-        //               `);
-        //           });
 
         // 添加斜线图案
         if (freq.slashStyle?.forward || freq.slashStyle?.backward) {
@@ -470,14 +426,6 @@ ${JSON.stringify(match.customInfo, null, 2)}
               .attr('opacity', 0.3);
           }
 
-          // if (freq.slashStyle.backward) {
-          //   pattern.append('path')
-          //     .attr('d', 'M-1,9 l12,-12 M-1,19 l22,-22 M-1,29 l32,-32')
-          //     .attr('stroke', 'black')
-          //     .attr('stroke-width', 1)
-          //     .attr('opacity', 0.3);
-          // }
-
           // 添加矩形
           freqGroup
             .append('rect')
@@ -504,6 +452,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
 
     // 清理函数
     return () => {
+      d3.select('.tooltip').remove();
+      d3.select(svgRef.current).selectAll('*').remove();
       tooltip.remove();
     };
   }, []);
