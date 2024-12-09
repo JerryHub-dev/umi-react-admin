@@ -38,7 +38,7 @@ const Frequency = () => {
           frequencyName: '设备A',
           range: [100000, 500000], // 100kHz-500kHz
           color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
+          slashStyle: { forward: false, backward: false },
           customInfo: {
             description: '测试设备',
             power: '10W',
@@ -181,8 +181,6 @@ const Frequency = () => {
     const width = Math.max(containerRef.current.clientWidth - margin.left - margin.right, 800);
     const typeHeight = 150;
     const height = data.length * typeHeight + margin.top + margin.bottom;
-    const bandHeight = 20; // 频率带的高度
-    const padding = 5; // 频率带之间的间距
 
     // 创建 SVG
     const svg = d3
@@ -204,11 +202,10 @@ const Frequency = () => {
     const labelMap = new Map(frequencyTicks.map((t) => [t.value, t.label]));
 
     // 创建tooltip
-    // const tooltip = d3.select(containerRef.current)
     const tooltip = d3
-      .select('body')
+      .select(containerRef.current)
       .append('div')
-      .attr('class', 'tooltip')
+      .attr('class', 'frequency-tooltip')
       .style('position', 'absolute')
       .style('visibility', 'hidden')
       .style('background-color', 'white')
@@ -216,9 +213,9 @@ const Frequency = () => {
       .style('border-radius', '4px')
       .style('padding', '12px')
       .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
-      .style('font-size', '12px')
       .style('z-index', '9999')
-      .style('max-width', '300px');
+      .style('max-width', '300px')
+      .style('font-size', '12px');
 
     // 创建频率查找函数
     const findMatchingFrequencies = (hz) => {
@@ -361,41 +358,29 @@ ${JSON.stringify(match.customInfo, null, 2)}
           .attr('fill', freq.color)
           .attr('rx', 3)
           .style('cursor', 'pointer')
-          .attr('opacity', 0.7);
-
-        // 3. 重新实现事件处理
-        rect
-          .on('mouseover', function () {
-            d3.select(this).attr('opacity', 0.9);
-          })
-          .on('mouseout', function () {
-            d3.select(this).attr('opacity', 0.7);
-            tooltip.style('visibility', 'hidden');
-          })
-          .on('click', function (event) {
-            console.log('click', event);
-            event.stopPropagation(); // 阻止事件冒泡
-
+          .attr('opacity', 0.7)
+          .on('click', (event) => {
             const matches = findMatchingFrequencies(freq.range[0]);
+            console.log(matches, 'matches');
 
-            if (matches && matches.length > 0) {
+            if (matches.length > 0) {
               const content = matches
                 .map(
                   (match) => `
-          <div style="margin-bottom: 8px;">
-            <div style="font-weight: bold; color: #333; margin-bottom: 4px;">
-              ${match.typeName} - ${match.frequencyName}
-            </div>
-            <div style="color: #666; margin-bottom: 4px;">
-              频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
-            </div>
-            <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap; font-size: 12px;">
+                <div style="margin-bottom: 8px;">
+                  <div style="font-weight: bold; margin-bottom: 4px;">
+                    ${match.typeName} - ${match.frequencyName}
+                  </div>
+                  <div style="margin-bottom: 4px;">
+                    频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+                  </div>
+                  <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
 ${JSON.stringify(match.customInfo, null, 2)}
-            </pre>
-          </div>
-        `,
+                  </pre>
+                </div>
+              `,
                 )
-                .join('<hr style="margin: 8px 0; border: none; border-top: 1px solid #eee;">');
+                .join('<hr style="margin: 8px 0;">');
 
               tooltip
                 .style('visibility', 'visible')
@@ -404,39 +389,6 @@ ${JSON.stringify(match.customInfo, null, 2)}
                 .html(content);
             }
           });
-
-        // 4. 添加点击其他区域隐藏 tooltip
-        d3.select('body').on('click', () => {
-          tooltip.style('visibility', 'hidden');
-        });
-
-        //         rect
-        //           .on('mouseover', function () {
-        //             d3.select(this).attr('opacity', 0.9);
-        //           })
-        //           .on('mouseout', function () {
-        //             d3.select(this).attr('opacity', 0.7);
-        //           })
-        //           .on('click', function (event) {
-        //             if (!tooltip) return;
-
-        //             tooltip
-        //               .style('visibility', 'visible')
-        //               .style('left', `${event.pageX + 10}px`)
-        //               .style('top', `${event.pageY + 10}px`).html(`
-        //                 <div>
-        //                   <div style="font-weight: bold; margin-bottom: 4px;">
-        //                     ${typeData.typeName} - ${freq.frequencyName}
-        //                   </div>
-        //                   <div style="margin-bottom: 4px;">
-        //                     频率范围: ${formatFrequency(freq.range[0])} - ${formatFrequency(freq.range[1])}
-        //                   </div>
-        //                   <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
-        // ${JSON.stringify(freq.customInfo, null, 2)}
-        //                   </pre>
-        //                 </div>
-        //               `);
-        //           });
 
         // 添加斜线图案
         if (freq.slashStyle?.forward || freq.slashStyle?.backward) {
@@ -470,14 +422,6 @@ ${JSON.stringify(match.customInfo, null, 2)}
               .attr('opacity', 0.3);
           }
 
-          // if (freq.slashStyle.backward) {
-          //   pattern.append('path')
-          //     .attr('d', 'M-1,9 l12,-12 M-1,19 l22,-22 M-1,29 l32,-32')
-          //     .attr('stroke', 'black')
-          //     .attr('stroke-width', 1)
-          //     .attr('opacity', 0.3);
-          // }
-
           // 添加矩形
           freqGroup
             .append('rect')
@@ -486,7 +430,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
             .attr('width', Math.max(endX - startX, 2))
             .attr('height', blockHeight)
             .attr('fill', `url(#${patternId})`)
-            .attr('rx', 3);
+            .attr('rx', 3)
+            .style('pointer-events', 'none'); // 确保斜线不会干扰点击事件
         }
       });
     });

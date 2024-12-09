@@ -6,6 +6,8 @@ export default (api: IApi) => {
     $('head').append([
       // 缩小的 turf 文件，并将其包含在脚本标记中
       `<script src="/public/js/turf.min.js" charset="utf-8"></script>`,
+      // html2canvas 文件vs, 并将其包含在脚本标记中
+      `<script src="/public/js/html2canvas.min.js" charset="utf-8"></script>`,
       // 添加 clarity 标签
       `<script type="text/javascript">
           (function(c,l,a,r,i,t,y){

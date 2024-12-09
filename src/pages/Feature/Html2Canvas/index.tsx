@@ -8,6 +8,8 @@ const Html2Canvas: React.FC = () => {
   const captureRef = useRef(null);
 
   const handleScreenshot = () => {
+    // let html2canvas = window.html2canvas;
+    // console.log('html2canvas', html2canvas);
     const element = captureRef.current; // 要截图的 DOM 元素
     if (element) {
       html2canvas(element, { useCORS: true }).then((canvas) => {
