@@ -38,7 +38,7 @@ const Frequency = () => {
           frequencyName: '设备A',
           range: [100000, 500000], // 100kHz-500kHz
           color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
+          slashStyle: { forward: false, backward: false },
           customInfo: {
             description: '测试设备',
             power: '10W',
@@ -164,7 +164,7 @@ const Frequency = () => {
   ];
 
   // 格式化频率显示
-  const formatFrequency = (hz) => {
+  const formatFrequency = (hz: any) => {
     if (hz >= 1e9) return `${(hz / 1e9).toFixed(0)}GHz`;
     if (hz >= 1e6) return `${(hz / 1e6).toFixed(0)}MHz`;
     return `${(hz / 1e3).toFixed(0)}kHz`;
@@ -181,8 +181,6 @@ const Frequency = () => {
     const width = Math.max(containerRef.current.clientWidth - margin.left - margin.right, 800);
     const typeHeight = 150;
     const height = data.length * typeHeight + margin.top + margin.bottom;
-    const bandHeight = 20; // 频率带的高度
-    const padding = 5; // 频率带之间的间距
 
     // 创建 SVG
     const svg = d3
@@ -192,8 +190,11 @@ const Frequency = () => {
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
+    // 创建虚线组
+    const guidelineGroup = svg.append('g').attr('class', 'guidelines');
+
     // 创建等距比例尺
-    const xScale = d3
+    const xScale: any = d3
       .scalePoint()
       .domain(frequencyTicks.map((t) => t.label))
       .range([0, width])
@@ -204,11 +205,10 @@ const Frequency = () => {
     const labelMap = new Map(frequencyTicks.map((t) => [t.value, t.label]));
 
     // 创建tooltip
-    // const tooltip = d3.select(containerRef.current)
     const tooltip = d3
-      .select('body')
+      .select(containerRef.current)
       .append('div')
-      .attr('class', 'tooltip')
+      .attr('class', 'frequency-tooltip')
       .style('position', 'absolute')
       .style('visibility', 'hidden')
       .style('background-color', 'white')
@@ -216,13 +216,15 @@ const Frequency = () => {
       .style('border-radius', '4px')
       .style('padding', '12px')
       .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
+      .style('z-index', '9999')
+      .style('max-width', '300px')
       .style('font-size', '12px')
-      .style('z-index', '1000')
-      .style('max-width', '300px');
+      .style('max-height', '500px')
+      .style('overflow-y', 'auto');
 
     // 创建频率查找函数
-    const findMatchingFrequencies = (hz) => {
-      const matches = [];
+    const findMatchingFrequencies = (hz: any) => {
+      const matches: any = [];
       data.forEach((type) => {
         type.ranges.forEach((range) => {
           if (hz >= range.range[0] && hz <= range.range[1]) {
@@ -237,7 +239,7 @@ const Frequency = () => {
     };
 
     // 创建轴
-    const createAxis = (position) => {
+    const createAxis = (position: any) => {
       const axis = position === 'top' ? d3.axisTop(xScale) : d3.axisBottom(xScale);
       const yPos = position === 'top' ? 0 : height - margin.top - margin.bottom;
 
@@ -251,7 +253,78 @@ const Frequency = () => {
       axisGroup
         .selectAll('.tick')
         .style('cursor', 'pointer')
-        .on('click', function (event, label) {
+        .each(function (tickValue: any) {
+          // eslint-disable-next-line @typescript-eslint/no-this-alias
+          const tickNode = this as any;
+          tickNode.addEventListener('click', (event: any) => {
+            event.stopPropagation();
+
+            // 清除之前的虚线
+            guidelineGroup.selectAll('*').remove();
+
+            // 获取刻度的x位置
+            const xPos: any = xScale(tickValue);
+
+            // 添加新的虚线
+            guidelineGroup
+              .append('line')
+              .attr('class', 'guideline')
+              .attr('x1', xPos)
+              .attr('y1', 0)
+              .attr('x2', xPos)
+              .attr('y2', height - margin.top - margin.bottom)
+              .attr('stroke', '#666')
+              .attr('stroke-width', 1)
+              .attr('stroke-dasharray', '4,4')
+              .style('pointer-events', 'none');
+
+            // 查找匹配的频率
+            const tickHz = frequencyTicks.find((t) => t.label === tickValue)?.value;
+            if (tickHz) {
+              const matches: any = [];
+              data.forEach((type) => {
+                type.ranges.forEach((range) => {
+                  if (tickHz >= range.range[0] && tickHz <= range.range[1]) {
+                    matches.push({
+                      typeName: type.typeName,
+                      ...range,
+                    });
+                  }
+                });
+              });
+              if (matches.length > 0) {
+                tooltip
+                  .style('visibility', 'visible')
+                  .style('left', `${event.pageX + 10}px`)
+                  .style('top', `${event.pageY - 10}px`).html(`
+                    <div>
+                      <div style="font-weight: bold; margin-bottom: 8px;">
+                        频率: ${tickValue}
+                      </div>
+                      ${matches
+                        .map(
+                          (match: any) => `
+                        <div style="margin-bottom: 8px;">
+                          <div style="color: ${match.color};">
+                            ${match.typeName} - ${match.frequencyName}
+                          </div>
+                          <div>
+                            范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+                          </div>
+                          <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px;">
+${JSON.stringify(match.customInfo, null, 2)}
+                          </pre>
+                        </div>
+                      `,
+                        )
+                        .join('<hr style="margin: 8px 0;">')}
+                    </div>
+                  `);
+              }
+            }
+          });
+        })
+        .on('click', function (event, label: any) {
           const hz = valueMap.get(label);
           const matches = findMatchingFrequencies(hz);
           console.log(matches, 'matches');
@@ -259,7 +332,7 @@ const Frequency = () => {
           if (matches.length > 0) {
             const content = matches
               .map(
-                (match) => `
+                (match: any) => `
               <div style="margin-bottom: 8px;">
                 <div style="font-weight: bold; margin-bottom: 4px;">
                   ${match.typeName} - ${match.frequencyName}
@@ -311,11 +384,13 @@ ${JSON.stringify(match.customInfo, null, 2)}
 
       // 处理频率重叠
       const overlapGroups = new Map();
-      typeData.ranges.forEach((range) => {
-        let level = 0;
+      typeData.ranges.forEach((range: any) => {
+        let level: any = 0;
         while (true) {
           const currentLevel = overlapGroups.get(level) || [];
-          const hasOverlap = currentLevel.some((r) => !(range.range[1] < r.range[0] || range.range[0] > r.range[1]));
+          const hasOverlap = currentLevel.some(
+            (r: any) => !(range.range[1] < r.range[0] || range.range[0] > r.range[1]),
+          );
 
           if (!hasOverlap) {
             if (!overlapGroups.has(level)) {
@@ -330,8 +405,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
       });
 
       // 映射频率到刻度位置
-      const getXPosition = (hz) => {
-        const label = labelMap.get(
+      const getXPosition = (hz: any) => {
+        const label: any = labelMap.get(
           frequencyTicks.reduce((prev, curr) => (Math.abs(curr.value - hz) < Math.abs(prev.value - hz) ? curr : prev))
             .value,
         );
@@ -339,7 +414,7 @@ ${JSON.stringify(match.customInfo, null, 2)}
       };
 
       // 绘制频率块
-      typeData.ranges.forEach((freq, i) => {
+      typeData.ranges.forEach((freq: any, i: any) => {
         const startX = getXPosition(freq.range[0]);
         const endX = getXPosition(freq.range[1]);
         const blockHeight = 25;
@@ -361,37 +436,10 @@ ${JSON.stringify(match.customInfo, null, 2)}
           .attr('fill', freq.color)
           .attr('rx', 3)
           .style('cursor', 'pointer')
-          .attr('opacity', 0.7);
-
-        // 创建矩形并绑定事件
-
-        // 添加交互
-        rect
-          .on('mouseover', function () {
-            d3.select(this).attr('opacity', 0.9);
-          })
-          .on('mouseout', function () {
-            d3.select(this).attr('opacity', 0.7);
-          })
+          .attr('opacity', 0.7)
+          .style('pointer-events', 'all')
           .on('click', function (event) {
-            if (!tooltip) return;
-
-            tooltip
-              .style('visibility', 'visible')
-              .style('left', `${event.pageX + 10}px`)
-              .style('top', `${event.pageY + 10}px`).html(`
-                <div>
-                  <div style="font-weight: bold; margin-bottom: 4px;">
-                    ${typeData.typeName} - ${freq.frequencyName}
-                  </div>
-                  <div style="margin-bottom: 4px;">
-                    频率范围: ${formatFrequency(freq.range[0])} - ${formatFrequency(freq.range[1])}
-                  </div>
-                  <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
-${JSON.stringify(freq.customInfo, null, 2)}
-                  </pre>
-                </div>
-              `);
+            console.log('Click event triggered');
           });
 
         // 添加斜线图案
@@ -434,7 +482,8 @@ ${JSON.stringify(freq.customInfo, null, 2)}
             .attr('width', Math.max(endX - startX, 2))
             .attr('height', blockHeight)
             .attr('fill', `url(#${patternId})`)
-            .attr('rx', 3);
+            .attr('rx', 3)
+            .style('pointer-events', 'none'); // 确保斜线不会干扰点击事件
         }
       });
     });
@@ -448,12 +497,11 @@ ${JSON.stringify(freq.customInfo, null, 2)}
       .attr('pointer-events', 'all')
       .on('click', () => {
         tooltip.style('visibility', 'hidden');
+        guidelineGroup.selectAll('*').remove();
       });
 
     // 清理函数
     return () => {
-      d3.select('.tooltip').remove();
-      d3.select(svgRef.current).selectAll('*').remove();
       tooltip.remove();
     };
   }, []);
