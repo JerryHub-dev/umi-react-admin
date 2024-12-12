@@ -1,184 +1,57 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// 不检查该文件
 import { ProCard } from '@ant-design/pro-components';
 import * as d3 from 'd3';
 import { useEffect, useRef } from 'react';
+import { data, frequencyTicks } from './components/DataUnit.ts';
 
 const Frequency = () => {
-  const svgRef = useRef(null);
-  const containerRef = useRef(null);
-
-  // 频率刻度点数组
-  const frequencyTicks = [
-    { value: 0, label: '0kHz' },
-    { value: 500000, label: '500kHz' },
-    { value: 1000000, label: '1000kHz' },
-    { value: 100000000, label: '100MHz' },
-    { value: 200000000, label: '200MHz' },
-    { value: 300000000, label: '300MHz' },
-    { value: 400000000, label: '400MHz' },
-    { value: 500000000, label: '500MHz' },
-    { value: 600000000, label: '600MHz' },
-    { value: 700000000, label: '700MHz' },
-    { value: 800000000, label: '800MHz' },
-    { value: 900000000, label: '900MHz' },
-    { value: 1000000000, label: '1000MHz' },
-    { value: 15000000000, label: '15GHz' },
-    { value: 30000000000, label: '30GHz' },
-    { value: 45000000000, label: '45GHz' },
-    { value: 60000000000, label: '60GHz' },
-  ];
-
-  const data = [
-    {
-      typeName: '无线设备',
-      ranges: [
-        {
-          frequencyName: '设备A',
-          range: [35000000, 140000000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: false, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: false, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-      ],
-    },
-    {
-      typeName: '无线设备',
-      ranges: [
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-      ],
-    },
-    {
-      typeName: '无线设备',
-      ranges: [
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-      ],
-    },
-    {
-      typeName: '无线设备',
-      ranges: [
-        {
-          frequencyName: '设备A',
-          range: [100000, 500000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [10000000, 50000000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: false },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [1000000, 500000000], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: true },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-        {
-          frequencyName: '设备A',
-          range: [0, 0], // 100kHz-500kHz
-          color: '#4299e1',
-          slashStyle: { forward: true, backward: true },
-          customInfo: {
-            description: '测试设备',
-            power: '10W',
-            status: '正常',
-          },
-        },
-      ],
-    },
-  ];
+  const svgRef = useRef(null) as any;
+  const containerRef = useRef(null) as any;
 
   // 格式化频率显示
   const formatFrequency = (hz: any) => {
     if (hz >= 1e9) return `${(hz / 1e9).toFixed(0)}GHz`;
     if (hz >= 1e6) return `${(hz / 1e6).toFixed(0)}MHz`;
     return `${(hz / 1e3).toFixed(0)}kHz`;
+  };
+
+  // 首先定义一个函数来计算每个类型组所需的实际高度
+  const calculateTypeHeight = (ranges: any[]) => {
+    // 创建一个更精确的重叠检测算法
+    const levels = new Map();
+    ranges.forEach((range) => {
+      let level = 0;
+      let placed = false;
+
+      while (!placed) {
+        const currentLevel = levels.get(level) || [];
+        // 检查当前级别是否有重叠
+        const hasOverlap = currentLevel.some((existing: any) => {
+          const [start1, end1] = range.range;
+          const [start2, end2] = existing.range;
+          return !(end1 < start2 || start1 > end2);
+        });
+
+        if (!hasOverlap) {
+          // 将范围添加到当前级别
+          if (!levels.has(level)) {
+            levels.set(level, []);
+          }
+          levels.get(level).push(range);
+          range.level = level; // 存储级别信息
+          placed = true;
+        } else {
+          level++;
+        }
+      }
+    });
+
+    const blockHeight = 25; // 每个频率块的高度
+    const blockSpacing = 10; // 块之间的垂直间距
+    const headerHeight = 30; // 类型标题的高度
+    const paddingBottom = 20; // 底部填充
+
+    // 计算总高度：标题 + (块高度 + 间距) * 层数 + 底部填充
+    return headerHeight + (blockHeight + blockSpacing) * levels.size + paddingBottom;
   };
 
   useEffect(() => {
@@ -193,27 +66,35 @@ const Frequency = () => {
     const typeHeight = 150;
     const height = data.length * typeHeight + margin.top + margin.bottom;
 
+    // 计算每个类型的高度并存储
+    const typeHeights = data.map((typeData: any) => calculateTypeHeight(typeData.ranges));
+
+    // 计算总高度
+    const totalHeight = typeHeights.reduce((acc: any, height: any) => acc + height, 0) + margin.top + margin.bottom;
+
     // 创建 SVG
     const svg = d3
       .select(svgRef.current)
       .attr('width', width + margin.left + margin.right)
-      .attr('height', height)
+      .attr('height', totalHeight + margin.top + margin.bottom)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     // 创建虚线组
     const guidelineGroup = svg.append('g').attr('class', 'guidelines');
 
+    const mainGroup = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
     // 创建等距比例尺
     const xScale: any = d3
       .scalePoint()
-      .domain(frequencyTicks.map((t) => t.label))
+      .domain(frequencyTicks.map((t: any) => t.label))
       .range([0, width])
       .padding(0.5);
 
     // 创建频率值映射
-    const valueMap = new Map(frequencyTicks.map((t) => [t.label, t.value]));
-    const labelMap = new Map(frequencyTicks.map((t) => [t.value, t.label]));
+    const valueMap = new Map(frequencyTicks.map((t: any) => [t.label, t.value]));
+    const labelMap = new Map(frequencyTicks.map((t: any) => [t.value, t.label]));
 
     // 创建tooltip
     const tooltip = d3
@@ -251,8 +132,8 @@ const Frequency = () => {
     // 创建频率查找函数
     const findMatchingFrequencies = (hz: any) => {
       const matches: any = [];
-      data.forEach((type) => {
-        type.ranges.forEach((range) => {
+      data.forEach((type: any) => {
+        type.ranges.forEach((range: any) => {
           if (hz >= range.range[0] && hz <= range.range[1]) {
             matches.push({
               typeName: type.typeName,
@@ -305,11 +186,11 @@ const Frequency = () => {
               .style('pointer-events', 'none');
 
             // 查找匹配的频率
-            const tickHz = frequencyTicks.find((t) => t.label === tickValue)?.value;
+            const tickHz = frequencyTicks.find((t: any) => t.label === tickValue)?.value;
             if (tickHz) {
               const matches: any = [];
-              data.forEach((type) => {
-                type.ranges.forEach((range) => {
+              data.forEach((type: any) => {
+                type.ranges.forEach((range: any) => {
                   if (tickHz >= range.range[0] && tickHz <= range.range[1]) {
                     matches.push({
                       typeName: type.typeName,
@@ -382,8 +263,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
           }
         })
         .on('mouseout', function () {
-          tooltip.style('visibility', 'hidden');
-          guidelineGroup.selectAll('*').remove();
+          // tooltip.style('visibility', 'hidden'); // 隐藏tooltip
+          // guidelineGroup.selectAll('*').remove(); // 清除虚线
         });
     };
 
@@ -392,19 +273,19 @@ ${JSON.stringify(match.customInfo, null, 2)}
     createAxis('bottom');
 
     // 处理每个类型组
-    data.forEach((typeData, typeIndex) => {
-      const typeGroup = svg
-        .append('g')
-        .attr('class', 'type-group')
-        .attr('transform', `translate(0,${typeIndex * typeHeight + 20})`);
+    let currentY = 0;
+    data.forEach((typeData: any, typeIndex: any) => {
+      const typeHeight = typeHeights[typeIndex];
+      const typeGroup = mainGroup.append('g').attr('class', 'type-group').attr('transform', `translate(0,${currentY})`);
 
       // 添加类型边框
+      // 使用实际计算的高度绘制边框
       typeGroup
         .append('rect')
         .attr('x', 0)
         .attr('y', 0)
         .attr('width', width)
-        .attr('height', typeHeight - 30)
+        .attr('height', typeHeight - 20) // 减去底部填充
         .attr('fill', 'none')
         .attr('stroke', '#e5e7eb')
         .attr('rx', 4);
@@ -437,8 +318,9 @@ ${JSON.stringify(match.customInfo, null, 2)}
       // 映射频率到刻度位置
       const getXPosition = (hz: any) => {
         const label: any = labelMap.get(
-          frequencyTicks.reduce((prev, curr) => (Math.abs(curr.value - hz) < Math.abs(prev.value - hz) ? curr : prev))
-            .value,
+          frequencyTicks.reduce((prev: any, curr: any) =>
+            Math.abs(curr.value - hz) < Math.abs(prev.value - hz) ? curr : prev,
+          ).value,
         );
         return xScale(label);
       };
@@ -471,10 +353,15 @@ ${JSON.stringify(match.customInfo, null, 2)}
           .style('pointer-events', 'all');
 
         // 添加鼠标事件监听
+        // 鼠标悬停时显示tooltip
         rect.on('mouseover', function (event) {
           console.log('mouseover', event);
           // 高亮显示当前频率块
           d3.select(this).attr('opacity', 0.9).attr('stroke', '#000').attr('stroke-width', 1);
+
+          // 清除刻度线和刻度 tooltip
+          tooltip.style('visibility', 'hidden'); // 隐藏tooltip
+          guidelineGroup.selectAll('*').remove(); // 清除虚线
 
           // 显示hover tooltip
           hoverTooltip
@@ -495,6 +382,7 @@ ${JSON.stringify(match.customInfo, null, 2)}
             `);
         });
 
+        // 鼠标移出时隐藏tooltip
         rect.on('mouseout', function () {
           console.log('mouseout');
           d3.select(this).attr('opacity', 0.7).attr('stroke', 'none');
@@ -546,14 +434,15 @@ ${JSON.stringify(match.customInfo, null, 2)}
             .style('pointer-events', 'none'); // 确保斜线不会干扰点击事件
         }
       });
+      currentY += typeHeight; // 更新下一个类型组的位置
     });
 
     // 点击其他区域隐藏tooltip
     // svg
-    //   .append('rect')
-    //   .attr('width', width)
-    //   .attr('height', height)
-    //   .attr('fill', 'none')
+    //   .append('rect') // 添加一个透明的矩形，用于点击隐藏tooltip
+    //   .attr('width', width) // 设置宽度
+    //   .attr('height', height) // 设置高度
+    //   .attr('fill', 'none') // 设置颜色
     //   .attr('pointer-events', 'all')
     //   .on('click', () => {
     //     tooltip.style('visibility', 'hidden');
