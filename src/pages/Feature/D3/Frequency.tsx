@@ -63,8 +63,8 @@ const Frequency = () => {
     // 设置尺寸和边距
     const margin = { top: 50, right: 40, bottom: 50, left: 40 };
     const width = Math.max(containerRef.current.clientWidth - margin.left - margin.right, 800);
-    const typeHeight = 150;
-    const height = data.length * typeHeight + margin.top + margin.bottom;
+    // const typeHeight = 150;
+    // const height = data.length * typeHeight + margin.top + margin.bottom;
 
     // 计算每个类型的高度并存储
     const typeHeights = data.map((typeData: any) => calculateTypeHeight(typeData.ranges));
@@ -80,9 +80,21 @@ const Frequency = () => {
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
+    // 创建一个背景层用于捕获所有鼠标事件
+    const backgroundLayer = svg.append('g').attr('class', 'background-layer');
+
+    // 添加一个透明的背景矩形来捕获事件
+    backgroundLayer
+      .append('rect')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', totalHeight)
+      .attr('fill', 'none')
+      .style('pointer-events', 'all');
+
     // 创建虚线组
     const guidelineGroup = svg.append('g').attr('class', 'guidelines');
 
+    // 创建主组用于内容绘制
     const mainGroup = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
     // 创建等距比例尺
@@ -129,6 +141,82 @@ const Frequency = () => {
       .style('pointer-events', 'none')
       .style('z-index', '1000');
 
+    // 添加鼠标移动事件监听
+    backgroundLayer.on('mousemove', function (event) {
+      // 获取鼠标在 SVG 中的位置，需要考虑偏移
+      const [mouseX] = d3.pointer(event);
+      const adjustedX = mouseX - margin.left;
+
+      // 找到最近的刻度值
+      const nearestTick = frequencyTicks.reduce((prev: any, curr: any) => {
+        const prevX = xScale(prev.label);
+        const currX = xScale(curr.label);
+        return Math.abs(currX - adjustedX) < Math.abs(prevX - adjustedX) ? curr : prev;
+      });
+
+      // 清除并重绘虚线
+      guidelineGroup.selectAll('*').remove();
+      const xPos = xScale(nearestTick.label);
+
+      // 绘制新的虚线
+      guidelineGroup
+        .append('line')
+        .attr('x1', xPos)
+        .attr('y1', 0)
+        .attr('x2', xPos)
+        .attr('y2', totalHeight - margin.top)
+        .attr('stroke', '#666')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '4,4');
+
+      // 查找并显示频率信息
+      const currentHz = nearestTick.value;
+      const matches = data.flatMap((type: any) =>
+        type.ranges
+          .filter((range: any) => currentHz >= range.range[0] && currentHz <= range.range[1])
+          .map((range: any) => ({
+            typeName: type.typeName,
+            ...range,
+          })),
+      );
+
+      // 更新提示信息显示
+      if (matches.length > 0) {
+        tooltip
+          .style('visibility', 'visible')
+          .style('left', `${event.pageX + 10}px`)
+          .style('top', `${event.pageY - 10}px`).html(`
+        <div>
+          <div style="font-weight: bold; margin-bottom: 8px;">
+            频率: ${nearestTick.label}
+          </div>
+          ${matches
+            .map(
+              (match: any) => `
+            <div style="margin-bottom: 8px;">
+              <div style="color: ${match.color};">
+                ${match.typeName} - ${match.frequencyName}
+              </div>
+              <div>
+                范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+              </div>
+            </div>
+          `,
+            )
+            .join('<hr style="margin: 8px 0;">')}
+        </div>
+      `);
+      } else {
+        tooltip.style('visibility', 'hidden');
+      }
+    });
+
+    // 处理鼠标离开事件
+    backgroundLayer.on('mouseleave', function () {
+      guidelineGroup.selectAll('*').remove();
+      tooltip.style('visibility', 'hidden');
+    });
+
     // 创建频率查找函数
     const findMatchingFrequencies = (hz: any) => {
       const matches: any = [];
@@ -147,14 +235,14 @@ const Frequency = () => {
 
     // 创建轴
     const createAxis = (position: any) => {
-      const axis = position === 'top' ? d3.axisTop(xScale) : d3.axisBottom(xScale);
-      const yPos = position === 'top' ? 0 : height - margin.top - margin.bottom;
+      const axis = position === 'top' ? d3.axisTop(xScale) : d3.axisBottom(xScale); // 创建轴
+      const yPos = position === 'top' ? 0 : totalHeight - margin.top; // 计算轴的位置
 
       const axisGroup = svg
-        .append('g')
-        .attr('class', `${position}-axis`)
-        .attr('transform', `translate(0,${yPos})`)
-        .call(axis);
+        .append('g') // 添加轴
+        .attr('class', `${position}-axis`) // 添加轴的类名
+        .attr('transform', `translate(0,${yPos})`) // 移动轴到正确的位置
+        .call(axis); // 调用轴
 
       // 添加刻度点击事件
       axisGroup
@@ -163,7 +251,7 @@ const Frequency = () => {
         .each(function (tickValue: any) {
           // eslint-disable-next-line @typescript-eslint/no-this-alias
           const tickNode = this as any;
-          tickNode.addEventListener('click', (event: any) => {
+          tickNode.addEventListener('mousemove', (event: any) => {
             event.stopPropagation();
 
             // 清除之前的虚线
@@ -179,7 +267,7 @@ const Frequency = () => {
               .attr('x1', xPos)
               .attr('y1', 0)
               .attr('x2', xPos)
-              .attr('y2', height - margin.top - margin.bottom)
+              .attr('y2', totalHeight - margin.top)
               .attr('stroke', '#666')
               .attr('stroke-width', 1)
               .attr('stroke-dasharray', '4,4')
@@ -329,9 +417,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
       typeData.ranges.forEach((freq: any, i: any) => {
         const startX = getXPosition(freq.range[0]);
         const endX = getXPosition(freq.range[1]);
-        console.log(startX, endX, 'startX, endX');
-        const blockHeight = 25;
-        const yOffset = 35 + freq.level * (blockHeight + 5);
+        const blockHeight = 25; // 频率块高度
+        const yOffset = 35 + freq.level * (blockHeight + 5); // 计算频率块的垂直位置
 
         // 创建频率块组
         const freqGroup = typeGroup
@@ -355,7 +442,7 @@ ${JSON.stringify(match.customInfo, null, 2)}
         // 添加鼠标事件监听
         // 鼠标悬停时显示tooltip
         rect.on('mouseover', function (event) {
-          console.log('mouseover', event);
+          event.stopPropagation(); // 阻止事件冒泡
           // 高亮显示当前频率块
           d3.select(this).attr('opacity', 0.9).attr('stroke', '#000').attr('stroke-width', 1);
 
@@ -424,13 +511,13 @@ ${JSON.stringify(match.customInfo, null, 2)}
 
           // 添加矩形
           freqGroup
-            .append('rect')
-            .attr('x', startX)
-            .attr('y', 0)
-            .attr('width', Math.max(endX - startX, 2))
-            .attr('height', blockHeight)
-            .attr('fill', `url(#${patternId})`)
-            .attr('rx', 3)
+            .append('rect') // 添加矩形
+            .attr('x', startX) // 与频率块重叠
+            .attr('y', 0) // 与频率块重叠
+            .attr('width', Math.max(endX - startX, 2)) // 确保宽度不为0
+            .attr('height', blockHeight) // 确保高度不为0
+            .attr('fill', `url(#${patternId})`) // 使用斜线填充
+            .attr('rx', 3) // 圆角
             .style('pointer-events', 'none'); // 确保斜线不会干扰点击事件
         }
       });
@@ -448,6 +535,91 @@ ${JSON.stringify(match.customInfo, null, 2)}
     //     tooltip.style('visibility', 'hidden');
     //     guidelineGroup.selectAll('*').remove();
     //   });
+
+    // 添加全屏鼠标移动交互层
+    // const interactionLayer = svg
+    //   .append('rect')
+    //   .attr('width', width)
+    //   .attr('height', totalHeight - margin.top - margin.bottom)
+    //   .attr('fill', 'transparent')
+    //   .style('pointer-events', 'all');
+
+    // // 添加鼠标移动事件处理
+    // interactionLayer.on('mousemove', function (event) {
+    //   // 获取鼠标在 SVG 中的位置
+    //   const [mouseX] = d3.pointer(event);
+
+    //   // 找到最近的刻度值
+    //   const nearestTick = xScale.domain().reduce((prev, curr) => {
+    //     const prevX = xScale(prev);
+    //     const currX = xScale(curr);
+    //     return Math.abs(currX - mouseX) < Math.abs(prevX - mouseX) ? curr : prev;
+    //   });
+
+    //   // 清除现有虚线
+    //   guidelineGroup.selectAll('*').remove();
+
+    //   // 添加新虚线
+    //   const xPos = xScale(nearestTick);
+    //   guidelineGroup
+    //     .append('line')
+    //     .attr('class', 'guideline')
+    //     .attr('x1', xPos)
+    //     .attr('y1', 0)
+    //     .attr('x2', xPos)
+    //     .attr('y2', height - margin.top - margin.bottom)
+    //     .attr('stroke', '#666')
+    //     .attr('stroke-width', 1)
+    //     .attr('stroke-dasharray', '4,4')
+    //     .style('pointer-events', 'none');
+
+    //   // 查找该刻度对应的频率信息
+    //   const tickHz = frequencyTicks.find((t: any) => t.label === nearestTick)?.value;
+    //   if (tickHz) {
+    //     const matches = data.flatMap((type: any) =>
+    //       type.ranges
+    //         .filter((range) => tickHz >= range.range[0] && tickHz <= range.range[1])
+    //         .map((range) => ({ typeName: type.typeName, ...range })),
+    //     );
+
+    //     // 如果找到匹配的频率块，显示信息
+    //     if (matches.length > 0) {
+    //       tooltip
+    //         .style('visibility', 'visible')
+    //         .style('left', `${event.pageX + 10}px`)
+    //         .style('top', `${event.pageY - 10}px`).html(`
+    //     <div>
+    //       <div style="font-weight: bold; margin-bottom: 8px;">
+    //         频率: ${nearestTick}
+    //       </div>
+    //       ${matches
+    //         .map(
+    //           (match) => `
+    //         <div style="margin-bottom: 8px;">
+    //           <div style="color: ${match.color};">
+    //             ${match.typeName} - ${match.frequencyName}
+    //           </div>
+    //           <div>
+    //             范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+    //           </div>
+    //         </div>
+    //       `,
+    //         )
+    //         .join('<hr style="margin: 8px 0;">')}
+    //     </div>
+    //   `);
+    //     } else {
+    //       // 如果没有匹配的频率块，隐藏 tooltip
+    //       tooltip.style('visibility', 'hidden');
+    //     }
+    //   }
+    // });
+
+    // // 添加鼠标离开事件处理
+    // interactionLayer.on('mouseleave', function () {
+    //   guidelineGroup.selectAll('*').remove();
+    //   tooltip.style('visibility', 'hidden');
+    // });
 
     // 清理函数
     return () => {
