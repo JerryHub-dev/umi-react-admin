@@ -19,6 +19,7 @@ export const frequencyTicks: any = [
   { value: 60000000000, label: '60GHz' },
 ];
 
+// 频率数组
 export const data: any = [
   {
     typeName: '无线设备',

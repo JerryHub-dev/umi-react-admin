@@ -47,6 +47,7 @@
     "ahooks": "^3.7.8",
     "all-contributors-cli": "^6.26.1",
     "antd": "^5.17.3",
+    "artplayer": "^5.2.1",
     "cesium": "^1.112.0",
     "cesium-heatmap": "^0.0.4",
     "cesiumjs-heat": "^1.0.7",

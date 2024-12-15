@@ -76,8 +76,20 @@ export const routes = [
       {
         name: 'VideoPlayer',
         path: '/feature/VideoPlayer',
-        component: './Feature/VideoPlayer',
         icon: 'VideoCameraAddOutlined',
+        // component: './Feature/VideoPlayer/xgplayer',
+        routes: [
+          {
+            name: 'xgplayer',
+            path: '/feature/VideoPlayer/xgplayer',
+            component: './Feature/VideoPlayer/xgplayer',
+          },
+          // {
+          //   name: 'ArtPlayer',
+          //   path: '/feature/VideoPlayer/ArtPlayer',
+          //   component: './Feature/VideoPlayer/ArtPlayer',
+          // }
+        ],
       },
       {
         name: 'D3',
@@ -89,6 +101,11 @@ export const routes = [
             path: '/feature/D3/Frequency',
             component: './Feature/D3/Frequency',
           },
+          // {
+          //   name: 'BarChartRace',
+          //   path: '/feature/D3/BarChartRace',
+          //   component: './Feature/D3/BarChartRace',
+          // },
         ],
       },
       {

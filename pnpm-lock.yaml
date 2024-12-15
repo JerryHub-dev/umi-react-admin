@@ -95,6 +95,9 @@ importers:
       antd:
         specifier: ^5.17.3
         version: 5.17.3(date-fns@2.30.0)(moment@2.29.4)(react-dom@18.1.0(react@18.1.0))(react@18.1.0)
+      artplayer:
+        specifier: ^5.2.1
+        version: 5.2.1
       cesium:
         specifier: ^1.112.0
         version: 1.112.0
@@ -3225,6 +3228,9 @@ packages:
     resolution: {integrity: sha512-3CYzex9M9FGQjCGMGyi6/31c8GJbgb0qGyrx5HWxPd0aCwh4cB2YjMb2Xf9UuoogrMrlO9cTqnB5rI5GHZTcUA==}
     engines: {node: '>=0.10.0'}
 
+  artplayer@5.2.1:
+    resolution: {integrity: sha512-xhNE9zSLT2z4O2CJwcMSWADsS3Cvq0PwNanvMzRsqgfUhsMOpum8HlMtIUPOTyMGjIhKV8sl109HFUalQK6WJQ==}
+
   asn1.js@5.4.1:
     resolution: {integrity: sha512-+I//4cYPccV8LdmBLiX8CYvf9Sp3vQsrqu2QNXRcrbiWvcx/UdlFiqUJJzxRQxgsZmvhXhn4cSKeSmoFjVdupA==}
 
@@ -5817,6 +5823,9 @@ packages:
   open@9.1.0:
     resolution: {integrity: sha512-OS+QTnw1/4vrf+9hh1jc1jnYjzSG4ttTBB8UxOwAnInG3Uo4ssetzC1ihqaIHjLJnA5GGlRl6QlZXOTQhRBUvg==}
     engines: {node: '>=14.16'}
+
+  option-validator@2.0.6:
+    resolution: {integrity: sha512-tmZDan2LRIRQyhUGvkff68/O0R8UmF+Btmiiz0SmSw2ng3CfPZB9wJlIjHpe/MKUZqyIZkVIXCrwr1tIN+0Dzg==}
 
   optionator@0.9.3:
     resolution: {integrity: sha512-JjCoypp+jKn1ttEFExxhetCKeJt9zhAgAve5FXHixTvFDW/5aEktX9bufBKLRRMdU7bNtpLfcGu94B3cdEJgjg==}
@@ -13126,6 +13135,10 @@ snapshots:
 
   arrify@1.0.1: {}
 
+  artplayer@5.2.1:
+    dependencies:
+      option-validator: 2.0.6
+
   asn1.js@5.4.1:
     dependencies:
       bn.js: 4.12.0
@@ -16126,6 +16139,10 @@ snapshots:
       define-lazy-prop: 3.0.0
       is-inside-container: 1.0.0
       is-wsl: 2.2.0
+
+  option-validator@2.0.6:
+    dependencies:
+      kind-of: 6.0.3
 
   optionator@0.9.3:
     dependencies:
