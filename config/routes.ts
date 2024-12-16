@@ -84,11 +84,11 @@ export const routes = [
             path: '/feature/VideoPlayer/xgplayer',
             component: './Feature/VideoPlayer/xgplayer',
           },
-          // {
-          //   name: 'ArtPlayer',
-          //   path: '/feature/VideoPlayer/ArtPlayer',
-          //   component: './Feature/VideoPlayer/ArtPlayer',
-          // }
+          {
+            name: 'ArtPlayer',
+            path: '/feature/VideoPlayer/ArtPlayer',
+            component: './Feature/VideoPlayer/ArtPlayer',
+          },
         ],
       },
       {
