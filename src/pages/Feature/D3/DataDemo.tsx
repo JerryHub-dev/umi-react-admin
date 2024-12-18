@@ -366,7 +366,6 @@ ${JSON.stringify(match.customInfo, null, 2)}
       const typeHeight = typeHeights[typeIndex];
       const typeGroup = mainGroup.append('g').attr('class', 'type-group').attr('transform', `translate(0,${currentY})`);
 
-      console.log(typeHeight, 'typeHeight');
       // 添加类型边框
       // 使用实际计算的高度绘制边框
       typeGroup
@@ -418,8 +417,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
       typeData.ranges.forEach((freq: any, i: any) => {
         const startX = getXPosition(freq.range[0]);
         const endX = getXPosition(freq.range[1]);
-        const blockHeight = 25;
-        const yOffset = 35 + freq.level * (blockHeight + 5);
+        const blockHeight = 25; // 频率块高度
+        const yOffset = 35 + freq.level * (blockHeight + 5); // 计算频率块的垂直位置
 
         // 创建频率块组
         const freqGroup = typeGroup
@@ -512,13 +511,13 @@ ${JSON.stringify(match.customInfo, null, 2)}
 
           // 添加矩形
           freqGroup
-            .append('rect')
-            .attr('x', startX)
-            .attr('y', 0)
-            .attr('width', Math.max(endX - startX, 2))
-            .attr('height', blockHeight)
-            .attr('fill', `url(#${patternId})`)
-            .attr('rx', 3)
+            .append('rect') // 添加矩形
+            .attr('x', startX) // 与频率块重叠
+            .attr('y', 0) // 与频率块重叠
+            .attr('width', Math.max(endX - startX, 2)) // 确保宽度不为0
+            .attr('height', blockHeight) // 确保高度不为0
+            .attr('fill', `url(#${patternId})`) // 使用斜线填充
+            .attr('rx', 3) // 圆角
             .style('pointer-events', 'none'); // 确保斜线不会干扰点击事件
         }
       });

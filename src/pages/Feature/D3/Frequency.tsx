@@ -143,72 +143,163 @@ const Frequency = () => {
 
     // 添加鼠标移动事件监听
     backgroundLayer.on('mousemove', function (event) {
-      // 获取鼠标在 SVG 中的位置，需要考虑偏移
+      // 1. 获取鼠标位置并调整到正确的坐标系
       const [mouseX] = d3.pointer(event);
-      const adjustedX = mouseX - margin.left;
 
-      // 找到最近的刻度值
-      const nearestTick = frequencyTicks.reduce((prev: any, curr: any) => {
-        const prevX = xScale(prev.label);
-        const currX = xScale(curr.label);
-        return Math.abs(currX - adjustedX) < Math.abs(prevX - adjustedX) ? curr : prev;
-      });
+      // 2. 创建一个更精确的频率计算方法
+      // 首先找到鼠标位置两侧的刻度点
+      let leftTick = frequencyTicks[0];
+      let rightTick = frequencyTicks[1];
 
-      // 清除并重绘虚线
-      guidelineGroup.selectAll('*').remove();
-      const xPos = xScale(nearestTick.label);
+      for (let i = 0; i < frequencyTicks.length - 1; i++) {
+        const currentTickX = xScale(frequencyTicks[i].label);
+        const nextTickX = xScale(frequencyTicks[i + 1].label);
 
-      // 绘制新的虚线
-      guidelineGroup
-        .append('line')
-        .attr('x1', xPos)
-        .attr('y1', 0)
-        .attr('x2', xPos)
-        .attr('y2', totalHeight - margin.top)
-        .attr('stroke', '#666')
-        .attr('stroke-width', 1)
-        .attr('stroke-dasharray', '4,4');
+        if (mouseX >= currentTickX && mouseX <= nextTickX) {
+          leftTick = frequencyTicks[i];
+          rightTick = frequencyTicks[i + 1];
+          break;
+        }
+      }
 
-      // 查找并显示频率信息
-      const currentHz = nearestTick.value;
+      // 3. 计算当前位置对应的频率值
+      // 使用线性插值计算鼠标位置对应的频率值
+      const leftX = xScale(leftTick.label);
+      const rightX = xScale(rightTick.label);
+      const progress = (mouseX - leftX) / (rightX - leftX);
+
+      // 使用对数插值来处理频率值，因为频率范围是对数刻度
+      const currentFrequency = Math.exp(
+        Math.log(leftTick.value) * (1 - progress) + Math.log(rightTick.value) * progress,
+      );
+
+      // 4. 查找匹配的频率范围
       const matches = data.flatMap((type: any) =>
         type.ranges
-          .filter((range: any) => currentHz >= range.range[0] && currentHz <= range.range[1])
+          .filter((range: any) => {
+            // 精确的范围匹配
+            return currentFrequency >= range.range[0] && currentFrequency <= range.range[1];
+          })
           .map((range: any) => ({
             typeName: type.typeName,
             ...range,
           })),
       );
 
-      // 更新提示信息显示
-      if (matches.length > 0) {
-        tooltip
-          .style('visibility', 'visible')
-          .style('left', `${event.pageX + 10}px`)
-          .style('top', `${event.pageY - 10}px`).html(`
-        <div>
-          <div style="font-weight: bold; margin-bottom: 8px;">
-            频率: ${nearestTick.label}
-          </div>
-          ${matches
-            .map(
-              (match: any) => `
-            <div style="margin-bottom: 8px;">
-              <div style="color: ${match.color};">
-                ${match.typeName} - ${match.frequencyName}
-              </div>
-              <div>
-                范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
-              </div>
+      // 5. 绘制虚线
+      guidelineGroup.selectAll('*').remove();
+      guidelineGroup
+        .append('line')
+        .attr('x1', mouseX)
+        .attr('y1', 0)
+        .attr('x2', mouseX)
+        .attr('y2', totalHeight - margin.top)
+        .attr('stroke', '#666')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '4,4');
+
+      // 6. 更新 tooltip 显示
+      const tooltipContent = `
+    <div>
+      <div style="font-weight: bold; margin-bottom: 8px;">
+        当前频率: ${formatFrequency(currentFrequency)}
+      </div>
+      ${
+        matches.length > 0
+          ? matches
+              .map(
+                (match: any) => `
+          <div style="margin-bottom: 8px;">
+            <div style="color: ${match.color}; font-weight: bold;">
+              ${match.typeName} - ${match.frequencyName}
             </div>
-          `,
-            )
-            .join('<hr style="margin: 8px 0;">')}
-        </div>
-      `);
-      } else {
-        tooltip.style('visibility', 'hidden');
+            <div>
+              频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+            </div>
+            <pre style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 4px 0 0 0;">
+${JSON.stringify(match.customInfo, null, 2)}
+            </pre>
+          </div>
+        `,
+              )
+              .join('<hr style="margin: 8px 0;">')
+          : '<div style="color: #666;">当前频率范围内无匹配项</div>'
       }
+    </div>
+  `;
+
+      tooltip
+        .style('visibility', 'visible')
+        .style('left', `${event.pageX - 240}px`)
+        .style('top', `${event.pageY - 70}px`)
+        .html(tooltipContent);
+
+      // 获取鼠标在 SVG 中的位置，需要考虑偏移
+      // const [mouseX] = d3.pointer(event);
+      // const adjustedX = mouseX - margin.left;
+
+      // // 找到最近的刻度值
+      // const nearestTick = frequencyTicks.reduce((prev: any, curr: any) => {
+      //   const prevX = xScale(prev.label);
+      //   const currX = xScale(curr.label);
+      //   return Math.abs(currX - adjustedX) < Math.abs(prevX - adjustedX) ? curr : prev;
+      // });
+
+      // // 清除并重绘虚线
+      // guidelineGroup.selectAll('*').remove();
+      // const xPos = xScale(nearestTick.label);
+
+      // // 绘制新的虚线
+      // guidelineGroup
+      //   .append('line')
+      //   .attr('x1', xPos)
+      //   .attr('y1', 0)
+      //   .attr('x2', xPos)
+      //   .attr('y2', totalHeight - margin.top)
+      //   .attr('stroke', '#666')
+      //   .attr('stroke-width', 1)
+      //   .attr('stroke-dasharray', '4,4');
+
+      // // 查找并显示频率信息
+      // const currentHz = nearestTick.value;
+      // const matches = data.flatMap((type: any) =>
+      //   type.ranges
+      //     .filter((range: any) => currentHz >= range.range[0] && currentHz <= range.range[1])
+      //     .map((range: any) => ({
+      //       typeName: type.typeName,
+      //       ...range,
+      //     })),
+      // );
+
+      // // 更新提示信息显示
+      // if (matches.length > 0) {
+      //   tooltip
+      //     .style('visibility', 'visible')
+      //     .style('left', `${event.pageX + 10}px`)
+      //     .style('top', `${event.pageY - 10}px`).html(`
+      //   <div>
+      //     <div style="font-weight: bold; margin-bottom: 8px;">
+      //       频率: ${nearestTick.label}
+      //     </div>
+      //     ${matches
+      //       .map(
+      //         (match: any) => `
+      //       <div style="margin-bottom: 8px;">
+      //         <div style="color: ${match.color};">
+      //           ${match.typeName} - ${match.frequencyName}
+      //         </div>
+      //         <div>
+      //           范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+      //         </div>
+      //       </div>
+      //     `,
+      //       )
+      //       .join('<hr style="margin: 8px 0;">')}
+      //   </div>
+      // `);
+      // } else {
+      //   tooltip.style('visibility', 'hidden');
+      // }
     });
 
     // 处理鼠标离开事件
@@ -290,8 +381,8 @@ const Frequency = () => {
               if (matches.length > 0) {
                 tooltip
                   .style('visibility', 'visible')
-                  .style('left', `${event.pageX + 10}px`)
-                  .style('top', `${event.pageY - 10}px`).html(`
+                  .style('left', `${event.pageX - 240}px`)
+                  .style('top', `${event.pageY - 60}px`).html(`
                     <div>
                       <div style="font-weight: bold; margin-bottom: 8px;">
                         频率: ${tickValue}
@@ -453,8 +544,8 @@ ${JSON.stringify(match.customInfo, null, 2)}
           // 显示hover tooltip
           hoverTooltip
             .style('visibility', 'visible')
-            .style('left', `${event.pageX + 10}px`)
-            .style('top', `${event.pageY - 10}px`).html(`
+            .style('left', `${event.pageX - 240}px`)
+            .style('top', `${event.pageY - 60}px`).html(`
               <div>
                 <div style="font-weight: bold; margin-bottom: 4px;">
                   ${typeData.typeName} - ${freq.frequencyName}
