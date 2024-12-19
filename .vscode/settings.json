@@ -99,5 +99,6 @@
     "valtio",
     "wavesurfer",
     "xgplayer"
-  ]
+  ],
+  "workbench.editor.wrapTabs": true
 }
