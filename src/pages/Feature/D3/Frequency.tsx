@@ -105,8 +105,8 @@ const Frequency = () => {
       .padding(0.5);
 
     // 创建频率值映射
-    const valueMap = new Map(frequencyTicks.map((t: any) => [t.label, t.value]));
-    const labelMap = new Map(frequencyTicks.map((t: any) => [t.value, t.label]));
+    const valueMap = new Map(frequencyTicks.map((t: any) => [t.label, t.value])); // 创建频率值映射
+    const labelMap = new Map(frequencyTicks.map((t: any) => [t.value, t.label])); // 创建标签映射
 
     // 创建tooltip
     const tooltip = d3
