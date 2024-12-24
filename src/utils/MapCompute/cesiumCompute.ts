@@ -110,7 +110,7 @@ export function handlerDistanceKm(startLongitude: number, startLatitude: number,
   let fixedPositions = Cesium.Cartographic.fromDegrees(startLongitude, startLatitude, startHeight); // 起点
   let fixedCartesian = Cesium.Cartographic.toCartesian(fixedPositions); // 起点的笛卡尔坐标
 
-  let endPointCartesians: any[] = [];
+  let endPointCartesians: any[] = []; // 终点的笛卡尔坐标
   // let currentCartesian = fixedCartesian;
 
   data.forEach((item: any) => {

@@ -58,6 +58,17 @@ export const data: any = [
         },
       },
       {
+        frequencyName: '设备B',
+        range: [90000000, 140000000], // 90MHz-140MHz
+        color: '#4299e1',
+        slashStyle: { forward: false, backward: true },
+        customInfo: {
+          description: '测试设备',
+          power: '10W',
+          status: '正常',
+        },
+      },
+      {
         frequencyName: '设备C',
         range: [1000000, 500000000], // 1MHz-500MHz
         color: '#4299e1',
@@ -70,6 +81,17 @@ export const data: any = [
       },
       {
         frequencyName: '设备d',
+        range: [10000000, 50000000], // 10MHz-50MHz
+        color: '#4299e1',
+        slashStyle: { forward: true, backward: false },
+        customInfo: {
+          description: '测试设备',
+          power: '10W',
+          status: '正常',
+        },
+      },
+      {
+        frequencyName: '设备dd',
         range: [10000000, 50000000], // 10MHz-50MHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: false },
