@@ -61,7 +61,7 @@ const Frequency = () => {
     d3.select(svgRef.current).selectAll('*').remove();
 
     // 设置尺寸和边距
-    const margin = { top: 50, right: 40, bottom: 50, left: 40 };
+    const margin = { top: 50, right: 0, bottom: 50, left: 0 };
     const width = Math.max(containerRef.current.clientWidth - margin.left - margin.right, 800);
     // const typeHeight = 150;
     // const height = data.length * typeHeight + margin.top + margin.bottom;
@@ -201,33 +201,33 @@ const Frequency = () => {
 
       // 6. 更新 tooltip 显示
       const tooltipContent = `
-    <div>
-      <div style="font-weight: bold; margin-bottom: 8px;">
-        当前频率: ${formatFrequency(currentFrequency)}
-      </div>
-      ${
-        matches.length > 0
-          ? matches
-              .map(
-                (match: any) => `
-          <div style="margin-bottom: 8px;">
-            <div style="color: ${match.color}; font-weight: bold;">
-              ${match.typeName} - ${match.frequencyName}
-            </div>
-            <div>
-              频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
-            </div>
-            <pre style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 4px 0 0 0;">
-${JSON.stringify(match.customInfo, null, 2)}
-            </pre>
+        <div>
+          <div style="font-weight: bold; margin-bottom: 8px;">
+            当前频率: ${formatFrequency(currentFrequency)}
           </div>
-        `,
-              )
-              .join('<hr style="margin: 8px 0;">')
-          : '<div style="color: #666;">当前频率范围内无匹配项</div>'
-      }
-    </div>
-  `;
+          ${
+            matches.length > 0
+              ? matches
+                  .map(
+                    (match: any) => `
+              <div style="margin-bottom: 8px;">
+                <div style="color: ${match.color}; font-weight: bold;">
+                  ${match.typeName} - ${match.frequencyName}
+                </div>
+                <div>
+                  频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
+                </div>
+                <pre style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 4px 0 0 0;">
+                  ${JSON.stringify(match.customInfo, null, 2)}
+                </pre>
+              </div>
+            `,
+                  )
+                  .join('<hr style="margin: 8px 0;">')
+              : '<div style="color: #666;">当前频率范围内无匹配项</div>'
+          }
+        </div>
+      `;
 
       tooltip
         .style('visibility', 'visible')
@@ -421,14 +421,14 @@ ${JSON.stringify(match.customInfo, null, 2)}
                             范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
                           </div>
                           <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px;">
-${JSON.stringify(match.customInfo, null, 2)}
-                          </pre>
-                        </div>
-                      `,
+                            ${JSON.stringify(match.customInfo, null, 2)}
+                                    </pre>
+                                  </div>
+                                `,
                         )
                         .join('<hr style="margin: 8px 0;">')}
-                    </div>
-                  `);
+                              </div>
+                            `);
               }
             }
           });
@@ -450,7 +450,7 @@ ${JSON.stringify(match.customInfo, null, 2)}
                   频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
                 </div>
                 <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
-${JSON.stringify(match.customInfo, null, 2)}
+                  ${JSON.stringify(match.customInfo, null, 2)}
                 </pre>
               </div>
             `,

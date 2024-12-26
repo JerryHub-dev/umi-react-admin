@@ -61,7 +61,7 @@ const Frequency = () => {
     d3.select(svgRef.current).selectAll('*').remove();
 
     // 设置尺寸和边距
-    const margin = { top: 50, right: 40, bottom: 50, left: 40 };
+    const margin = { top: 50, right: 0, bottom: 50, left: 0 };
     const width = Math.max(containerRef.current.clientWidth - margin.left - margin.right, 800);
     // const typeHeight = 150;
     // const height = data.length * typeHeight + margin.top + margin.bottom;
@@ -421,14 +421,14 @@ const Frequency = () => {
                             范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
                           </div>
                           <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px;">
-${JSON.stringify(match.customInfo, null, 2)}
-                          </pre>
-                        </div>
-                      `,
+                            ${JSON.stringify(match.customInfo, null, 2)}
+                                    </pre>
+                                  </div>
+                                `,
                         )
                         .join('<hr style="margin: 8px 0;">')}
-                    </div>
-                  `);
+                              </div>
+                            `);
               }
             }
           });
@@ -450,7 +450,7 @@ ${JSON.stringify(match.customInfo, null, 2)}
                   频率范围: ${formatFrequency(match.range[0])} - ${formatFrequency(match.range[1])}
                 </div>
                 <pre style="background: #f5f5f5; padding: 8px; margin-top: 4px; border-radius: 4px; white-space: pre-wrap;">
-${JSON.stringify(match.customInfo, null, 2)}
+                  ${JSON.stringify(match.customInfo, null, 2)}
                 </pre>
               </div>
             `,
@@ -528,18 +528,86 @@ ${JSON.stringify(match.customInfo, null, 2)}
       // };
 
       // 映射频率到位置的函数
-      const getFrequencyPosition = (hz: number) => {
-        // 找到对应的刻度标签
-        const nearestTick = frequencyTicks.find((tick: any) => tick.value === hz);
-        if (nearestTick) {
-          // 如果频率值正好对应某个刻度，直接返回刻度位置
-          return xScale(nearestTick.label);
+      // const getFrequencyPosition = (hz: number) => {
+      //   // 找到对应的刻度标签
+      //   const nearestTick = frequencyTicks.find((tick: any) => tick.value === hz);
+      //   if (nearestTick) {
+      //     // 如果频率值正好对应某个刻度，直接返回刻度位置
+      //     return xScale(nearestTick.label);
+      //   }
+
+      //   // 找到最接近的两个刻度点
+      //   let leftTick = frequencyTicks[0];
+      //   let rightTick = frequencyTicks[1];
+
+      //   for (let i = 0; i < frequencyTicks.length - 1; i++) {
+      //     if (hz >= frequencyTicks[i].value && hz <= frequencyTicks[i + 1].value) {
+      //       leftTick = frequencyTicks[i];
+      //       rightTick = frequencyTicks[i + 1];
+      //       break;
+      //     }
+      //   }
+
+      //   // 获取两个刻度点的位置
+      //   const leftPos = xScale(leftTick.label);
+      //   const rightPos = xScale(rightTick.label);
+
+      //   // 如果找不到合适的区间，返回 0 或最大值
+      //   if (!leftPos || !rightPos) {
+      //     return hz <= leftTick.value
+      //       ? xScale(frequencyTicks[0].label)
+      //       : xScale(frequencyTicks[frequencyTicks.length - 1].label);
+      //   }
+
+      //   return leftPos;
+      // };
+
+      // 改进频率到位置的映射函数
+      // const getXPosition = (hz: number) => {
+      //   // 1. 首先找到包含这个频率值的刻度区间
+      //   let leftTick, rightTick;
+
+      //   // 处理边界情况
+      //   if (hz <= frequencyTicks[0].value) {
+      //     return xScale(frequencyTicks[0].label);
+      //   }
+      //   if (hz >= frequencyTicks[frequencyTicks.length - 1].value) {
+      //     return xScale(frequencyTicks[frequencyTicks.length - 1].label);
+      //   }
+
+      //   // 找到频率值所在的刻度区间
+      //   for (let i = 0; i < frequencyTicks.length - 1; i++) {
+      //     if (hz >= frequencyTicks[i].value && hz <= frequencyTicks[i + 1].value) {
+      //       leftTick = frequencyTicks[i];
+      //       rightTick = frequencyTicks[i + 1];
+      //       break;
+      //     }
+      //   }
+
+      //   // 2. 计算在区间内的精确位置
+      //   const leftX = xScale(leftTick.label);
+      //   const rightX = xScale(rightTick.label);
+
+      //   // 3. 使用对数比例计算位置
+      //   // 因为频率是对数性质的，所以在计算区间内的相对位置时应该使用对数插值
+      //   const logProgress =
+      //     (Math.log(hz) - Math.log(leftTick.value)) / (Math.log(rightTick.value) - Math.log(leftTick.value));
+
+      //   // 返回插值计算的位置
+      //   return leftX + (rightX - leftX) * logProgress;
+      // };
+
+      const getXPosition = (hz: number) => {
+        // 处理边界情况
+        if (hz <= frequencyTicks[0].value) {
+          return xScale(frequencyTicks[0].label);
+        }
+        if (hz >= frequencyTicks[frequencyTicks.length - 1].value) {
+          return xScale(frequencyTicks[frequencyTicks.length - 1].label);
         }
 
-        // 找到最接近的两个刻度点
-        let leftTick = frequencyTicks[0];
-        let rightTick = frequencyTicks[1];
-
+        // 找到包含该频率值的刻度区间
+        let leftTick, rightTick;
         for (let i = 0; i < frequencyTicks.length - 1; i++) {
           if (hz >= frequencyTicks[i].value && hz <= frequencyTicks[i + 1].value) {
             leftTick = frequencyTicks[i];
@@ -548,26 +616,32 @@ ${JSON.stringify(match.customInfo, null, 2)}
           }
         }
 
-        // 获取两个刻度点的位置
+        // 如果找不到适合的区间（这种情况不应该发生，但我们需要处理）
+        if (!leftTick || !rightTick) {
+          console.warn('无法为频率值找到合适的区间:', formatFrequency(hz));
+          return null;
+        }
+
+        // 获取刻度点的位置
         const leftPos = xScale(leftTick.label);
         const rightPos = xScale(rightTick.label);
 
-        // 如果找不到合适的区间，返回 0 或最大值
-        if (!leftPos || !rightPos) {
-          return hz <= leftTick.value
-            ? xScale(frequencyTicks[0].label)
-            : xScale(frequencyTicks[frequencyTicks.length - 1].label);
-        }
+        // 在对数空间中计算相对位置
+        const logHz = Math.log10(hz);
+        const logLeft = Math.log10(leftTick.value);
+        const logRight = Math.log10(rightTick.value);
 
-        return leftPos;
+        // 使用对数插值计算实际位置
+        const progress = (logHz - logLeft) / (logRight - logLeft);
+        return leftPos + (rightPos - leftPos) * progress;
       };
 
       // 绘制频率块
       typeData.ranges.forEach((freq: any, i: any) => {
-        // const startX = getXPosition(freq.range[0]);
-        // const endX = getXPosition(freq.range[1]);
-        const startX = getFrequencyPosition(freq.range[0]);
-        const endX = getFrequencyPosition(freq.range[1]);
+        const startX = getXPosition(freq.range[0]);
+        const endX = getXPosition(freq.range[1]);
+        // const startX = getFrequencyPosition(freq.range[0]);
+        // const endX = getFrequencyPosition(freq.range[1]);
         const blockHeight = 25; // 频率块高度
         const yOffset = 35 + freq.level * (blockHeight + 5); // 计算频率块的垂直位置
 

@@ -22,7 +22,7 @@ export const frequencyTicks: any = [
 // 频率数组
 export const data: any = [
   {
-    typeName: '无线设备',
+    typeName: '无线设备1',
     ranges: [
       {
         frequencyName: '设备0',
@@ -115,7 +115,7 @@ export const data: any = [
     ],
   },
   {
-    typeName: '无线设备',
+    typeName: '无线设备2',
     ranges: [
       {
         frequencyName: '设备c',
@@ -186,11 +186,11 @@ export const data: any = [
     ],
   },
   {
-    typeName: '无线设备',
+    typeName: '无线设备3',
     ranges: [
       {
         frequencyName: '设备A',
-        range: [100000, 5000000], // 100kHz-500kHz
+        range: [100000, 500000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: false },
         customInfo: {
@@ -213,7 +213,7 @@ export const data: any = [
     ],
   },
   {
-    typeName: '无线设备',
+    typeName: '无线设备4',
     ranges: [
       {
         frequencyName: '设备A',
