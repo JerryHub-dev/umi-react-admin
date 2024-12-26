@@ -12,6 +12,7 @@ const Unit = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [viewer, setViewer] = useState(null as any);
   const viewerRef = useRef(viewer);
+  const draggingEntityRef = useRef(null); // 正在拖拽的实体
 
   // NOTE 添加图标
   const handleIcon = (viewer: any) => {
@@ -45,6 +46,50 @@ const Unit = () => {
         text: item.label,
       };
     });
+  };
+
+  // NOTE 添加鼠标事件
+  const handleAddDrag = (viewer: any) => {
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+    let isDragging = false; // 是否正在拖拽
+
+    // 鼠标左键按下事件
+    handler.setInputAction((movement: any) => {
+      // 检查鼠标点击到的对象是否为目标实体
+      const pickedObject = viewer.scene.pick(movement.position);
+      if (Cesium.defined(pickedObject) && pickedObject.id) {
+        isDragging = true;
+        draggingEntityRef.current = pickedObject.id;
+        viewer.scene.screenSpaceCameraController.enableRotate = false; // 禁止地图旋转
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+    // 鼠标左键释放事件
+    handler.setInputAction((movement) => {
+      if (isDragging && draggingEntityRef.current) {
+        // 获取鼠标的地理位置
+        const cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+        if (cartesian) {
+          // 将地理位置转换为经纬度
+          const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+          const newLongitude = Cesium.Math.toDegrees(cartographic.longitude);
+          const newLatitude = Cesium.Math.toDegrees(cartographic.latitude);
+
+          // 更新实体位置
+          draggingEntityRef.current.position = Cesium.Cartesian3.fromDegrees(newLongitude, newLatitude);
+        }
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+    // 鼠标左键抬起事件
+    handler.setInputAction(() => {
+      if (isDragging) {
+        isDragging = false; // 结束拖拽
+        draggingEntityRef.current = null; // 清空拖拽实体
+        viewer.scene.screenSpaceCameraController.enableRotate = true; // 恢复地图旋转
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_UP);
   };
 
   // NOTE 初始化 Cesium
@@ -81,6 +126,7 @@ const Unit = () => {
     viewer.camera.flyTo(initView);
 
     setViewer(viewer);
+    handleAddDrag(viewer);
     viewerRef.current = viewer;
 
     // 2, 添加一个点击事件来显示位置坐标：
@@ -211,20 +257,36 @@ const Unit = () => {
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
   };
 
+  // NOTE 获取实体数据
+  const handlePull = () => {
+    const entities = viewer.entities.values;
+    console.log('实体数据', entities);
+    entities.forEach((entity: any) => {
+      console.log(entity);
+      // 获取实体经纬度坐标
+      const position = entity.position.getValue(Cesium.JulianDate.now()); // 获取实体位置
+      const cartographic = Cesium.Cartographic.fromCartesian(position); // 转换为经纬度坐标
+      const longitude = Cesium.Math.toDegrees(cartographic.longitude); // 转换为经度
+      const latitude = Cesium.Math.toDegrees(cartographic.latitude); // 转换为纬度
+      console.log('经纬度坐标', longitude, latitude);
+
+      // entity.properties._name._value // 获取实体添加的名称/信息
+    });
+  };
+
   return (
     <>
       {contextHolder}
       <ProCard>
-        {/* <div id="cesiumContainer" className="relative" style={{ width: '100%', height: '100vh' }} /> */}
         <div id="cesiumContainer" className="relative" />
         <div className="absolute z-10 flex flex-col items-center justify-center rounded-full top-16 right-8">
           <Button className="w-8 h-8 p-0" onClick={() => FnSquareRegion()}>
             <GatewayOutlined className="text-lg text-center align-middle text-sky-400 hover:text-sky-400 " />
           </Button>
-          {/* <Button className="w-8 h-8 p-0 m-2" onClick={() => {}}>
-            <GatewayOutlined className="text-lg text-center align-middle text-sky-400 hover:text-sky-400 " />
-          </Button> */}
         </div>
+        <Button onClick={() => handlePull()} className="mt-2">
+          获取实体数据
+        </Button>
       </ProCard>
     </>
   );
