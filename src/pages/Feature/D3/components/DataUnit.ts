@@ -189,8 +189,8 @@ export const data: any = [
     typeName: '无线设备3',
     ranges: [
       {
-        frequencyName: '设备A',
-        range: [100000, 500000], // 100kHz-500kHz
+        frequencyName: '设备1',
+        range: [100000, 5000000000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: false },
         customInfo: {
@@ -200,8 +200,8 @@ export const data: any = [
         },
       },
       {
-        frequencyName: '设备A',
-        range: [100000, 500000], // 100kHz-500kHz
+        frequencyName: '设备2',
+        range: [10000000, 5000000000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: false },
         customInfo: {
@@ -216,8 +216,8 @@ export const data: any = [
     typeName: '无线设备4',
     ranges: [
       {
-        frequencyName: '设备A',
-        range: [100000, 500000], // 100kHz-500kHz
+        frequencyName: '设备1',
+        range: [1000000, 50000000000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: false },
         customInfo: {
@@ -227,7 +227,7 @@ export const data: any = [
         },
       },
       {
-        frequencyName: '设备A',
+        frequencyName: '设备2',
         range: [10000000, 500000000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: false },
@@ -238,7 +238,7 @@ export const data: any = [
         },
       },
       {
-        frequencyName: '设备A',
+        frequencyName: '设备3',
         range: [1000000, 500000000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: true, backward: true },
@@ -249,7 +249,7 @@ export const data: any = [
         },
       },
       {
-        frequencyName: '设备A',
+        frequencyName: '设备4',
         range: [1000000, 600000000], // 100kHz-500kHz
         color: '#4299e1',
         slashStyle: { forward: false, backward: true },

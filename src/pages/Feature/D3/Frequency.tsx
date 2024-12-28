@@ -518,85 +518,6 @@ const Frequency = () => {
       });
 
       // 映射频率到刻度位置
-      // const getXPosition = (hz: any) => {
-      //   const label: any = labelMap.get(
-      //     frequencyTicks.reduce((prev: any, curr: any) =>
-      //       Math.abs(curr.value - hz) < Math.abs(prev.value - hz) ? curr : prev,
-      //     ).value,
-      //   );
-      //   return xScale(label);
-      // };
-
-      // 映射频率到位置的函数
-      // const getFrequencyPosition = (hz: number) => {
-      //   // 找到对应的刻度标签
-      //   const nearestTick = frequencyTicks.find((tick: any) => tick.value === hz);
-      //   if (nearestTick) {
-      //     // 如果频率值正好对应某个刻度，直接返回刻度位置
-      //     return xScale(nearestTick.label);
-      //   }
-
-      //   // 找到最接近的两个刻度点
-      //   let leftTick = frequencyTicks[0];
-      //   let rightTick = frequencyTicks[1];
-
-      //   for (let i = 0; i < frequencyTicks.length - 1; i++) {
-      //     if (hz >= frequencyTicks[i].value && hz <= frequencyTicks[i + 1].value) {
-      //       leftTick = frequencyTicks[i];
-      //       rightTick = frequencyTicks[i + 1];
-      //       break;
-      //     }
-      //   }
-
-      //   // 获取两个刻度点的位置
-      //   const leftPos = xScale(leftTick.label);
-      //   const rightPos = xScale(rightTick.label);
-
-      //   // 如果找不到合适的区间，返回 0 或最大值
-      //   if (!leftPos || !rightPos) {
-      //     return hz <= leftTick.value
-      //       ? xScale(frequencyTicks[0].label)
-      //       : xScale(frequencyTicks[frequencyTicks.length - 1].label);
-      //   }
-
-      //   return leftPos;
-      // };
-
-      // 改进频率到位置的映射函数
-      // const getXPosition = (hz: number) => {
-      //   // 1. 首先找到包含这个频率值的刻度区间
-      //   let leftTick, rightTick;
-
-      //   // 处理边界情况
-      //   if (hz <= frequencyTicks[0].value) {
-      //     return xScale(frequencyTicks[0].label);
-      //   }
-      //   if (hz >= frequencyTicks[frequencyTicks.length - 1].value) {
-      //     return xScale(frequencyTicks[frequencyTicks.length - 1].label);
-      //   }
-
-      //   // 找到频率值所在的刻度区间
-      //   for (let i = 0; i < frequencyTicks.length - 1; i++) {
-      //     if (hz >= frequencyTicks[i].value && hz <= frequencyTicks[i + 1].value) {
-      //       leftTick = frequencyTicks[i];
-      //       rightTick = frequencyTicks[i + 1];
-      //       break;
-      //     }
-      //   }
-
-      //   // 2. 计算在区间内的精确位置
-      //   const leftX = xScale(leftTick.label);
-      //   const rightX = xScale(rightTick.label);
-
-      //   // 3. 使用对数比例计算位置
-      //   // 因为频率是对数性质的，所以在计算区间内的相对位置时应该使用对数插值
-      //   const logProgress =
-      //     (Math.log(hz) - Math.log(leftTick.value)) / (Math.log(rightTick.value) - Math.log(leftTick.value));
-
-      //   // 返回插值计算的位置
-      //   return leftX + (rightX - leftX) * logProgress;
-      // };
-
       const getXPosition = (hz: number) => {
         // 处理边界情况
         if (hz <= frequencyTicks[0].value) {
@@ -640,8 +561,6 @@ const Frequency = () => {
       typeData.ranges.forEach((freq: any, i: any) => {
         const startX = getXPosition(freq.range[0]);
         const endX = getXPosition(freq.range[1]);
-        // const startX = getFrequencyPosition(freq.range[0]);
-        // const endX = getFrequencyPosition(freq.range[1]);
         const blockHeight = 25; // 频率块高度
         const yOffset = 35 + freq.level * (blockHeight + 5); // 计算频率块的垂直位置
 
