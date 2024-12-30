@@ -62,6 +62,13 @@ const Unit = () => {
         isDragging = true;
         draggingEntityRef.current = pickedObject.id;
         viewer.scene.screenSpaceCameraController.enableRotate = false; // 禁止地图旋转
+
+        // 获取当前实体的经纬度坐标
+        const position = pickedObject.id.position.getValue(Cesium.JulianDate.now());
+        const cartographic = Cesium.Cartographic.fromCartesian(position);
+        const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+        const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+        console.log('经纬度坐标', longitude + ',' + latitude);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
