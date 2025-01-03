@@ -1,7 +1,7 @@
 import thermal from '@/utils/MapCompute/ThermalMapData.json';
 import { iconData } from '@/utils/MapCompute/dataEnd';
 import { ProCard } from '@ant-design/pro-components';
-import { message } from 'antd';
+import { Button, message } from 'antd';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useState } from 'react';
@@ -140,10 +140,79 @@ const HaiAirPosture = () => {
     };
   }, []);
 
+  const handleLonLat = () => {
+    function convertDMSToDD(dmsStr: string) {
+      try {
+        // 移除空格,保留数字、正负号和度分秒符号
+        const cleanStr = dmsStr.trim();
+
+        // 获取正负号
+        const sign = cleanStr.startsWith('-') ? -1 : 1;
+
+        // 提取数字部分
+        const matches = cleanStr.match(/([+-]?\d+)˚(\d+)'(\d+)''/);
+        if (!matches) {
+          console.error('Invalid DMS format:', dmsStr);
+          return null;
+        }
+
+        // 解析度分秒
+        const degrees = parseFloat(matches[1]);
+        const minutes = parseFloat(matches[2]);
+        const seconds = parseFloat(matches[3]);
+
+        // 验证数值
+        console.log('Parsed values:', {
+          degrees,
+          minutes,
+          seconds,
+          sign,
+        });
+
+        // 转换为十进制度数
+        const decimal = sign * (Math.abs(degrees) + minutes / 60 + seconds / 3600);
+
+        console.log('Converted decimal:', decimal);
+
+        return decimal;
+      } catch (error) {
+        console.error('Conversion error:', error);
+        return null;
+      }
+    }
+
+    let longitude = "+115˚12'266''";
+    let latitude = "-29˚33'123''";
+
+    const lonDD = convertDMSToDD(longitude);
+    const latDD = convertDMSToDD(latitude);
+
+    console.log('Final coordinates:', { lonDD, latDD });
+
+    // 确保坐标有效再创建位置
+    if (lonDD !== null && latDD !== null && !isNaN(lonDD) && !isNaN(latDD)) {
+      const position = Cesium.Cartesian3.fromDegrees(lonDD, latDD);
+
+      viewer.entities.add({
+        position: position,
+        billboard: {
+          image: require('@/assets/Detection.png'),
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          scale: 0.6,
+        },
+      });
+    } else {
+      console.error('Invalid coordinates calculated');
+    }
+  };
+
   return (
     <>
       <ProCard>
         {contextHolder}
+        <Button className="mb-2" onClick={() => handleLonLat()}>
+          经纬度
+        </Button>
         <div id="cesiumContainer" />
       </ProCard>
     </>
