@@ -3,6 +3,7 @@ import { iconData } from '@/utils/MapCompute/dataEnd';
 import { ProCard } from '@ant-design/pro-components';
 import { Button, message } from 'antd';
 import * as Cesium from 'cesium';
+import CesiumNavigation from 'cesium-navigation-es6';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useState } from 'react';
 
@@ -102,6 +103,15 @@ const HaiAirPosture = () => {
       vrButton: false, // 是否显示VR按钮
       // sceneMode: Cesium.SceneMode.SCENE2D, // 2D 模式
     });
+
+    // 初始化导航插件
+    const options = {
+      enableCompass: true,
+      enableZoomControls: true,
+      enableDistanceLegend: true,
+      enableCompassOuterRing: true,
+    };
+    new CesiumNavigation(viewer, options);
 
     // 1, 去除版权信息
     (viewer.cesiumWidget.creditContainer as HTMLElement).style.display = 'none';

@@ -104,6 +104,9 @@ importers:
       cesium-heatmap:
         specifier: ^0.0.4
         version: 0.0.4
+      cesium-navigation-es6:
+        specifier: ^3.0.9
+        version: 3.0.9
       cesiumjs-heat:
         specifier: ^1.0.7
         version: 1.0.7
@@ -3486,6 +3489,9 @@ packages:
 
   cesium-heatmap@0.0.4:
     resolution: {integrity: sha512-6ujF5HMss/gI7wiHo9EDM5Ec5dK1b/e7AJOioJfFo7wuB1rgHfvGTKDbO0rUQHJKlvojyFdyHcHzEb0sPAm8AQ==}
+
+  cesium-navigation-es6@3.0.9:
+    resolution: {integrity: sha512-tRMABMc4Le6fMxPvlC+pw6UyP7pm7tG1QrwRepIGzoRQDqO9o6f0SOt1zdbghDn8blY2u8sNWInfs5RaQ/+VEA==}
 
   cesium@1.112.0:
     resolution: {integrity: sha512-johaLB97GIBZF9qEfKHc04vQHgh3B0tikFE+QA5W+ZsL97KQjTcdlgwGNxCT2yMCgN5hZ+eSynoQhkqLdFuUDA==}
@@ -13463,6 +13469,10 @@ snapshots:
       lazy-cache: 1.0.4
 
   cesium-heatmap@0.0.4: {}
+
+  cesium-navigation-es6@3.0.9:
+    dependencies:
+      cesium: 1.112.0
 
   cesium@1.112.0:
     dependencies:

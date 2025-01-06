@@ -50,6 +50,7 @@
     "artplayer": "^5.2.1",
     "cesium": "^1.112.0",
     "cesium-heatmap": "^0.0.4",
+    "cesium-navigation-es6": "^3.0.9",
     "cesiumjs-heat": "^1.0.7",
     "d3": "^7.9.0",
     "dayjs": "^1.11.11",
