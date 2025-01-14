@@ -14,6 +14,11 @@ const HaiAirPosture = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [data, setData] = useState([]);
   Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN as string;
+  // setTimeout(() => {
+  //   let CesiumNavigation = window.CesiumNavigation;
+  //   console.log('CesiumNavigation:', window);
+
+  // }, 1000);
 
   // NOTE 添加图标
   const handleIcon = (viewer: any) => {
