@@ -35,17 +35,17 @@ export const data: any = [
           status: '正常',
         },
       },
-      {
-        frequencyName: '设备A',
-        range: [35000, 140000000], // 35kHz-140MHz
-        color: '#4299e1',
-        slashStyle: { forward: true, backward: false },
-        customInfo: {
-          description: '测试设备',
-          power: '10W',
-          status: '正常',
-        },
-      },
+      // {
+      //   frequencyName: '设备A',
+      //   range: [35000, 140000000], // 35kHz-140MHz
+      //   color: '#4299e1',
+      //   slashStyle: { forward: true, backward: false },
+      //   customInfo: {
+      //     description: '测试设备',
+      //     power: '10W',
+      //     status: '正常',
+      //   },
+      // },
       {
         frequencyName: '设备B',
         range: [90000000, 140000000], // 90MHz-140MHz

@@ -97,6 +97,9 @@ const Frequency = () => {
     // 创建主组用于内容绘制
     const mainGroup = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
+    // 将频率标记组添加到最底层
+    const frequencyMarkerGroup = svg.append('g').attr('class', 'frequency-markers').style('pointer-events', 'none');
+
     // 创建等距比例尺
     const xScale: any = d3
       .scalePoint()
@@ -556,6 +559,57 @@ const Frequency = () => {
         const progress = (logHz - logLeft) / (logRight - logLeft);
         return leftPos + (rightPos - leftPos) * progress;
       };
+
+      // const targetFrequencyRange = [1000000, 140000000];
+      const targetFrequencyRange: any = [];
+
+      // 如果是第一个类型组，添加频率标记
+      if (targetFrequencyRange.length > 0) {
+        const startX = getXPosition(targetFrequencyRange[0]);
+        const endX = getXPosition(targetFrequencyRange[1]);
+
+        if (startX !== null && endX !== null) {
+          // 添加范围背景
+          frequencyMarkerGroup
+            .append('rect')
+            .attr('x', startX) // 从顶部开始
+            .attr('y', 0) // 从顶部开始
+            .attr('width', endX - startX) // 到底部结束
+            .attr('height', totalHeight - margin.bottom) // 到底部结束
+            .attr('fill', 'green')
+            .attr('opacity', 0.1)
+            .style('pointer-events', 'none');
+
+          // 添加标记线
+          [startX, endX].forEach((x) => {
+            frequencyMarkerGroup
+              .append('line')
+              .attr('x1', x) // 从顶部开始
+              .attr('y1', 0) // 从顶部开始
+              .attr('x2', x) // 到底部结束
+              .attr('y2', totalHeight - margin.bottom) // 到底部结束
+              .attr('stroke', 'green')
+              .attr('stroke-width', 2)
+              .style('pointer-events', 'none');
+          });
+
+          // // 添加频率标签
+          // [
+          //   { x: startX, freq: targetFrequencyRange[0], align: 'start' },
+          //   { x: endX, freq: targetFrequencyRange[1], align: 'end' }
+          // ].forEach(({ x, freq, align }) => {
+          //   mainGroup
+          //     .append('text')
+          //     .attr('x', x)
+          //     .attr('y', -margin.top - 10)
+          //     .attr('text-anchor', align)
+          //     .attr('fill', 'green')
+          //     .attr('font-size', '12px')
+          //     .text(formatFrequency(freq))
+          //     .style('pointer-events', 'none');
+          // });
+        }
+      }
 
       // 绘制频率块
       typeData.ranges.forEach((freq: any, i: any) => {
