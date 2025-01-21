@@ -560,8 +560,8 @@ const Frequency = () => {
         return leftPos + (rightPos - leftPos) * progress;
       };
 
-      // const targetFrequencyRange = [1000000, 140000000];
-      const targetFrequencyRange: any = [];
+      const targetFrequencyRange = [1000000, 140000000];
+      // const targetFrequencyRange: any = [];
 
       // 如果是第一个类型组，添加频率标记
       if (targetFrequencyRange.length > 0) {
@@ -577,7 +577,7 @@ const Frequency = () => {
             .attr('width', endX - startX) // 到底部结束
             .attr('height', totalHeight - margin.bottom) // 到底部结束
             .attr('fill', 'green')
-            .attr('opacity', 0.1)
+            .attr('opacity', 0.1) // 透明度
             .style('pointer-events', 'none');
 
           // 添加标记线
@@ -589,11 +589,11 @@ const Frequency = () => {
               .attr('x2', x) // 到底部结束
               .attr('y2', totalHeight - margin.bottom) // 到底部结束
               .attr('stroke', 'green')
-              .attr('stroke-width', 2)
+              .attr('stroke-width', 1)
               .style('pointer-events', 'none');
           });
 
-          // // 添加频率标签
+          // 添加频率标签
           // [
           //   { x: startX, freq: targetFrequencyRange[0], align: 'start' },
           //   { x: endX, freq: targetFrequencyRange[1], align: 'end' }
