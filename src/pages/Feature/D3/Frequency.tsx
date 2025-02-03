@@ -560,13 +560,11 @@ const Frequency = () => {
         return leftPos + (rightPos - leftPos) * progress;
       };
 
-      // const targetFrequencyRange = [1000000, 140000000];
-      const targetFrequencyRange: any = [];
+      const targetFrequencyRange = [1000000, 140000000];
+      // const targetFrequencyRange: any = [];
 
       // 如果是第一个类型组，添加频率标记
       if (targetFrequencyRange.length > 0) {
-        console.log('targetFrequencyRange', targetFrequencyRange);
-
         const startX = getXPosition(targetFrequencyRange[0]);
         const endX = getXPosition(targetFrequencyRange[1]);
 
