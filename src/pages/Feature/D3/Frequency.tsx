@@ -560,7 +560,7 @@ const Frequency = () => {
         return leftPos + (rightPos - leftPos) * progress;
       };
 
-      const targetFrequencyRange = [1000000, 140000000];
+      const targetFrequencyRange = [1900000, 140000000];
       // const targetFrequencyRange: any = [];
 
       // 如果是第一个类型组，添加频率标记
@@ -581,17 +581,17 @@ const Frequency = () => {
             .style('pointer-events', 'none');
 
           // 添加标记线
-          // [startX, endX].forEach((x) => {
-          //   frequencyMarkerGroup
-          //     .append('line')
-          //     .attr('x1', x) // 从顶部开始
-          //     .attr('y1', 0) // 从顶部开始
-          //     .attr('x2', x) // 到底部结束
-          //     .attr('y2', totalHeight - margin.bottom) // 到底部结束
-          //     .attr('stroke', 'green')
-          //     .attr('stroke-width', 1)
-          //     .style('pointer-events', 'none');
-          // });
+          [startX, endX].forEach((x) => {
+            frequencyMarkerGroup
+              .append('line')
+              .attr('x1', x) // 从顶部开始
+              .attr('y1', 0) // 从顶部开始
+              .attr('x2', x) // 到底部结束
+              .attr('y2', totalHeight - margin.bottom) // 到底部结束
+              .attr('stroke', 'green')
+              .attr('stroke-width', 0.5)
+              .style('pointer-events', 'none');
+          });
 
           // 添加频率标签
           // [
