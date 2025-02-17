@@ -594,20 +594,20 @@ const Frequency = () => {
           });
 
           // 添加频率标签
-          // [
-          //   { x: startX, freq: targetFrequencyRange[0], align: 'start' },
-          //   { x: endX, freq: targetFrequencyRange[1], align: 'end' }
-          // ].forEach(({ x, freq, align }) => {
-          //   mainGroup
-          //     .append('text')
-          //     .attr('x', x)
-          //     .attr('y', -margin.top - 10)
-          //     .attr('text-anchor', align)
-          //     .attr('fill', 'green')
-          //     .attr('font-size', '12px')
-          //     .text(formatFrequency(freq))
-          //     .style('pointer-events', 'none');
-          // });
+          [
+            { x: startX, freq: targetFrequencyRange[0], align: 'start' },
+            { x: endX, freq: targetFrequencyRange[1], align: 'end' },
+          ].forEach(({ x, freq, align }) => {
+            mainGroup
+              .append('text')
+              .attr('x', x)
+              .attr('y', -margin.top - 10)
+              .attr('text-anchor', align)
+              .attr('fill', 'green')
+              .attr('font-size', '12px')
+              .text(formatFrequency(freq))
+              .style('pointer-events', 'none');
+          });
         }
       }
 
