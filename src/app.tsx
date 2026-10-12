@@ -5,7 +5,6 @@ import 'antd/dist/reset.css';
 import BuildFooter from '@/components/BuildFooter';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import GuideTour from '@/components/GuideTour';
-import { AUTH_TOKEN_KEY } from '@/constants';
 import RightContent from '@/layouts/RightContent';
 import Forbidden from '@/pages/Exception/403';
 import { registerMessage } from '@/utils/antdMessage';
@@ -55,7 +54,7 @@ const MessageBridge = () => {
 const PUBLIC_PATHS = ['/login', '/exception/403', '/exception/404', '/exception/500'];
 
 /**
- * 路由守卫：包在 layout childrenRender 中，未登录（无 token 或 initialState 未建立）
+ * 路由守卫：包在 layout childrenRender 中，服务端/演示会话的 initialState 未建立
  * 时重定向到登录页。不走 config/routes.ts 的 wrappers 属性——该属性在
  * @umijs/max 4.6.53 + layout 插件组合下实测会导致生产构建整站静默不渲染（升级 4.7.19 后未复测，
  * 守卫实现保持不变）。
@@ -63,12 +62,11 @@ const PUBLIC_PATHS = ['/login', '/exception/403', '/exception/404', '/exception/
 const AuthGuard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { initialState } = useModel('@@initialState');
   const location = useLocation();
-  const hasToken = typeof window !== 'undefined' && !!localStorage.getItem(AUTH_TOKEN_KEY);
 
   if (PUBLIC_PATHS.includes(location.pathname)) {
     return <>{children}</>;
   }
-  if (!hasToken || !initialState?.name) {
+  if (!initialState?.name) {
     // 带上原本要访问的地址，登录后回到这里
     return <Navigate replace to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} />;
   }

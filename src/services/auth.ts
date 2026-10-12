@@ -1,37 +1,63 @@
-import type { DemoRole } from '@/demo/token';
+import { DEMO_MODE } from '@/demo/mode';
+import { verifyDemoToken } from '@/demo/token';
+import { clearDemoToken, saveDemoToken } from '@/utils/Auth/session';
+import { BizError } from '@/utils/BizError';
+import { t } from '@/utils/i18n';
 import { api } from './client';
+import type { CurrentUser, LoginResult } from './types';
+
+export type { CurrentUser, LoginResult } from './types';
 
 export interface LoginParams {
   name: string;
   password: string;
 }
 
-export interface CurrentUser {
-  /** 登录名 */
-  name: string;
-  email: string;
-  /** 显示名 */
-  nickName?: string;
-  /** 角色声明：access 权限消费它（canSeeAdmin = role === 'admin'）。真实后端必须由服务端返回 */
-  role?: DemoRole;
-}
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
-export interface LoginResult {
-  token: string;
-  user: CurrentUser;
-}
+/** A successful HTTP response alone cannot establish an authenticated UI state. */
+const currentUser = (value: unknown): CurrentUser => {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== 'string' ||
+    !value.name.trim() ||
+    value.name.length > 256 ||
+    /[\u0000-\u001f\u007f]/.test(value.name) ||
+    typeof value.email !== 'string' ||
+    (value.nickName !== undefined && typeof value.nickName !== 'string') ||
+    (value.role !== undefined && typeof value.role !== 'string')
+  ) {
+    throw new BizError({ message: t('login.invalidSession') });
+  }
+  return { name: value.name, email: value.email, nickName: value.nickName, role: value.role };
+};
 
-/**
- * 登录。演示模式下由浏览器内的演示后端签发 token（见 src/demo/server/routes.ts：
- * admin / guest 等种子账号按其角色签发，其余任意用户名放行；密码不校验）。
- */
-export const login = (params: LoginParams) => api<LoginResult>('/api/v1/login', { method: 'POST', data: params });
+/** Real mode authenticates with a server cookie; the plaintext demo bearer stays in the current browser tab. */
+export const login = async (params: LoginParams): Promise<LoginResult> => {
+  const result = await api<unknown>('/api/v1/login', { method: 'POST', data: params, skipErrorHandler: true });
+  const user = currentUser(isRecord(result) ? result.user : undefined);
+  if (DEMO_MODE) {
+    const token = isRecord(result) && typeof result.token === 'string' ? result.token : '';
+    if (!verifyDemoToken(token)) throw new BizError({ message: t('login.invalidSession') });
+    try {
+      saveDemoToken(token);
+    } catch {
+      throw new BizError({ message: t('login.storageError') });
+    }
+  }
+  return { user };
+};
 
-/** 退出登录，best-effort：失败不影响本地登出流程（skipErrorHandler：不弹全局错误提示） */
-export const logout = () => api<null>('/api/v1/logout', { method: 'POST', skipErrorHandler: true });
+/** Only demo sign-out is best effort. A failed real sign-out cannot revoke an HttpOnly cookie locally. */
+export const logout = async () => {
+  try {
+    await api<null>('/api/v1/logout', { method: 'POST', skipErrorHandler: true });
+  } catch (error) {
+    if (!DEMO_MODE) throw error;
+  }
+  clearDemoToken();
+};
 
-/**
- * 用本地 token 换取当前登录用户；token 无效时抛错，由调用方（getInitialState）回落到未登录态。
- * 应用启动时调用：skipErrorHandler 让失效 token 静默处理，由路由守卫引导回登录页。
- */
-export const fetchCurrentUser = () => api<CurrentUser>('/api/v1/currentUser', { skipErrorHandler: true });
+/** Real mode always asks the server about its cookie; demo mode supplies its tab-local token via the adapter. */
+export const fetchCurrentUser = async () =>
+  currentUser(await api<unknown>('/api/v1/currentUser', { skipErrorHandler: true }));

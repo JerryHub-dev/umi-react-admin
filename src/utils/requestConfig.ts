@@ -1,8 +1,9 @@
-import { AUTH_TOKEN_KEY } from '@/constants';
 import { demoAdapter } from '@/demo/adapter';
 import { DEMO_MODE } from '@/demo/mode';
 import type { RequestConfig, RequestOptions } from '@umijs/max';
 import { history } from '@umijs/max';
+import { resolveApiUrl } from './Auth/apiBoundary';
+import { clearDemoToken, readDemoToken, removeLegacyToken } from './Auth/session';
 import { BizError } from './BizError';
 import { getMessage } from './antdMessage';
 import { t } from './i18n';
@@ -26,29 +27,7 @@ const getErrorMessage = (data: unknown, fallback: string) => {
   return fallback;
 };
 
-const getAuthToken = () => {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  return localStorage.getItem(AUTH_TOKEN_KEY) || '';
-};
-
-/** 请求是否发往本应用自己的后端（同源或配置的 baseURL）：第三方地址不附带登录 token */
-const isOwnApi = (url?: string, baseURL?: string) => {
-  if (typeof window === 'undefined') {
-    return true;
-  }
-  try {
-    const target = new URL(url || '', baseURL || window.location.href);
-    const trusted = new Set([window.location.origin]);
-    if (baseURL) {
-      trusted.add(new URL(baseURL, window.location.href).origin);
-    }
-    return trusted.has(target.origin);
-  } catch {
-    return false;
-  }
-};
+const API_BASE = DEMO_MODE ? undefined : UMI_APP_API_BASE;
 
 /** 主动取消的请求（AbortController / CancelToken）不是错误，无需提示 */
 const isCanceled = (error: unknown) =>
@@ -56,9 +35,9 @@ const isCanceled = (error: unknown) =>
 
 export const requestConfig: RequestConfig = {
   timeout: 15000,
-  // 真实后端地址（可选）：经 config define 注入的 UMI_APP_API_BASE 全局常量。
-  // 未配置时为演示模式：请求交给浏览器内的演示后端（src/demo/adapter.ts），不发网络请求
-  baseURL: UMI_APP_API_BASE,
+  // 演示必须显式启用；真实模式只接受固定同源路径，Cookie 不暴露给 JS。
+  baseURL: API_BASE,
+  withCredentials: !DEMO_MODE,
   adapter: DEMO_MODE ? (demoAdapter as unknown as RequestConfig['adapter']) : undefined,
   errorConfig: {
     // 后端 success:false 的业务错误统一转成 BizError 抛给调用方
@@ -103,7 +82,8 @@ export const requestConfig: RequestConfig = {
           case 401:
             message.error(t('request.unauthorized'));
             if (typeof window !== 'undefined') {
-              localStorage.removeItem(AUTH_TOKEN_KEY);
+              clearDemoToken();
+              removeLegacyToken();
               // 整页跳转而非 SPA 路由（审计 2026-09-22 L-2）：重置内存中的 initialState
               //（残留的已登录用户与昵称），也顺带避免并发 401 重复 push；PUBLIC_PATH 兼容子路径部署
               window.location.assign(`${PUBLIC_PATH}login`);
@@ -138,17 +118,33 @@ export const requestConfig: RequestConfig = {
   },
   requestInterceptors: [
     (config: RequestOptions) => {
-      const token = getAuthToken();
-      if (!token || !isOwnApi(config.url, config.baseURL)) {
-        return config;
+      if (typeof window === 'undefined' || (!DEMO_MODE && !API_BASE)) {
+        throw new Error('Real authentication requires a configured same-origin API');
       }
-
+      if (config.baseURL !== undefined && config.baseURL !== API_BASE) {
+        throw new Error('Per-request API baseURL overrides are disabled');
+      }
+      const url = resolveApiUrl(config.url, API_BASE ?? '/', window.location.origin);
+      const headers = Object.fromEntries(
+        Object.entries(config.headers || {}).filter(
+          ([name]) => !['authorization', 'proxy-authorization', 'x-requested-with'].includes(name.toLowerCase()),
+        ),
+      );
+      const token = readDemoToken();
+      if (DEMO_MODE && token) headers.Authorization = `Bearer ${token}`;
+      if (!DEMO_MODE && !['GET', 'HEAD', 'OPTIONS'].includes((config.method ?? 'GET').toUpperCase())) {
+        // The backend must require this header and validate Origin; this browser code is not the server CSRF check.
+        headers['X-Requested-With'] = 'XMLHttpRequest';
+        headers['Content-Type'] = 'application/json';
+      }
       return {
         ...config,
-        headers: {
-          ...(config.headers || {}),
-          Authorization: `Bearer ${token}`,
-        },
+        url,
+        baseURL: undefined,
+        auth: undefined,
+        withCredentials: !DEMO_MODE,
+        adapter: DEMO_MODE ? (demoAdapter as unknown as RequestConfig['adapter']) : undefined,
+        headers,
       };
     },
   ],

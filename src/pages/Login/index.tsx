@@ -1,8 +1,10 @@
-import { AUTH_TOKEN_KEY } from '@/constants';
+import { DEMO_MODE } from '@/demo/mode';
 import { useThemeMode } from '@/hooks/useThemeMode';
 import { login, type LoginParams } from '@/services/auth';
 import { readTheme } from '@/utils/Auth/initialState';
+import { safeRedirect } from '@/utils/Auth/safeRedirect';
 import { UserInfo } from '@/utils/Auth/userInfo';
+import { BizError } from '@/utils/BizError';
 import {
   CheckCircleFilled,
   EyeOutlined,
@@ -14,12 +16,6 @@ import {
 import { getLocale, history, setLocale, useIntl, useLocation, useModel } from '@umijs/max';
 import { App, Button, Card, Divider, Dropdown, Form, Input, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-
-/** 登录后回到原本要访问的页面；只接受站内路径，防止开放重定向 */
-const safeRedirect = (search: string) => {
-  const target = new URLSearchParams(search).get('redirect');
-  return target && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/login') ? target : '/';
-};
 
 const HIGHLIGHTS = ['dashboard', 'system', 'maps', 'i18n'];
 
@@ -37,7 +33,7 @@ const Login: React.FC = () => {
   // 路由守卫看到的仍是未登录，又被重定向回登录页（登录请求变为异步后稳定复现）
   const signedIn = !!initialState?.name;
   useEffect(() => {
-    if (signedIn && localStorage.getItem(AUTH_TOKEN_KEY)) {
+    if (signedIn) {
       history.replace(safeRedirect(location.search));
     }
   }, [signedIn, location.search]);
@@ -45,19 +41,12 @@ const Login: React.FC = () => {
   const signIn = async (values: LoginParams) => {
     setPending(values.name);
     try {
-      const { token, user } = await login(values);
-      try {
-        localStorage.setItem(AUTH_TOKEN_KEY, token);
-      } catch {
-        // 隐私模式 / 配额满等本地存储不可用：点击无任何反馈比失败提示更糟（审计 2026-09-22 L-8）
-        messageApi.error(t('login.storageError'));
-        return;
-      }
+      const { user } = await login(values);
       // 立即刷新全局初始状态（保留当前主题），让路由守卫与 access 权限即时生效
       await setInitialState({ ...new UserInfo(user), theme: readTheme() });
       messageApi.success(t('login.success'));
-    } catch {
-      // 登录失败提示由全局 errorHandler 统一呈现（BizError / HTTP 错误均在其分流内）
+    } catch (error) {
+      messageApi.error(error instanceof BizError ? error.message : t('login.failed'));
     } finally {
       setPending(undefined);
     }
@@ -128,40 +117,48 @@ const Login: React.FC = () => {
             </div>
           </div>
           <Card className="shadow-sm" title={t('login.title')}>
-            <div className="flex flex-col gap-3">
-              <Button
-                size="large"
-                type="primary"
-                block
-                icon={<SafetyCertificateOutlined />}
-                loading={pending === 'admin'}
-                onClick={() => signIn({ name: 'admin', password: 'demo' })}
-              >
-                {t('login.asAdmin')}
-              </Button>
-              <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
-                {t('login.asAdminDesc')}
-              </Typography.Text>
-              <Button
-                size="large"
-                block
-                icon={<EyeOutlined />}
-                loading={pending === 'guest'}
-                onClick={() => signIn({ name: 'guest', password: 'demo' })}
-              >
-                {t('login.asGuest')}
-              </Button>
-              <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
-                {t('login.asGuestDesc')}
-              </Typography.Text>
-            </div>
+            {DEMO_MODE && (
+              <div className="flex flex-col gap-3">
+                <Button
+                  size="large"
+                  type="primary"
+                  block
+                  icon={<SafetyCertificateOutlined />}
+                  loading={pending === 'admin'}
+                  onClick={() => signIn({ name: 'admin', password: 'demo' })}
+                >
+                  {t('login.asAdmin')}
+                </Button>
+                <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
+                  {t('login.asAdminDesc')}
+                </Typography.Text>
+                <Button
+                  size="large"
+                  block
+                  icon={<EyeOutlined />}
+                  loading={pending === 'guest'}
+                  onClick={() => signIn({ name: 'guest', password: 'demo' })}
+                >
+                  {t('login.asGuest')}
+                </Button>
+                <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
+                  {t('login.asGuestDesc')}
+                </Typography.Text>
+              </div>
+            )}
             {/* 分隔说明是辅助信息，用次要文字色，不和上下两组操作抢视线 */}
-            <Divider plain>
-              <Typography.Text type="secondary" className="text-xs">
-                {t('login.or')}
-              </Typography.Text>
-            </Divider>
-            <Form<LoginParams> initialValues={{ name: 'admin', password: 'demo' }} layout="vertical" onFinish={signIn}>
+            {DEMO_MODE && (
+              <Divider plain>
+                <Typography.Text type="secondary" className="text-xs">
+                  {t('login.or')}
+                </Typography.Text>
+              </Divider>
+            )}
+            <Form<LoginParams>
+              initialValues={DEMO_MODE ? { name: 'admin', password: 'demo' } : undefined}
+              layout="vertical"
+              onFinish={signIn}
+            >
               <Form.Item
                 label={t('login.username')}
                 name="name"
@@ -176,13 +173,15 @@ const Login: React.FC = () => {
               >
                 <Input.Password autoComplete="current-password" />
               </Form.Item>
-              <Button block htmlType="submit" loading={!!pending && pending !== 'admin' && pending !== 'guest'}>
+              <Button block htmlType="submit" loading={!!pending}>
                 {t('login.submit')}
               </Button>
             </Form>
-            <Typography.Paragraph type="secondary" className="mt-4 mb-0 text-center text-xs">
-              {t('login.demoHint')}
-            </Typography.Paragraph>
+            {DEMO_MODE && (
+              <Typography.Paragraph type="secondary" className="mt-4 mb-0 text-center text-xs">
+                {t('login.demoHint')}
+              </Typography.Paragraph>
+            )}
           </Card>
         </div>
       </main>
