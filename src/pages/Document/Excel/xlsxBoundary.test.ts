@@ -12,7 +12,9 @@ type ZipFixture = {
   generateAsync: (options: Record<string, string | boolean>) => Promise<Uint8Array>;
 };
 const Zip = require(require.resolve('jszip', { paths: [require.resolve('exceljs')] })) as new () => ZipFixture;
-const toBuffer = (bytes: Uint8Array) => bytes.slice().buffer as ArrayBuffer;
+// ExcelJS writeBuffer() 在 Node 24 下可能返回共享池上的视图（byteOffset>0、底层 slab 更大），
+// slice().buffer 会把整个 slab 当文件传入，EOCD 边界校验必然失败；这里显式拷贝出精确长度的 buffer
+const toBuffer = (bytes: Uint8Array) => new Uint8Array(bytes).buffer as ArrayBuffer;
 const t = (id: string, values?: Record<string, string | number>) =>
   ((en as Record<string, string>)[id] ?? id).replace(/\{(\w+)\}/g, (_, key: string) => String(values?.[key] ?? ''));
 const zipXml = async (xml: string, descriptor = false, name = 'xl/worksheets/sheet1.xml') => {
