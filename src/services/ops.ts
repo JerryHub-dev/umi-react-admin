@@ -1,3 +1,4 @@
+import { safeSignature } from '@/utils/signature';
 import { api, compact } from './client';
 import type {
   Alarm,
@@ -35,5 +36,7 @@ export const listTickets = (query: TicketQuery) =>
 export const moveTicket = (id: string, status: TicketStatus) =>
   api<Ticket>(`/api/v1/tickets/${encodeURIComponent(id)}`, { method: 'PUT', data: { status } });
 
-export const signTicket = (id: string, signature: string) =>
-  api<Ticket>(`/api/v1/tickets/${encodeURIComponent(id)}/acceptance`, { method: 'POST', data: { signature } });
+export const signTicket = (id: string, signature: string) => {
+  if (!safeSignature(signature)) return Promise.reject(new Error('Invalid signature PNG'));
+  return api<Ticket>(`/api/v1/tickets/${encodeURIComponent(id)}/acceptance`, { method: 'POST', data: { signature } });
+};

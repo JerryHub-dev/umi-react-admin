@@ -4,8 +4,10 @@ import { createUser, listUsers } from '@/services/users';
 import { DownloadOutlined, FileExcelOutlined, InboxOutlined } from '@ant-design/icons';
 import { Link, useIntl } from '@umijs/max';
 import { Alert, App, Button, Card, Space, Spin, Table, Tag, Typography, Upload } from 'antd';
-import { useState } from 'react';
-import { FIELDS, buildUsersWorkbook, downloadWorkbook, parseUsersWorkbook, type ParsedRow } from './userSheet';
+import { useEffect, useRef, useState } from 'react';
+import { importUsersFile } from './importFile';
+import { FIELDS, buildUsersWorkbook, downloadWorkbook, type ParsedRow } from './userSheet';
+import { WorkbookInputError, checkWorkbookFileSize } from './xlsxBoundary';
 
 /** exceljs 体积较大，只在点击导入 / 导出时加载 */
 const loadExcel = () => import('exceljs');
@@ -21,46 +23,85 @@ export default function Excel() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { message } = App.useApp();
-  const [busy, setBusy] = useState<'export' | 'import' | 'save'>();
+  const [busy, setBusy] = useState<'export' | 'template' | 'import' | 'save'>();
   const [rows, setRows] = useState<ParsedRow[]>();
+  const busyRef = useRef<typeof busy>(undefined);
+  const mounted = useRef(true);
+  const importController = useRef<AbortController | undefined>(undefined);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      importController.current?.abort();
+    };
+  }, []);
+
+  const start = (operation: NonNullable<typeof busy>) => {
+    busyRef.current = operation;
+    setBusy(operation);
+  };
+  const finish = () => {
+    busyRef.current = undefined;
+    if (mounted.current) setBusy(undefined);
+  };
 
   const handleExport = async () => {
-    setBusy('export');
+    if (busyRef.current) return;
+    start('export');
     try {
       const [ExcelJS, users] = await Promise.all([loadExcel(), fetchAllUsers()]);
+      if (!mounted.current) return;
       await downloadWorkbook(buildUsersWorkbook(ExcelJS, users, t, t('excel.exportTitle')), 'users.xlsx');
-      message.success(t('excel.exported', { count: users.length }));
+      if (mounted.current) message.success(t('excel.exported', { count: users.length }));
+    } catch {
+      if (mounted.current) message.error(t('excel.exportFailed'));
     } finally {
-      setBusy(undefined);
+      finish();
     }
   };
 
   const handleTemplate = async () => {
-    const ExcelJS = await loadExcel();
-    await downloadWorkbook(
-      buildUsersWorkbook(ExcelJS, TEMPLATE_ROWS, t, t('excel.exportTitle')),
-      'users-template.xlsx',
-    );
+    if (busyRef.current) return;
+    start('template');
+    try {
+      const ExcelJS = await loadExcel();
+      if (!mounted.current) return;
+      await downloadWorkbook(
+        buildUsersWorkbook(ExcelJS, TEMPLATE_ROWS, t, t('excel.exportTitle')),
+        'users-template.xlsx',
+      );
+    } catch {
+      if (mounted.current) message.error(t('excel.exportFailed'));
+    } finally {
+      finish();
+    }
   };
 
   const handleImport = async (file: File) => {
-    setBusy('import');
+    if (busyRef.current && busyRef.current !== 'import') return false;
+    importController.current?.abort();
+    const controller = new AbortController();
+    importController.current = controller;
+    start('import');
     try {
-      const [ExcelJS, users] = await Promise.all([loadExcel(), fetchAllUsers()]);
-      const workbook = new ExcelJS.Workbook();
-      try {
-        await workbook.xlsx.load(await file.arrayBuffer());
-      } catch {
-        message.error(t('excel.parseFailed'));
-        return false;
+      checkWorkbookFileSize(file.size);
+      const users = await fetchAllUsers();
+      if (controller.signal.aborted || !mounted.current) return false;
+      const imported = await importUsersFile(
+        file,
+        users.map((u) => u.username.toLowerCase()),
+        t,
+        controller.signal,
+      );
+      if (!controller.signal.aborted && mounted.current) setRows(imported);
+    } catch (error) {
+      if (!controller.signal.aborted && mounted.current) {
+        const code = error instanceof WorkbookInputError ? error.code : 'parseFailed';
+        message.error(t(code === 'parseFailed' || code === 'noSheet' ? `excel.${code}` : `excel.import.error.${code}`));
       }
-      if (!workbook.worksheets[0]) {
-        message.warning(t('excel.noSheet'));
-        return false;
-      }
-      setRows(parseUsersWorkbook(workbook, new Set(users.map((u) => u.username.toLowerCase())), t));
     } finally {
-      setBusy(undefined);
+      if (importController.current === controller) finish();
     }
     return false; // 阻止 Upload 默认上传行为
   };
@@ -68,15 +109,26 @@ export default function Excel() {
   const valid = rows?.filter((row) => row.input) ?? [];
 
   const handleSave = async () => {
-    setBusy('save');
+    if (busyRef.current) return;
+    start('save');
+    const created = new Set<string>();
     try {
       for (const row of valid) {
+        if (!mounted.current) return;
         await createUser(row.input!);
+        created.add(row.key);
       }
-      message.success(t('excel.imported', { count: valid.length }));
-      setRows(undefined);
+      if (mounted.current) {
+        message.success(t('excel.imported', { count: valid.length }));
+        setRows(undefined);
+      }
+    } catch {
+      if (mounted.current) {
+        setRows((current) => current?.filter((row) => !created.has(row.key)));
+        message.error(t('excel.saveFailed', { count: created.size }));
+      }
     } finally {
-      setBusy(undefined);
+      finish();
     }
   };
 
@@ -86,10 +138,20 @@ export default function Excel() {
       source="src/pages/Document/Excel/userSheet.ts"
       extra={
         <>
-          <Button icon={<DownloadOutlined />} loading={busy === 'export'} onClick={handleExport}>
+          <Button
+            icon={<DownloadOutlined />}
+            disabled={!!busy && busy !== 'export'}
+            loading={busy === 'export'}
+            onClick={handleExport}
+          >
             {t('excel.export')}
           </Button>
-          <Button icon={<FileExcelOutlined />} onClick={handleTemplate}>
+          <Button
+            icon={<FileExcelOutlined />}
+            disabled={!!busy && busy !== 'template'}
+            loading={busy === 'template'}
+            onClick={handleTemplate}
+          >
             {t('excel.template')}
           </Button>
         </>
@@ -99,7 +161,12 @@ export default function Excel() {
         // 空状态即导入入口：拖拽区本身就是主操作，并说明需要哪些列
         <Card>
           <Spin spinning={busy === 'import'}>
-            <Upload.Dragger accept=".xlsx" beforeUpload={handleImport} showUploadList={false}>
+            <Upload.Dragger
+              accept=".xlsx"
+              disabled={!!busy && busy !== 'import'}
+              beforeUpload={handleImport}
+              showUploadList={false}
+            >
               <p className="ant-upload-drag-icon">
                 <InboxOutlined />
               </p>
@@ -114,7 +181,12 @@ export default function Excel() {
         <Card
           title={t('excel.previewTitle')}
           extra={
-            <Button type="primary" disabled={!valid.length} loading={busy === 'save'} onClick={handleSave}>
+            <Button
+              type="primary"
+              disabled={!valid.length || (!!busy && busy !== 'save')}
+              loading={busy === 'save'}
+              onClick={handleSave}
+            >
               {t('excel.importValid', { count: valid.length })}
             </Button>
           }

@@ -5,6 +5,7 @@ import { useChartTheme } from '@/hooks/useChartTheme';
 import { listTickets, signTicket } from '@/services/ops';
 import type { Ticket } from '@/services/types';
 import { formatDateTime } from '@/utils/format';
+import { safeSignature } from '@/utils/signature';
 import {
   CheckOutlined,
   ClearOutlined,
@@ -98,7 +99,7 @@ export default function Signature() {
     pad.addEventListener('endStroke', syncEmpty);
     const resize = () => {
       const data = pad.toData();
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const ratio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
       canvas.width = canvas.offsetWidth * ratio;
       canvas.height = canvas.offsetHeight * ratio;
       canvas.getContext('2d')?.scale(ratio, ratio);
@@ -159,8 +160,10 @@ export default function Signature() {
 
   const download = () => {
     if (!signed?.acceptance) return;
+    const signature = safeSignature(signed.acceptance.signature);
+    if (!signature) return;
     const link = document.createElement('a');
-    link.href = signed.acceptance.signature;
+    link.href = signature;
     link.download = `${signed.id}-signature.png`;
     link.click();
   };
@@ -204,28 +207,38 @@ export default function Signature() {
         <Col xs={24} lg={15}>
           <Card title={t('signature.pad')}>
             {signed?.acceptance ? (
-              <Result
-                status="success"
-                title={t('signature.done', { ticket: signed.id })}
-                subTitle={t('signature.signedBy', {
-                  name: signed.acceptance.signerName,
-                  time: formatDateTime(signed.acceptance.signedAt, 'YYYY-MM-DD HH:mm'),
-                })}
-                extra={[
-                  <img
-                    key="img"
-                    src={signed.acceptance.signature}
-                    alt={t('signature.pad')}
-                    className="mx-auto mb-4 block max-h-40 rounded border bg-white"
-                  />,
-                  <Button key="download" icon={<DownloadOutlined />} onClick={download}>
-                    {t('signature.download')}
-                  </Button>,
-                  <Button key="next" type="primary" onClick={() => setSigned(undefined)} disabled={!pending?.length}>
-                    {t('signature.ticketPlaceholder')}
-                  </Button>,
-                ]}
-              />
+              (() => {
+                const signature = safeSignature(signed.acceptance.signature);
+                return (
+                  <Result
+                    status="success"
+                    title={t('signature.done', { ticket: signed.id })}
+                    subTitle={t('signature.signedBy', {
+                      name: signed.acceptance.signerName,
+                      time: formatDateTime(signed.acceptance.signedAt, 'YYYY-MM-DD HH:mm'),
+                    })}
+                    extra={[
+                      <img
+                        key="img"
+                        src={signature}
+                        alt={t('signature.pad')}
+                        className="mx-auto mb-4 block max-h-40 rounded border bg-white"
+                      />,
+                      <Button key="download" icon={<DownloadOutlined />} disabled={!signature} onClick={download}>
+                        {t('signature.download')}
+                      </Button>,
+                      <Button
+                        key="next"
+                        type="primary"
+                        onClick={() => setSigned(undefined)}
+                        disabled={!pending?.length}
+                      >
+                        {t('signature.ticketPlaceholder')}
+                      </Button>,
+                    ]}
+                  />
+                );
+              })()
             ) : (
               <>
                 {/* 画板随主题（暗色下不再是一整块白板）；签名线与提示是 DOM 浮层，不会进入导出的图片 */}

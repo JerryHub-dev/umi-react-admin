@@ -4,6 +4,7 @@ import { PRIORITY_COLOR } from '@/constants/semantic';
 import type { Ticket, TicketStatus } from '@/services/types';
 import { humanizeDuration } from '@/utils/duration';
 import { formatDateTime } from '@/utils/format';
+import { safeSignature } from '@/utils/signature';
 import { useIntl } from '@umijs/max';
 import { Descriptions, Drawer, Segmented, Space, Steps, Tag, Typography } from 'antd';
 import { useSla } from './TicketCard';
@@ -45,6 +46,7 @@ const TicketDetail = ({ ticket }: { ticket: Ticket }) => {
     },
   ];
   const current = steps.findIndex((step) => !step.at);
+  const signature = safeSignature(ticket.acceptance?.signature);
 
   return (
     <>
@@ -87,9 +89,9 @@ const TicketDetail = ({ ticket }: { ticket: Ticket }) => {
             : step.planned && t('tickets.scheduled', { time: formatDateTime(step.planned, 'MM-DD HH:mm') }),
         }))}
       />
-      {ticket.acceptance && (
+      {signature && (
         <img
-          src={ticket.acceptance.signature}
+          src={signature}
           alt={t('tickets.step.accepted')}
           className="mt-2 block max-h-28 rounded border border-solid bg-white"
           style={{ borderColor: 'rgba(0, 0, 0, 0.12)' }}

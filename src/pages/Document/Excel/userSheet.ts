@@ -10,6 +10,7 @@ import zhEnums from '@/locales/zh-CN/enums';
 import zhSystem from '@/locales/zh-CN/system';
 import type { DepartmentKey, RoleKey, User, UserInput } from '@/services/types';
 import type { Workbook } from 'exceljs';
+import { WorkbookInputError, XLSX_LIMITS } from './xlsxBoundary';
 
 export const FIELDS = ['name', 'username', 'email', 'department', 'role'] as const;
 export type Field = (typeof FIELDS)[number];
@@ -71,6 +72,22 @@ export const buildUsersWorkbook = (
 };
 
 export const parseUsersWorkbook = (workbook: Workbook, existingUsernames: Set<string>, t: Translate): ParsedRow[] => {
+  if (!workbook.worksheets.length) throw new WorkbookInputError('noSheet');
+  if (workbook.worksheets.length > XLSX_LIMITS.sheets) throw new WorkbookInputError('sheetLimit');
+  let cells = 0;
+  // Defend direct callers too. Archive checks run before ExcelJS allocates this model.
+  workbook.worksheets.forEach((worksheet) => {
+    if (worksheet.rowCount > XLSX_LIMITS.rows || worksheet.columnCount > XLSX_LIMITS.columns) {
+      throw new WorkbookInputError('sheetLimit');
+    }
+    worksheet.eachRow((row) => {
+      if (row.cellCount > XLSX_LIMITS.columns) throw new WorkbookInputError('sheetLimit');
+      row.eachCell((cell) => {
+        if (++cells > XLSX_LIMITS.cells) throw new WorkbookInputError('sheetLimit');
+        if (cell.text.length > XLSX_LIMITS.textCharacters) throw new WorkbookInputError('textLimit');
+      });
+    });
+  });
   const sheet = workbook.worksheets[0];
   const columnField = new Map<number, Field>();
   // 一律取 cell.text：邮箱常被 Excel 转成超链接，富文本与公式单元格的 value 都是对象
@@ -92,7 +109,20 @@ export const parseUsersWorkbook = (workbook: Workbook, existingUsernames: Set<st
     FIELDS.forEach((field) => {
       if (!values[field]) errors.push(t('excel.error.required', { field: t(headerKey(field)) }));
     });
-    if (values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.push(t('excel.error.email'));
+    if (values.email) {
+      // Same accepted shape as the old pattern, with linear work on long invalid input.
+      const at = values.email.indexOf('@');
+      const dot = values.email.indexOf('.', at + 2);
+      if (
+        at <= 0 ||
+        at !== values.email.lastIndexOf('@') ||
+        dot <= at + 1 ||
+        dot === values.email.length - 1 ||
+        /\s/.test(values.email)
+      ) {
+        errors.push(t('excel.error.email'));
+      }
+    }
     const username = values.username?.toLowerCase();
     if (username && !/^[a-z][a-z0-9._-]{2,31}$/.test(username)) errors.push(t('excel.error.username'));
     if (username && existingUsernames.has(username)) errors.push(t('excel.error.exists'));

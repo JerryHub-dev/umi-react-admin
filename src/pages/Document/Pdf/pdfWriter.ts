@@ -3,6 +3,7 @@
  * 用于把浏览器里渲染好的报告页（html2canvas 截图）打包成 PDF——中文、图表都按像素保留，
  * 不需要嵌入 CJK 字体（那会是数 MB 的字体文件）。代价是文字不可选中，适合「报表导出」这类场景。
  */
+import { PDF_LIMITS, PdfInputError, checkPdfFileSize, checkPdfPageCount } from './previewLimits';
 
 export type JpegPage = { jpeg: Uint8Array; width: number; height: number };
 
@@ -11,13 +12,35 @@ const A4 = { width: 595.28, height: 841.89 };
 const encoder = new TextEncoder();
 
 export const dataUrlToBytes = (dataUrl: string) => {
-  const binary = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+  const prefix = 'data:image/jpeg;base64,';
+  if (!dataUrl.startsWith(prefix) || dataUrl.length - prefix.length > Math.ceil(PDF_LIMITS.fileBytes / 3) * 4) {
+    throw new PdfInputError('fileLimit');
+  }
+  const encoded = dataUrl.slice(prefix.length);
+  if (!encoded || encoded.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) throw new PdfInputError('parseFailed');
+  const binary = atob(encoded);
+  checkPdfFileSize(binary.length);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 };
 
 export const buildImagePdf = (pages: JpegPage[]): Uint8Array => {
+  checkPdfPageCount(pages.length);
+  let imageBytes = 0;
+  for (const page of pages) {
+    if (
+      ![page.width, page.height].every((value) => Number.isSafeInteger(value) && value > 0) ||
+      page.width > PDF_LIMITS.canvasSide ||
+      page.height > PDF_LIMITS.canvasSide ||
+      page.width * page.height > PDF_LIMITS.imagePixels
+    ) {
+      throw new PdfInputError('canvasLimit');
+    }
+    if (!(page.jpeg instanceof Uint8Array) || !page.jpeg.length) throw new PdfInputError('parseFailed');
+    imageBytes += page.jpeg.length;
+    checkPdfFileSize(imageBytes);
+  }
   const chunks: Uint8Array[] = [];
   const offsets: number[] = [];
   let length = 0;
@@ -25,6 +48,7 @@ export const buildImagePdf = (pages: JpegPage[]): Uint8Array => {
     const bytes = typeof part === 'string' ? encoder.encode(part) : part;
     chunks.push(bytes);
     length += bytes.length;
+    checkPdfFileSize(length);
   };
   // 对象编号：1 目录、2 页树，之后每页 3 个对象（页、内容流、图片）
   const object = (id: number, body: (string | Uint8Array)[]) => {

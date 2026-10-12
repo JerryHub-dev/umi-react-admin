@@ -47,4 +47,14 @@ describe('用户表导入导出', () => {
     expect(rows[3].errors).toEqual(['登录名与文件中其它行重复']);
     expect(rows.every((r) => !r.input)).toBe(true);
   });
+
+  it('直接调用时也拒绝稀疏超限坐标、过长字段和无工作表', () => {
+    expect(() => parseUsersWorkbook(new ExcelJS.Workbook(), new Set(), tZh)).toThrow('noSheet');
+    const sparse = new ExcelJS.Workbook();
+    sparse.addWorksheet('s').getCell('A1002').value = 'Test';
+    expect(() => parseUsersWorkbook(sparse, new Set(), tZh)).toThrow('sheetLimit');
+    const text = new ExcelJS.Workbook();
+    text.addWorksheet('s').getCell('A1').value = 'A'.repeat(4097);
+    expect(() => parseUsersWorkbook(text, new Set(), tZh)).toThrow('textLimit');
+  });
 });
