@@ -1,0 +1,16 @@
+diff --git a/dist/features/configPlugins/configPlugins.js b/dist/features/configPlugins/configPlugins.js
+--- a/dist/features/configPlugins/configPlugins.js
++++ b/dist/features/configPlugins/configPlugins.js
+@@ -64,10 +64,10 @@
+       "react-dom": reactDOMPath,
+       // mpa don't need to use react-router
+       ...userConfig.mpa ? {} : {
+-        "react-router": (0, import_path.dirname)(
++        "react-router$": (0, import_path.dirname)(
+           require.resolve("react-router/package.json")
+         ),
+-        "react-router-dom": (0, import_path.dirname)(
++        "react-router-dom$": (0, import_path.dirname)(
+           require.resolve("react-router-dom/package.json")
+         )
+       }

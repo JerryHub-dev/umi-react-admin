@@ -1,0 +1,14 @@
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -4,7 +4,9 @@
+ exports.cluster						= null;
+ exports.console						= require.resolve('console-browserify');
+ exports.constants					= require.resolve('constants-browserify');
+-exports.crypto						= require.resolve('crypto-browserify');
++// Generic browser crypto is intentionally unavailable. Excel imports its
++// real hashing and secure random-byte dependencies explicitly.
++exports.crypto = null;
+ exports.dgram						= null;
+ exports.dns							= null;
+ exports.domain						= require.resolve('domain-browser');

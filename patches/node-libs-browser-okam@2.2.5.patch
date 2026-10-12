@@ -1,0 +1,23 @@
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -4,7 +4,9 @@
+ exports.cluster						= null;
+ exports.console						= require.resolve('console-browserify');
+ exports.constants					= require.resolve('constants-browserify');
+-exports.crypto						= require.resolve('crypto-browserify');
++// Generic browser crypto is intentionally unavailable. Excel imports its
++// real hashing and secure random-byte dependencies explicitly.
++exports.crypto = null;
+ exports.dgram						= null;
+ exports.dns							= null;
+ exports.domain						= require.resolve('domain-browser');
+@@ -18,7 +20,7 @@
+ exports.path						= require.resolve('path-browserify');
+ exports.punycode					= require.resolve('punycode-okam/');
+ exports.process						= require.resolve('process-okam/browser.js');
+-exports.querystring					= require.resolve('querystring-es3-okam/');
++exports.querystring					= require.resolve('querystring-es3/');
+ exports.readline					= null;
+ exports.repl						= null;
+ exports.stream						= require.resolve('stream-browserify');
