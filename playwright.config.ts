@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * 浏览器级冒烟：对 GitHub Pages 同构的静态产物（build:github，子路径 /umi-react-admin/）逐路由验证。
+ * 浏览器级冒烟：对 GitHub Pages 同构的静态产物（build:github:demo，子路径 /umi-react-admin/）逐路由验证。
  * 设置 E2E_BASE_URL 时直接测线上地址（部署后冒烟），否则本地起静态服务器。
  */
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:4173/umi-react-admin/';

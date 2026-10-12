@@ -3,8 +3,8 @@
 //
 // 判定：产物里出现的 JWT 只可能是硬编码进源码/依赖的 token 或经构建注入的预期公开 token，前者一律判失败。
 // 白名单两个来源：
-// 1. Cesium 自带的公开默认 ion token（@cesium/engine 的 Source/Core/Ion.js，未配置 token 时兜底，
-//    页面会提示正在使用默认 token），它随 Cesium 必然进入产物。从已安装的源码动态读取：
+// 1. Cesium 源码自带的公开默认 ion token（@cesium/engine 的 Source/Core/Ion.js），
+//    本模板不会启用它，但 SDK 仍会把该常量打入产物。从已安装的源码动态读取：
 //    Cesium 升级换 token 不会误报；读取失败直接判失败，不会静默放行。
 // 2. EXPECTED_TOKEN 环境变量（审计 2026-09-22 H-1：部署产线注入的 ion token 等「设计上公开」的凭据）。
 //    CI 传入 secret 值，脚本只以 sha256 指纹比对（不可逆），值不打印、不落日志——

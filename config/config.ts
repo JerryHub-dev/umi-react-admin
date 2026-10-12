@@ -2,13 +2,15 @@ import { defineConfig } from '@umijs/max';
 import { resolveAuthConfig } from './auth';
 import { BUILD_INFO, addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
+import { buildCsp } from './csp';
 import { routes } from './routes';
 import { configureSplitChunks } from './splitChunks';
 
-// Clarity 统计默认不加载：配置 CLARITY_ID 环境变量后按部署者自己的项目上报
-// （原 public/js/clarity.js 硬编码作者私有项目 ID，下游部署无感知上报访客数据，已删除）
+// 统计接入须同时具备用户同意、内容遮蔽和匹配的 CSP，模板没有这些集成时拒绝加载。
 const CLARITY_ID = process.env.CLARITY_ID;
 const AUTH_CONFIG = resolveAuthConfig(process.env);
+if (CLARITY_ID && !/^[a-z0-9]{4,32}$/i.test(CLARITY_ID)) throw new Error('Invalid CLARITY_ID');
+if (CLARITY_ID) throw new Error('Analytics require a separately reviewed CSP and consent integration');
 
 // 演示必须显式启用；真实模式缺失 API 配置由 resolveAuthConfig 阻止生产构建。
 if (process.env.NODE_ENV === 'production' && AUTH_CONFIG.demoMode) {
@@ -77,17 +79,22 @@ export default defineConfig({
     UMI_APP_API_BASE: AUTH_CONFIG.apiBase,
     UMI_APP_DEMO_MODE: AUTH_CONFIG.demoMode,
     // 高德 Web 端（JS API）Key 与安全密钥（审计 2026-09-22 M-6）：
-    // 可选——不配置时高德页面回落 @pansy/amap-api-loader 自带的公共 key（配额不受本项目控制）
+    // 未配置时不加载第三方 SDK，也不使用组件库内置的共享 key。
     AMAP_KEY: process.env.AMAP_KEY,
     AMAP_SECURITY_CODE: process.env.AMAP_SECURITY_CODE,
     // 构建信息（页脚与 dist/version.json 同源，见 ./buildInfo.ts）
     BUILD_INFO,
   },
   // 覆盖 umi 默认的 viewport（user-scalable=no / maximum-scale=1 禁止缩放，违反 WCAG 1.4.4）
-  metas: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+  metas: [
+    { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+    ...(process.env.NODE_ENV === 'production'
+      ? [{ 'http-equiv': 'Content-Security-Policy', content: buildCsp({ meta: true }) }]
+      : []),
+  ],
   // SVG 图标（现代浏览器均支持），GitHub Pages 产线见 config.github.ts
   favicons: ['/logo.svg'],
-  headScripts: CLARITY_ID ? [{ src: `https://www.clarity.ms/tag/${CLARITY_ID}`, async: true }] : [],
+  headScripts: [],
   // 产物文件名带内容哈希：配合 nginx 对哈希文件的长缓存（nginx/default.conf），发版后不会命中旧脚本
   hash: true,
   jsMinifier: 'terser',
