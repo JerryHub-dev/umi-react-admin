@@ -4,6 +4,13 @@
 
 ## [未发布]
 
+### 安全加固四部曲（2026-10-12，PR #45–#48）
+
+- 认证与演示模式（#45）：真实模式改为同源 Cookie 会话，登录不再返回 bearer、token 不进 JS 存储；登录回跳规范化并限制在本站内；请求层禁止单请求覆盖 API 地址、剥离注入头、真实模式强制 `withCredentials` 与 CSRF 语义头；演示模式须构建期显式 `UMI_APP_DEMO_MODE=true`，未配置后端的真实生产构建直接失败，GitHub Pages 目标仅允许公开演示
+- 文档输入边界（#46）：XLSX 导入前逐项校验 ZIP/XML（文件 5 MiB、解压 16 MiB、16 表 / 1000 行 / 64 列、单元格 4096 字符），解析迁移至可终止 Worker（10 秒超时）；PDF 限 20 MiB / 1000 页、两页窗口渲染与画布预算；签名图只放行有界 PNG（魔数 / IHDR / 尺寸校验）
+- 依赖补丁与审计（#47）：7 个无补丁版本的传递依赖改为真实源码补丁（`patchedDependencies` 哈希固定），删除全部 audit ignore；新增 `pnpm audit:security`（全量公告 + 已装补丁源码验证 + 攻击回归）；react-router 约束至 7.18.2
+- 部署与第三方（#48）：CI / deploy 最小权限（`persist-credentials: false`，只读构建 job 经 artifact 交接给唯一可写发布 job）；Vercel / nginx 强制 CSP 并加 HSTS，生产 HTML 带 meta CSP；`serve-dist` 拒绝目录越界 / 符号链接逃逸；Cesium 无 token 回落 HTTPS OSM（connect-src 增列瓦片源）、AMap 无 key 不加载 SDK、`CLARITY_ID` 未审查集成直接拒绝构建
+
 ### antd 6（2026-10-07，PR #41）
 
 - antd 5.29 → 6.6.5、@ant-design/pro-components 2 → 3.1.14-7、@ant-design/icons 5 → 6.3.4（闭环 #22 遗留项）
