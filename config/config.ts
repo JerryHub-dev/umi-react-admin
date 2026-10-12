@@ -9,8 +9,10 @@ import { configureSplitChunks } from './splitChunks';
 // 统计接入须同时具备用户同意、内容遮蔽和匹配的 CSP，模板没有这些集成时拒绝加载。
 const CLARITY_ID = process.env.CLARITY_ID;
 const AUTH_CONFIG = resolveAuthConfig(process.env);
-if (CLARITY_ID && !/^[a-z0-9]{4,32}$/i.test(CLARITY_ID)) throw new Error('Invalid CLARITY_ID');
-if (CLARITY_ID) throw new Error('Analytics require a separately reviewed CSP and consent integration');
+if (CLARITY_ID)
+  throw new Error(
+    'Unsupported CLARITY_ID: the template ships no analytics; integration needs consent masking and a reviewed CSP',
+  );
 
 // 演示必须显式启用；真实模式缺失 API 配置由 resolveAuthConfig 阻止生产构建。
 if (process.env.NODE_ENV === 'production' && AUTH_CONFIG.demoMode) {
