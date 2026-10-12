@@ -48,22 +48,26 @@ pnpm start
 
 | 变量 | 必需 | 说明 |
 | --- | --- | --- |
-| `CESIUM_ION_TOKEN` | Cesium 功能需要 | 在 [ion.cesium.com](https://ion.cesium.com/tokens) 获取；缺失时 Cesium Ion 影像/地形不可用（其余功能不受影响） |
-| `UMI_APP_API_BASE` | 可选 | 真实后端 API 地址；不配置时为演示模式：接口由浏览器内的演示后端响应（`src/demo`，dev 与所有静态部署同一套实现，改动经 localStorage 持久化） |
-| `AMAP_KEY` / `AMAP_SECURITY_CODE` | 可选 | 高德 Web 端（JS API）Key 与安全密钥（[控制台申请](https://console.amap.com)）；不配置时高德演示页使用组件库自带公共 key（配额不受控），正式部署建议配置 |
-| `CLARITY_ID` | 可选 | [Clarity](https://clarity.microsoft.com) 统计项目 ID；**模板默认不含任何统计脚本**，配置后才按你自己的项目上报（含会话回放，正式站点请履行隐私告知义务） |
+| `CESIUM_ION_TOKEN` | 可选 | 自行申请并限制来源与权限的公开 Web token；缺失时使用 HTTPS OSM，不使用 SDK 共享 token，Ion 地形需要自有 token |
+| `UMI_APP_DEMO_MODE` | 演示需显式开启 | 仅 `true` 启用纯前端演示；未设置或 `false` 为真实模式。`.env.example` 明确开启演示 |
+| `UMI_APP_API_BASE` | 真实生产构建需要 | 同源 API 路径前缀，例如 `/` 或 `/backend`；跨源后端须由同源入口代理。不可与演示模式同时配置 |
+| `AMAP_KEY` / `AMAP_SECURITY_CODE` | 高德功能需要 | 自行申请受来源与配额限制的公开 Web Key；未配置时不加载 SDK、不使用组件库共享 key |
+| `CLARITY_ID` | 暂不支持 | 模板缺少同意、内容遮蔽及对应 CSP 集成，设置该变量会拒绝构建；默认无统计脚本 |
 
 ## 常用脚本
 
 ```bash
-pnpm start            # 开发服务器（端口 8000）
-pnpm build            # 生产构建（主产线：Vercel / Docker）
-pnpm build:github     # GitHub Pages 构建（子路径 /umi-react-admin/）
+pnpm start            # 开发服务器（端口 8000，读取 .env.local 的显式模式）
+pnpm start:demo       # 显式演示开发
+pnpm build            # 真实模式生产构建：必须配置同源 API
+pnpm build:demo       # 显式公开演示构建（主产线：Vercel / Docker）
+pnpm build:github:demo # GitHub Pages 公开演示构建（子路径 /umi-react-admin/）
 pnpm check            # typecheck + 严格 lint + vitest（提交前必跑）
 pnpm test             # vitest 单测（含演示数据合理性、接口、CSP 一致性、路由表）
-pnpm e2e              # Playwright：对 build:github 产物逐页冒烟 + 英文完整性 + 关键流程（先 build:github）
+pnpm e2e              # Playwright：对 build:github:demo 产物逐页冒烟 + 英文完整性 + 关键流程
 pnpm e2e:build        # 构建并跑 e2e
-pnpm size             # 构建并执行体积预算门禁（size-budget.json）
+pnpm size             # 显式演示构建并执行体积预算门禁（size-budget.json）
+pnpm audit:security   # 全量原始依赖公告 + 已安装补丁源码及攻击回归校验
 pnpm analyze          # 构建并生成 bundle 组成分析
 pnpm format           # Prettier 格式化
 ```
@@ -87,10 +91,11 @@ e2e/                  # Playwright 用例
 
 ## 功能说明
 
-- **演示后端**：未配置 `UMI_APP_API_BASE` 时，所有接口由浏览器内的演示后端响应（`src/demo`，经请求层 axios adapter 接入）。dev、preview 与各静态部署是同一套实现；不用 Service Worker，所以 Docker 经 http 内网地址访问也能用。数据按日历日以固定种子生成，时间窗随今天滑动；你做的改动（新建、编辑、拖动、签名……）以补丁形式存 localStorage，头像菜单可「重置演示数据」。
+- **演示后端**：仅 `UMI_APP_DEMO_MODE=true` 时使用浏览器内的演示接口（`src/demo`，经 axios adapter 接入）。登录 token 仅存在当前标签页的 sessionStorage；虚构业务数据的修改仍以补丁形式存 localStorage，头像菜单可「重置演示数据」。请勿导入真实业务或敏感数据。数据按日历日以固定种子生成，时间窗随今天滑动。
 - **数据合理性**：`src/demo/generate.test.ts` 把规则写成断言——级别比例、工作日 / 周末节律、时间线先后、设备状态与活动告警对应、KPI 与明细口径一致、邮箱只用 example.com、手机号只以脱敏形式出现、IP 只用文档保留段。
-- **接真实后端**：设置 `UMI_APP_API_BASE`，按 [src/services/types.ts](./src/services/types.ts) 的契约实现同名接口即可，前端零改动；演示后端代码不会被加载。
-- **鉴权与权限**：`admin`（系统管理员）与 `guest`（访客）两个体验账号，任意其它用户名也可登录（密码不校验，见 SECURITY.md「已知限制」）。未登录打开受保护页面会先去登录、登录后回到原页面；受限身份访问管理页得到 403。
+- **接真实后端**：关闭演示，设置同源 `UMI_APP_API_BASE`，按 [src/services/types.ts](./src/services/types.ts) 实现接口。前端采用服务端会话 Cookie；登录返回用户信息，不保存 bearer。Cookie、CSRF、服务端权限与 TLS 契约见 [SECURITY.md](./SECURITY.md)，仓库没有后端实现。未配置后端的真实生产构建直接失败，真实页面不显示演示快捷入口。
+- **鉴权与权限**：演示账号 `admin`、`guest` 及任意其它用户名的密码均不校验；菜单、按钮和数据过滤只展示交互规则。真实后端必须独立校验每次操作及数据范围。登录回跳会规范化并限制在本站应用内。
+- **文档输入**：XLSX 限 5 MiB、实际解压 16 MiB、16 张表、1000 数据行、64 列、每字段 4096 字符；XML/合并/命名区域也在分配前检查。解析放入可终止 worker，超时 10 秒。PDF 限 20 MiB、1000 页，只渲染两页窗口，并检查图片及画布预算；切换文件会取消旧任务。
 - **多语言与主题**：中英双语（首次访问按浏览器语言选择），代码中直接写中文会被 ESLint 规则拦下，英文界面无遗漏由 e2e 断言；明暗主题下图表、地图、日历、富文本同步切换。
 - **构建信息**：页脚显示构建提交与时间，`dist/version.json` 同源，部署后可核对线上版本。
 - **无障碍**：`<html lang>` 随语言切换、页面允许缩放；顶栏与看板可键盘操作；图标按钮具可访问名称。
@@ -98,11 +103,11 @@ e2e/                  # Playwright 用例
 
 ## 部署
 
-三条产线的安全响应头基线一致（审计 2026-09-22；CSP 单一来源 [config/csp.ts](./config/csp.ts)，另两份静态副本由测试比对）：`X-Content-Type-Options` / `Referrer-Policy` / `X-Frame-Options` / `Permissions-Policy` / CSP；CSP 来源清单按产物逐域核实（高德、Cesium ion、OSM 瓦片、演示视频 CDN），`'unsafe-eval'` 因 Cesium Knockout 模板编译保留。启用 Clarity 统计的部署需自行在 CSP 中追加 `https://www.clarity.ms` 与 `https://c.bing.com`。
+Vercel 与 Docker 强制 CSP，并设置 `X-Content-Type-Options`、`Referrer-Policy`、`X-Frame-Options`、`Permissions-Policy` 和 HTTPS HSTS。CSP 来源见 [config/csp.ts](./config/csp.ts)，两份响应头副本由测试比对；生产 HTML 也带 meta CSP。`'unsafe-eval'` 服务于 Cesium Knockout 控件，样式内联服务于 antd；这些兼容需求要求保持第三方版本和所有 HTML 输入边界的检查。GitHub Pages 的 meta CSP 无法提供响应头级的防嵌入保护，只支持公开演示。
 
-- **GitHub Pages**：push `master` 自动触发 [deploy.yml](./.github/workflows/deploy.yml)（typecheck/test/lint/build 全绿、产物秘钥扫描通过后部署；复制 `404.html` 使子路由直链与刷新可用；部署后等待线上 `version.json` 切到本次提交，再对线上地址跑 `@smoke` 用例）。平台无法自定义响应头，安全头经产物内的 CSP `<meta>` 提供（`config/config.github.ts`）；`X-Frame-Options` 等响应头级的点击劫持防护为平台限制，介意者请用另外两条产线。
-- **Vercel**：仓库含 [vercel.json](./vercel.json)（含 SPA rewrite 与安全响应头 `headers`），导入仓库即可；锁文件以 `--frozen-lockfile` 安装。
-- **Docker**：见 [Dockerfile](./Dockerfile) 与 [nginx/](./nginx/)（多阶段构建 + nginx 1.30，`docker build` 时通过 `--build-arg CESIUM_ION_TOKEN=` 与 `--build-arg GIT_SHA=$(git rev-parse HEAD)` 传参）。产物文件名带内容哈希，仅哈希文件一年长缓存，入口与 Cesium 等无哈希资源每次协商；CSP 以 `Content-Security-Policy-Report-Only` 观察一个迭代周期后在 `nginx/security-headers.conf` 中转正式。
+- **GitHub Pages**：push `master` 自动触发 [deploy.yml](./.github/workflows/deploy.yml)。构建、全量依赖检查及产物扫描在只读 job 中执行，下载已检查产物的发布 job 才拥有仓库写权限。`build:github:demo` 显式开启公开演示；真实模式拒绝该目标。复制 `404.html` 支持子路由，部署后按 `version.json` 校验版本并跑线上 `@smoke`。
+- **Vercel**：见 [vercel.json](./vercel.json)。公开演示明确设置 `UMI_APP_DEMO_MODE=true`；真实部署配置同源 API 代理及后端会话，不可将 SPA rewrite 作为 API 响应。锁文件以 `--frozen-lockfile` 安装。
+- **Docker**：公开演示使用 `docker build --build-arg UMI_APP_DEMO_MODE=true .`；真实目标使用 `--build-arg UMI_APP_API_BASE=/` 并在 HTTPS 入口配置 API 反向代理。镜像本身只有静态前端，`/api/` 返回 404。nginx 1.30 强制 CSP；哈希产物一年长缓存，入口和非哈希资源协商缓存。`CESIUM_ION_TOKEN` 为公开客户端凭据，需自行限制来源与权限；可选 `GIT_SHA` 用于版本信息。
 
 ## 第三方许可说明
 
@@ -115,7 +120,7 @@ e2e/                  # Playwright 用例
 
 ## 统计与隐私
 
-模板默认**零统计、零埋点**。如需为自己的部署开启 Clarity 统计，配置 `CLARITY_ID` 环境变量即可——数据上报到你自己的 Clarity 账号；Clarity 含会话回放能力，面向公众的站点请依法履行隐私告知/同意义务。
+模板无统计或会话回放脚本，直接设置 `CLARITY_ID` 会阻止构建。另行集成统计时，应先完成同意、敏感输入遮蔽与匹配的 CSP，并验证拒绝同意时无请求。地图、视频等页面会按功能请求公开第三方服务；公开 Web Key 需限制来源与配额。
 
 ## Contributors ✨
 

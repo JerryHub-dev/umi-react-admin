@@ -1,6 +1,6 @@
 // 全局类型声明（与 config.ts / config.github.ts 的 define 块一一对应）
 
-// Cesium Ion Token（可选：未配置时 Cesium 回退自带默认 token）
+// Cesium Ion Token（可选：未配置时用 HTTPS OSM，不使用共享 token）
 declare const CESIUM_ION_TOKEN: string | undefined;
 declare const CESIUM_BASE_URL: string;
 

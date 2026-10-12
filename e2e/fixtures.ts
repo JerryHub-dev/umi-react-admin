@@ -18,11 +18,6 @@ export const test = base.extend<{ health: Health }>({
       const store: string[] = [];
       (window as unknown as { __csp: string[] }).__csp = store;
       document.addEventListener('securitypolicyviolation', (event) => {
-        // 第三方 SDK 自己注入内联脚本等行为（sourceFile 指向其域名）不计入本应用的违规
-        if (/amap\.com|autonavi\.com/.test(event.sourceFile)) return;
-        // 本地 E2E 走 http：Cesium 的 Bing 影像瓦片协议跟随页面（http），不在 https 白名单内。
-        // 线上 https 部署瓦片走 https，不会出现；只在 http 页面上忽略这一种
-        if (location.protocol === 'http:' && /^http:\/\/[^/]*virtualearth\.net\//.test(event.blockedURI)) return;
         store.push(`${event.violatedDirective} ${event.blockedURI} ${event.sourceFile}`);
       });
     });

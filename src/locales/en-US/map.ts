@@ -1,5 +1,6 @@
 /** Maps: AMap, OpenLayers and the six Cesium scenes */
 export default {
+  'map.keyRequired': 'Configure an origin-restricted AMap Web Key to load the map',
   'map.legend.status': 'Device status',
   'map.reset': 'Back to national view',
   'map.clear': 'Clear layers',

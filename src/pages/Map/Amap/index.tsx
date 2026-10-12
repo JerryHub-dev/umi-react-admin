@@ -1,7 +1,7 @@
 /**
  * 高德地图：全部监测站按状态着色，点击查看详情。
- * Key 经 AMAP_KEY / AMAP_SECURITY_CODE 环境变量注入（见 config/config.ts define）；未配置时回落
- * @pansy/amap-api-loader 自带的公共 key——配额与可用性不受本项目控制，正式部署请申请自己的 Web 端 Key。
+ * Key 经 AMAP_KEY / AMAP_SECURITY_CODE 环境变量注入（见 config/config.ts define）。
+ * 未配置时不加载 SDK；正式部署请申请受来源与配额限制的公开 Web 端 Key。
  * 直接调用 JS API 2.0（不经 @pansy/react-amap：其 Marker 依赖 React 19 已删除的 unmountComponentAtNode）。
  */
 import DemoPage from '@/components/DemoPage';
@@ -38,14 +38,19 @@ export default function Amap() {
   const [loadError, setLoadError] = useState<string>();
   const [selected, setSelected] = useState<Device>();
   const infoWindowRef = useRef<AMap.InfoWindow>(undefined);
+  const missingKeyMessage = t('map.keyRequired');
   // 弹窗 DOM 交给高德定位，内容经 React portal 渲染：留在本组件树里，主题、语言上下文自然继承
   // （此前用 createRoot 单独渲染：脱离 antd 主题，暗色下白底弹窗里是白字，内容看不见）
   const [popupElement] = useState(() => document.createElement('div'));
 
   useEffect(() => {
     if (!devices || !containerRef.current) return undefined;
+    if (!AMAP_KEY) {
+      setLoadError(missingKeyMessage);
+      return undefined;
+    }
     let disposed = false;
-    load({ key: AMAP_KEY || undefined, version: '2.0' })
+    load({ key: AMAP_KEY, version: '2.0' })
       .then((AMapApi) => {
         if (disposed || !containerRef.current) return;
         const map = new AMapApi.Map(containerRef.current, {
@@ -93,7 +98,7 @@ export default function Amap() {
       mapRef.current?.destroy();
       mapRef.current = undefined;
     };
-  }, [devices, dark, popupElement]);
+  }, [devices, dark, popupElement, missingKeyMessage]);
 
   const closePopup = () => {
     infoWindowRef.current?.close();

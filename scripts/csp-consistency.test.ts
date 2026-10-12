@@ -21,9 +21,7 @@ describe('CSP 三产线一致性', () => {
   });
 
   it('nginx/security-headers.conf 的 CSP 与 config/csp.ts 一致', () => {
-    const matched = /add_header Content-Security-Policy(?:-Report-Only)? "([^"]+)"/.exec(
-      read('nginx/security-headers.conf'),
-    );
+    const matched = /add_header Content-Security-Policy "([^"]+)"/.exec(read('nginx/security-headers.conf'));
     expect(matched?.[1]).toBe(buildCsp());
   });
 

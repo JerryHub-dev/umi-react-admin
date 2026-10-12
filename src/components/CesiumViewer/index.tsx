@@ -27,7 +27,7 @@ const configureCesium = () => {
   if (configured) return;
   configured = true;
   if (typeof window !== 'undefined' && !window.Cesium) window.Cesium = Cesium;
-  if (typeof CESIUM_ION_TOKEN !== 'undefined' && CESIUM_ION_TOKEN) Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN;
+  Cesium.Ion.defaultAccessToken = typeof CESIUM_ION_TOKEN !== 'undefined' ? CESIUM_ION_TOKEN || '' : '';
 };
 
 /**
@@ -37,7 +37,15 @@ const configureCesium = () => {
 export const createDemoViewer = (container: string | Element, options: Cesium.Viewer.ConstructorOptions = {}) => {
   configureCesium();
   try {
-    return new Cesium.Viewer(container, { ...DEMO_VIEWER_OPTIONS, ...options });
+    const baseLayer = Cesium.Ion.defaultAccessToken
+      ? undefined
+      : new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }));
+    return new Cesium.Viewer(container, {
+      ...DEMO_VIEWER_OPTIONS,
+      geocoder: false,
+      ...(baseLayer ? { baseLayer } : {}),
+      ...options,
+    });
   } catch (error) {
     console.error('Cesium Viewer init failed:', error);
     return null;
