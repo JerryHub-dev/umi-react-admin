@@ -76,6 +76,24 @@ export default {
   'pdf.backToReport': 'Back to the report',
   'pdf.download': 'Download PDF',
   'pdf.loadFailed': 'Could not load the document. Try opening a local file.',
+  'pdf.error.fileLimit': 'PDF files must not exceed 20 MiB',
+  'pdf.error.pageLimit': 'PDF files must contain 1 to 1000 pages',
+  'pdf.error.canvasLimit': 'This page or its images exceed the preview limits. Choose a smaller document.',
+  'pdf.error.parseFailed': 'Invalid PDF file. Try opening another local file.',
+  'pdf.error.timeout': 'PDF loading or rendering exceeded 10 seconds. Choose a smaller file and try again.',
+  'excel.import.error.fileLimit': 'Excel files must not exceed 5 MiB',
+  'excel.import.error.archiveLimit':
+    'Expanded Excel content exceeds the limits: 8 MiB per entry, 16 MiB total, and 256 entries',
+  'excel.import.error.sheetLimit':
+    'Excel allows up to 16 sheets, 1000 data rows and 64 columns; cells or merged ranges exceed the limit',
+  'excel.import.error.textLimit': 'Excel cell text must not exceed 4096 characters',
+  'excel.import.error.unsupported':
+    'Unsupported ZIP/XML structure or secure decompression is unavailable. Use a regular .xlsx file and a recent browser.',
+  'excel.import.error.timeout': 'Excel parsing exceeded 10 seconds. Try a smaller file.',
+  'excel.import.error.cancelled': 'Excel import cancelled',
+  'excel.exportFailed': 'Could not export Excel. Please try again.',
+  'excel.saveFailed':
+    'Imported {count} rows before a failure. Successful rows were removed from the preview; check the remaining rows and retry.',
   'pdf.pages': 'Pages {from}–{to} of {total}',
   'pdf.prev': 'Previous',
   'pdf.next': 'Next',

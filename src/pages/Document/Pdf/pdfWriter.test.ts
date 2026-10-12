@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildImagePdf } from './pdfWriter';
+import { buildImagePdf, dataUrlToBytes } from './pdfWriter';
 
 // 最小的合法 JPEG 不重要：这里验证的是 PDF 结构（交叉引用偏移必须精确，否则阅读器会报损坏）
 const fakeJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
@@ -26,5 +26,20 @@ describe('buildImagePdf', () => {
     });
     const startxref = Number(/startxref\n(\d+)/.exec(text)![1]);
     expect(text.slice(startxref, startxref + 4)).toBe('xref');
+  });
+
+  it('rejects invalid dimensions or page counts before building the output', () => {
+    expect(() => buildImagePdf([{ jpeg: fakeJpeg, width: 0, height: 10 }])).toThrow('canvasLimit');
+    expect(() => buildImagePdf([{ jpeg: fakeJpeg, width: Infinity, height: 10 }])).toThrow('canvasLimit');
+    expect(() => buildImagePdf([])).toThrow('pageLimit');
+    expect(() =>
+      buildImagePdf(Array.from({ length: 1001 }, () => ({ jpeg: fakeJpeg, width: 10, height: 10 }))),
+    ).toThrow('pageLimit');
+  });
+
+  it('accepts JPEG data URLs and rejects malformed/non-JPEG encodings', () => {
+    expect(dataUrlToBytes('data:image/jpeg;base64,/9j/2Q==')).toEqual(fakeJpeg);
+    expect(() => dataUrlToBytes('data:text/plain;base64,SGk=')).toThrow();
+    expect(() => dataUrlToBytes('data:image/jpeg;base64,invalid%%%')).toThrow();
   });
 });
