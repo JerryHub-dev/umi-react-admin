@@ -43,6 +43,9 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      - name: Dependency audit（全量依赖公告与真实源码补丁验证）
+        run: pnpm audit:security
+
       - name: Build
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}

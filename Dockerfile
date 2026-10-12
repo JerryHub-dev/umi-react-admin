@@ -7,6 +7,8 @@ WORKDIR /app
 # 先装依赖以利用层缓存
 # pnpm-workspace.yaml 承载 overrides 与提升配置，缺了它 --frozen-lockfile 会因配置不符而失败
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# 冻结安装会立即读取 patchedDependencies，补丁必须先于 install 进入构建上下文。
+COPY patches ./patches
 RUN corepack enable && pnpm install --frozen-lockfile
 
 # 源码与构建（Cesium token 经 build-arg 注入，最终 define 进产物）

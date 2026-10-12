@@ -1,0 +1,54 @@
+{
+  "@umijs/renderer-react": {
+    "version": "4.7.22",
+    "files": {
+      "dist/server.js": "0c3c013227fe9e2a569a61bc41a0f3e72727fe96485cc3cd74fa713380a2ecf2"
+    }
+  },
+  "braces": {
+    "version": "3.0.3",
+    "files": {
+      "index.js": "3281a27f3e841336e9c720a37099b12c090ac80e0f5c95aa69d6c8478ecdbfea",
+      "lib/compile.js": "9a48f15c71e72788e901f6b21c7c994fea3d1796270c7b15e66cb238640517cd",
+      "lib/constants.js": "c18ac5adb57308f1ce42a28552da3a31f5d83709743ebd9a636336813a744d4b",
+      "lib/expand.js": "4c21c833ce2c9fcf69357b8de9f14494a964c089640590f6dff16c5f2d833596",
+      "lib/parse.js": "8dd93940c09445fabd97a74753af44871eeb48250d0e086c5d12bc278b24c158",
+      "lib/security.js": "f2b15c86f65d170a93dc7de1a2470d2d0c5021ede2425a045e83a794326bdeb2",
+      "lib/stringify.js": "21b26fb2fe662b8af06e1a82d6cb49c053c40e7844b76b2f4b1cfd1992508a00",
+      "lib/utils.js": "326e1511f12ce002424b53298e1d41df7b6068659536dc7db8f3c0f581aa2355",
+      "package.json": "56f08b888a4f30dc7cf8a7dbb36ffe92b737912ba36abe9d069d32167c957ac7"
+    }
+  },
+  "decode-uri-component": {
+    "version": "0.2.2",
+    "files": {
+      "index.js": "5112ff71759fadbfd485235d26e80573eb2837bf15cc3cd8597cf14e9b6c27b5",
+      "package.json": "8f2e9784337b3b4fa69359f88f75a2847e0aa17776f062cb518d008d8d408bca"
+    }
+  },
+  "exceljs": {
+    "version": "4.4.0",
+    "files": {
+      "lib/utils/encryptor.js": "e688f82e4af31c9e2b6389116d24ae7ea66700736c0f6151ed2580e6e8f32726",
+      "package.json": "5faa75a2313394021757d11f99c4f5c4a05f9f04efa043e2d7408c70d5a2abda"
+    }
+  },
+  "node-libs-browser-okam": {
+    "version": "2.2.5",
+    "files": {
+      "index.js": "d6b8653589157be43d35fc8b507f44e0951b7449036fcb3ebe520848d901745e"
+    }
+  },
+  "node-libs-browser": {
+    "version": "2.2.1",
+    "files": {
+      "index.js": "8347aa8313ce9198ef4bd3a030e769c3f1db9f1e80091009505ec9fe0d7adf19"
+    }
+  },
+  "@umijs/preset-umi": {
+    "version": "4.7.22",
+    "files": {
+      "dist/features/configPlugins/configPlugins.js": "f2d0c966abd181b4b9b06da59adfb0edbed4a871003dfb2c10a57fd3e162d014"
+    }
+  }
+}

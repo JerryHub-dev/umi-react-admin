@@ -1,0 +1,410 @@
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -4,6 +4,7 @@
+ const compile = require('./lib/compile');
+ const expand = require('./lib/expand');
+ const parse = require('./lib/parse');
++const security = require('./lib/security');
+ 
+ /**
+  * Expand the given pattern or create a regex-compatible string.
+@@ -26,13 +27,13 @@
+     for (const pattern of input) {
+       const result = braces.create(pattern, options);
+       if (Array.isArray(result)) {
+-        output.push(...result);
++        output = security.flatten(output, result);
+       } else {
+-        output.push(result);
++        output = security.flatten(output, result);
+       }
+     }
+   } else {
+-    output = [].concat(braces.create(input, options));
++    output = security.flatten(braces.create(input, options));
+   }
+ 
+   if (options && options.expand === true && options.nodupes === true) {
+diff --git a/lib/compile.js b/lib/compile.js
+--- a/lib/compile.js
++++ b/lib/compile.js
+@@ -2,14 +2,17 @@
+ 
+ const fill = require('fill-range');
+ const utils = require('./utils');
++const security = require('./security');
+ 
+ const compile = (ast, options = {}) => {
++  security.validateAST(ast);
+   const walk = (node, parent = {}) => {
+     const invalidBlock = utils.isInvalidBrace(parent);
+     const invalidNode = node.invalid === true && options.escapeInvalid === true;
+     const invalid = invalidBlock === true || invalidNode === true;
+     const prefix = options.escapeInvalid === true ? '\\' : '';
+     let output = '';
++    let outputBytes = 0;
+ 
+     if (node.isOpen === true) {
+       return prefix + node.value;
+@@ -38,23 +41,27 @@
+ 
+     if (node.nodes && node.ranges > 0) {
+       const args = utils.reduce(node.nodes);
++      security.checkRange(args, options);
+       const range = fill(...args, { ...options, wrap: false, toRegex: true, strictZeros: true });
+ 
+       if (range.length !== 0) {
+-        return args.length > 1 && range.length > 1 ? `(${range})` : range;
++        return security.checkString(args.length > 1 && range.length > 1 ? `(${range})` : range);
+       }
+     }
+ 
+     if (node.nodes) {
+       for (const child of node.nodes) {
+-        output += walk(child, node);
++        const part = walk(child, node);
++        outputBytes += security.bytes(part);
++        if (outputBytes > security.MAX_BYTES) security.fail('output bytes');
++        output += part;
+       }
+     }
+ 
+     return output;
+   };
+ 
+-  return walk(ast);
++  return security.checkString(walk(ast));
+ };
+ 
+ module.exports = compile;
+diff --git a/lib/expand.js b/lib/expand.js
+--- a/lib/expand.js
++++ b/lib/expand.js
+@@ -3,35 +3,32 @@
+ const fill = require('fill-range');
+ const stringify = require('./stringify');
+ const utils = require('./utils');
++const security = require('./security');
+ 
+-const append = (queue = '', stash = '', enclose = false) => {
++const append = (queue = '', stash = '', enclose = false, spend) => {
++  queue = security.flatten(queue);
++  stash = security.flatten(stash);
++  if (!stash.length) return queue;
++  if (!queue.length) queue = [''];
++  if (queue.length * stash.length > security.MAX_RESULTS) security.fail('expanded paths');
+   const result = [];
+-
+-  queue = [].concat(queue);
+-  stash = [].concat(stash);
+-
+-  if (!stash.length) return queue;
+-  if (!queue.length) {
+-    return enclose ? utils.flatten(stash).map(ele => `{${ele}}`) : stash;
+-  }
+-
++  let outputBytes = 0;
+   for (const item of queue) {
+-    if (Array.isArray(item)) {
+-      for (const value of item) {
+-        result.push(append(value, stash, enclose));
+-      }
+-    } else {
+-      for (let ele of stash) {
+-        if (enclose === true && typeof ele === 'string') ele = `{${ele}}`;
+-        result.push(Array.isArray(ele) ? append(item, ele, enclose) : item + ele);
+-      }
++    for (const element of stash) {
++      const size = security.bytes(item) + security.bytes(element) + (enclose ? 2 : 0);
++      outputBytes += size;
++      if (outputBytes > security.MAX_BYTES) security.fail('output bytes');
++      spend(size);
++      result.push(item + (enclose ? `{${element}}` : element));
+     }
+   }
+-  return utils.flatten(result);
++  return result;
+ };
+ 
+ const expand = (ast, options = {}) => {
+-  const rangeLimit = options.rangeLimit === undefined ? 1000 : options.rangeLimit;
++  security.validateAST(ast);
++  const spend = security.budget();
++  const boundedAppend = (queue, stash, enclose = false) => append(queue, stash, enclose, spend);
+ 
+   const walk = (node, parent = {}) => {
+     node.queue = [];
+@@ -45,28 +42,26 @@
+     }
+ 
+     if (node.invalid || node.dollar) {
+-      q.push(append(q.pop(), stringify(node, options)));
++      q.push(boundedAppend(q.pop(), stringify(node, options)));
+       return;
+     }
+ 
+     if (node.type === 'brace' && node.invalid !== true && node.nodes.length === 2) {
+-      q.push(append(q.pop(), ['{}']));
++      q.push(boundedAppend(q.pop(), ['{}']));
+       return;
+     }
+ 
+     if (node.nodes && node.ranges > 0) {
+       const args = utils.reduce(node.nodes);
+ 
+-      if (utils.exceedsLimit(...args, options.step, rangeLimit)) {
+-        throw new RangeError('expanded array length exceeds range limit. Use options.rangeLimit to increase or disable the limit.');
+-      }
++      security.checkRange(args, options);
+ 
+       let range = fill(...args, options);
+       if (range.length === 0) {
+         range = stringify(node, options);
+       }
+ 
+-      q.push(append(q.pop(), range));
++      q.push(boundedAppend(q.pop(), range));
+       node.nodes = [];
+       return;
+     }
+@@ -90,12 +85,12 @@
+       }
+ 
+       if (child.type === 'close') {
+-        q.push(append(q.pop(), queue, enclose));
++        q.push(boundedAppend(q.pop(), queue, enclose));
+         continue;
+       }
+ 
+       if (child.value && child.type !== 'open') {
+-        queue.push(append(queue.pop(), child.value));
++        queue.push(boundedAppend(queue.pop(), child.value));
+         continue;
+       }
+ 
+diff --git a/lib/parse.js b/lib/parse.js
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -1,6 +1,7 @@
+ 'use strict';
+ 
+ const stringify = require('./stringify');
++const security = require('./security');
+ 
+ /**
+  * Constants
+@@ -48,6 +49,7 @@
+   let index = 0;
+   let depth = 0;
+   let value;
++  let nodeCount = 1;
+ 
+   /**
+    * Helpers
+@@ -64,6 +66,7 @@
+       return;
+     }
+ 
++    if (++nodeCount > security.MAX_NODES) security.fail('AST nodes');
+     block.nodes.push(node);
+     node.parent = block;
+     node.prev = prev;
+@@ -143,6 +146,7 @@
+      */
+ 
+     if (value === CHAR_LEFT_PARENTHESES) {
++      if (stack.length > security.MAX_DEPTH) security.fail('parse depth');
+       block = push({ type: 'paren', nodes: [] });
+       stack.push(block);
+       push({ type: 'text', value });
+@@ -195,6 +199,7 @@
+      */
+ 
+     if (value === CHAR_LEFT_CURLY_BRACE) {
++      if (stack.length > security.MAX_DEPTH) security.fail('parse depth');
+       depth++;
+ 
+       const dollar = prev.value && prev.value.slice(-1) === '$' || block.dollar === true;
+diff --git a/lib/security.js b/lib/security.js
+new file mode 100644
+--- /dev/null
++++ b/lib/security.js
+@@ -0,0 +1,110 @@
++'use strict';
++
++// GHSA-vfj7-8cjw-p6xm: bound recursive entry points and result allocation.
++// These hard ceilings cannot be disabled with rangeLimit/maxLength options.
++const MAX_DEPTH = 64;
++const MAX_NODES = 65536;
++const MAX_RESULTS = 1000;
++const MAX_BYTES = 1024 * 1024;
++const MAX_WORK_BYTES = 4 * MAX_BYTES;
++
++const fail = reason => { throw new RangeError(`braces resource limit exceeded: ${reason}`); };
++const bytes = value => Buffer.byteLength(String(value), 'utf8');
++const checkString = value => {
++  if (bytes(value) > MAX_BYTES) fail('output bytes');
++  return value;
++};
++
++const validateAST = ast => {
++  const pending = [{ node: ast, depth: 0 }];
++  const seen = new Set();
++  while (pending.length) {
++    const { node, depth } = pending.pop();
++    if (!node || typeof node !== 'object') throw new TypeError('Expected an AST node');
++    if (seen.has(node)) fail('cyclic or shared AST');
++    seen.add(node);
++    if (seen.size > MAX_NODES) fail('AST nodes');
++    if (depth > MAX_DEPTH + 1 || (node.nodes && depth > MAX_DEPTH)) fail('AST depth');
++    if (node.value !== undefined) {
++      if (typeof node.value !== 'string') throw new TypeError('Expected a string AST value');
++      checkString(node.value);
++    }
++    // Parent/prev references intentionally exist in parser ASTs. Only nodes
++    // are children; parent chains must also be finite before expansion.
++    const ancestors = new Set();
++    let parent = node.parent;
++    while (parent) {
++      if (typeof parent !== 'object' || ancestors.has(parent) || parent === node) fail('cyclic AST parent');
++      ancestors.add(parent);
++      if (ancestors.size > MAX_DEPTH + 1) fail('AST parent depth');
++      parent = parent.parent;
++    }
++    if (node.nodes !== undefined) {
++      if (!Array.isArray(node.nodes)) throw new TypeError('Expected an AST nodes array');
++      if (node.nodes.length + seen.size + pending.length > MAX_NODES) fail('AST nodes');
++      for (let index = node.nodes.length - 1; index >= 0; index--) {
++        pending.push({ node: node.nodes[index], depth: depth + 1 });
++      }
++    }
++  }
++};
++
++const flatten = (...args) => {
++  const result = [];
++  const frames = [{ values: args, index: 0 }];
++  const active = new Set([args]);
++  let outputBytes = 0;
++  while (frames.length) {
++    const frame = frames[frames.length - 1];
++    if (frame.index === frame.values.length) {
++      active.delete(frame.values);
++      frames.pop();
++      continue;
++    }
++    const value = frame.values[frame.index++];
++    if (Array.isArray(value)) {
++      if (active.has(value)) fail('cyclic expansion');
++      if (frames.length > MAX_DEPTH + 1) fail('expansion depth');
++      active.add(value);
++      frames.push({ values: value, index: 0 });
++    } else if (value !== undefined) {
++      if (result.length >= MAX_RESULTS) fail('expanded paths');
++      outputBytes += bytes(value);
++      if (outputBytes > MAX_BYTES) fail('output bytes');
++      result.push(value);
++    }
++  }
++  return result;
++};
++
++const checkRange = (args, options = {}) => {
++  const [start, end] = args;
++  const numeric = value => value !== '' && Number.isInteger(Number(value));
++  let min, max;
++  if (numeric(start) && numeric(end)) {
++    min = Number(start); max = Number(end);
++    if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max)) fail('range endpoints');
++  } else if (typeof start === 'string' && typeof end === 'string' && start.length === 1 && end.length === 1) {
++    min = start.charCodeAt(0); max = end.charCodeAt(0);
++  } else {
++    return;
++  }
++  const rawStep = args[2] === undefined ? options.step : args[2];
++  const step = Math.abs(Number(rawStep || 1));
++  if (!Number.isSafeInteger(step) || step < 1) fail('range step');
++  const limit = typeof options.rangeLimit === 'number' && Number.isFinite(options.rangeLimit)
++    ? Math.min(MAX_RESULTS, Math.max(0, options.rangeLimit)) : MAX_RESULTS;
++  if (Math.floor(Math.abs(max - min) / step) + 1 > limit) fail('range length');
++};
++
++const budget = () => {
++  let workBytes = 0;
++  let workItems = 0;
++  return size => {
++    if (size > MAX_BYTES) fail('output bytes');
++    workBytes += size; workItems++;
++    if (workBytes > MAX_WORK_BYTES || workItems > MAX_NODES) fail('expansion work');
++  };
++};
++
++module.exports = { MAX_DEPTH, MAX_NODES, MAX_RESULTS, MAX_BYTES, fail, bytes, checkString, validateAST, flatten, checkRange, budget };
+diff --git a/lib/stringify.js b/lib/stringify.js
+--- a/lib/stringify.js
++++ b/lib/stringify.js
+@@ -1,12 +1,15 @@
+ 'use strict';
+ 
+ const utils = require('./utils');
++const security = require('./security');
+ 
+ module.exports = (ast, options = {}) => {
++  security.validateAST(ast);
+   const stringify = (node, parent = {}) => {
+     const invalidBlock = options.escapeInvalid && utils.isInvalidBrace(parent);
+     const invalidNode = node.invalid === true && options.escapeInvalid === true;
+     let output = '';
++    let outputBytes = 0;
+ 
+     if (node.value) {
+       if ((invalidBlock || invalidNode) && utils.isOpenOrClose(node)) {
+@@ -21,12 +24,15 @@
+ 
+     if (node.nodes) {
+       for (const child of node.nodes) {
+-        output += stringify(child);
++        const part = stringify(child);
++        outputBytes += security.bytes(part);
++        if (outputBytes > security.MAX_BYTES) security.fail('output bytes');
++        output += part;
+       }
+     }
+     return output;
+   };
+ 
+-  return stringify(ast);
++  return security.checkString(stringify(ast));
+ };
+ 
+diff --git a/lib/utils.js b/lib/utils.js
+--- a/lib/utils.js
++++ b/lib/utils.js
+@@ -98,25 +98,4 @@
+  * Flatten an array
+  */
+ 
+-exports.flatten = (...args) => {
+-  const result = [];
+-
+-  const flat = arr => {
+-    for (let i = 0; i < arr.length; i++) {
+-      const ele = arr[i];
+-
+-      if (Array.isArray(ele)) {
+-        flat(ele);
+-        continue;
+-      }
+-
+-      if (ele !== undefined) {
+-        result.push(ele);
+-      }
+-    }
+-    return result;
+-  };
+-
+-  flat(args);
+-  return result;
+-};
++exports.flatten = require('./security').flatten;

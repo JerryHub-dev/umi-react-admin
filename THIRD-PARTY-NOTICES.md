@@ -28,15 +28,21 @@
 
 > 历史版本曾携带的 `react-dev.pdf`（疑似 React 官方文档，版权属 Meta）、来源不明音频与视频已在治理中替换/移除；音频播放器页此前热链的商业歌曲、专辑封面及随仓库分发的完整歌词，以及首页图表取自 AntV 示例的第三方数据（股价、气温距平），均已于 2026-09 替换为项目自制内容。
 
-## 已知接受风险
+## 依赖安全修复（2026-10-09）
 
-依赖审计策略（2026-09-22 起）：CI 以 `pnpm audit --prod --audit-level=high` 阻断 high 及以上；以下 moderate/low 公告经评估登记接受：
+历史接受项已改为源码处理；完整构建链和运行时链均纳入审计，不再配置 `auditConfig.ignoreGhsas`。公告根据版本号匹配，本地补丁保留真实版本；原始审计的非零结果必须与补丁证明分别记录。
 
-- `image-size`（high，**已消解**）：仅构建链使用。已通过 `"less@<4.9.1": "4.9.1"` override 升级 less（4.9.1 起改用 probe-image-size）消除。
-- `react-router@6.30.4` ×2（moderate）：反斜杠 open redirect 与 SSR hydration 注入。6.x 无补丁（修复在 7.18.0），受 @umijs/max 4 约束无法升级；本项目所有路由跳转目标均为代码常量、纯 SPA 无 SSR，实际不可利用。umi 升级 5/react-router 7 时一并闭环。
-- `uuid@8.3.2`（moderate）：exceljs 传递依赖，仅 v3/v5/v6 且调用方传自定义 buffer 才触发，exceljs 内部只用 v4，不受影响。
-- `decode-uri-component@0.2.2`（moderate）：@umijs/history 传递依赖，畸形 percent-encoding 的 DoS，需超长构造串，风险低。
-- `postcss-selector-parser`（low，**已消解**）：构建链使用。已通过 6.1.3 / 7.1.3 两条 override 消除（2026-09-23）。
-- `elliptic`（low）：审计命中的是 umi 构建链 node-libs-browser → crypto-browserify，上游无补丁。产物里另有一份随 exceljs 预打包浏览器版带入的 elliptic，exceljs 只用 createHash 做工作表保护哈希，不做 EC 签名/验签，不触及该公告的风险路径。
-- `braces`（high，GHSA-vfj7-8cjw-p6xm，**无补丁**）：栈耗尽 DoS，<=3.0.3 全系受影响，上游暂无修复版本。路径仅 @umijs/lint 构建链（typescript-estree → micromatch → braces），不进运行时产物，CI 已以 `auditConfig.ignoreGhsas` 登记忽略；补丁发布后移除该忽略并 override。
-- `sprintf-js`（moderate，GHSA-hp3w-g68c-fv3c，**无补丁**）：仅 umi 测试链（@umijs/test → babel-jest → argparse）引用，构建与运行时产物不涉及。
+| 组件 / 原风险 | 处理 |
+| --- | --- |
+| image-size / less | 保留 less >=4.9.1 override，移除旧 image-size 路径 |
+| react-router / react-router-dom 6.30.4 | Umi 的 6.x 路径定向升级至 7.18.2；补 StaticRouter 导入和仅匹配完整入口的 alias，保留 Router 7 子路径导出；未使用的旧测试工具移除 |
+| uuid 8.3.2 | ExcelJS 的依赖定向升级到仍支持 CommonJS 的 11.1.1 |
+| postcss-selector-parser 6.1.3 | 两条旧主版本路径均升级 7.1.6，包含新增公告修复 |
+| decode-uri-component 0.2.2 | 按官方线性解码修复回移，保留 query-string 所需 CommonJS API；真实源码补丁在 patches/ |
+| braces 3.0.3 | 本地源码增加解析/AST/编译深度、节点数、展开数量和输出预算，范围限制不可绕过；真实包攻击回归验证普通 glob 与边界拒绝 |
+| elliptic / crypto-browserify | 删除通用浏览器 crypto polyfill 链；ExcelJS 使用 bare 入口及实际所需的 hash/randombytes，避免预打包旧 ECC 副本。保留真实 SHA-512 工作表保护能力 |
+| sprintf-js 1.0.3 | 移除未使用的 Umi lint/test 工具路径；模板继续使用独立 ESLint/Vitest |
+
+本地补丁使用 pnpm `patchedDependencies`，随锁文件固定。`pnpm audit:security` 输出全量原始公告；只对精确匹配已修补源码的全部安装实例，且通过真实攻击回归的已知公告认定已修复，其他公告一律失败。不能将审计记录解释为上游已经发布修复版本。
+
+补丁升级需要重新核对源码哈希、CommonJS/浏览器入口、构建与 E2E，随后更新证明；不能仅删除补丁或添加 ignore。官方公告包括 [braces](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)、[decode-uri-component](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr)、[React Router 7 的后续修复](https://github.com/advisories/GHSA-qwww-vcr4-c8h2)。
