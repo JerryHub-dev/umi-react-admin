@@ -6,7 +6,7 @@
  * 来源说明：
  * - script 'unsafe-eval'：Cesium Knockout 模板编译用 new Function（实测在用），pdfjs 已关 isEvalSupported
  * - style 'unsafe-inline'：antd cssinjs 运行时注入 + tailwind 任意值
- * - 高德 / autonavi：AMap JS API 2.0；openstreetmap：OpenLayers 瓦片；cesium.com：ion 影像
+ * - 高德 / autonavi：AMap JS API 2.0；openstreetmap：瓦片（OpenLayers 走 <img>，Cesium 无 token 回落走 XHR，故 img/connect 均列出）；cesium.com：ion 影像
  * - virtualearth.net：显式配置 ion token 的 Cesium 影像可能引用 Bing；无 token 时仅使用 HTTPS OSM
  * - media blob:：wavesurfer 7 把音频解码后以 blob URL 交给 <audio> 播放（缺了它音频可视页无法播放）
  * - huoshanstatic：xgplayer 演示视频
@@ -41,6 +41,7 @@ export const CSP_DIRECTIVES: [string, string[]][] = [
       'blob:',
       'https://*.amap.com',
       'https://*.autonavi.com',
+      'https://tile.openstreetmap.org',
       'https://ion.cesium.com',
       'https://api.cesium.com',
       'https://assets.ion.cesium.com',
