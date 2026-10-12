@@ -24,6 +24,7 @@
   "author": "Jerry - li <lishuai4415@gmail.com>",
   "scripts": {
     "analyze": "cross-env ANALYZE=1 max build",
+    "audit:security": "node scripts/dependency-audit.mjs",
     "build": "max build",
     "build:demo": "cross-env UMI_APP_DEMO_MODE=true max build",
     "build:github": "cross-env UMI_ENV=github max build",
