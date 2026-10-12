@@ -1,4 +1,5 @@
 import { defineConfig } from '@umijs/max';
+import { resolveAuthConfig } from './auth';
 import { BUILD_INFO, addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
 import { routes } from './routes';
@@ -7,11 +8,10 @@ import { configureSplitChunks } from './splitChunks';
 // Clarity 统计默认不加载：配置 CLARITY_ID 环境变量后按部署者自己的项目上报
 // （原 public/js/clarity.js 硬编码作者私有项目 ID，下游部署无感知上报访客数据，已删除）
 const CLARITY_ID = process.env.CLARITY_ID;
+const AUTH_CONFIG = resolveAuthConfig(process.env);
 
-// 演示鉴权防线（审计 2026-09-22 H-4）：生产构建未配置真实后端时，登录是纯前端演示桩
-// （任意用户名/密码放行）。这里把「静默 fail-open」变为「构建期可见」——banner 无法被忽略。
-// 不做硬阻断（build fail）：那会破坏模板 clone 即 build 的开箱体验。
-if (process.env.NODE_ENV === 'production' && !process.env.UMI_APP_API_BASE) {
+// 演示必须显式启用；真实模式缺失 API 配置由 resolveAuthConfig 阻止生产构建。
+if (process.env.NODE_ENV === 'production' && AUTH_CONFIG.demoMode) {
   console.warn(
     [
       '',
@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.UMI_APP_API_BASE) {
       '!!   本构建使用纯前端演示鉴权：任意用户名/密码均可登录        !!',
       '!!   （详见 SECURITY.md「已知限制」）                         !!',
       '!!                                                           !!',
-      '!!   接入真实后端：设置 UMI_APP_API_BASE 后重新构建           !!',
+      '!!   真实接入：关闭演示并设置同源 UMI_APP_API_BASE           !!',
       '!!   下游二开请在面向公网部署前完成接入                       !!',
       '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
       '',
@@ -74,7 +74,8 @@ export default defineConfig({
     PUBLIC_PATH: '/',
     // 以下变量经 define 显式注入（umi 仅自动注入 UMI_APP_* 前缀，未显式声明的
     // process.env.X 会原样进入浏览器包并在模块初始化时抛 ReferenceError）
-    UMI_APP_API_BASE: process.env.UMI_APP_API_BASE,
+    UMI_APP_API_BASE: AUTH_CONFIG.apiBase,
+    UMI_APP_DEMO_MODE: AUTH_CONFIG.demoMode,
     // 高德 Web 端（JS API）Key 与安全密钥（审计 2026-09-22 M-6）：
     // 可选——不配置时高德页面回落 @pansy/amap-api-loader 自带的公共 key（配额不受本项目控制）
     AMAP_KEY: process.env.AMAP_KEY,

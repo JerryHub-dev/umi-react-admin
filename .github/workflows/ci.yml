@@ -51,7 +51,7 @@ jobs:
       fail-fast: false
       matrix:
         # 两条产线都冒烟：主产线（Vercel/Docker）与 GitHub Pages 子路径产线
-        script: [build, 'build:github']
+        script: ['build:demo', 'build:github:demo']
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,7 +72,7 @@ jobs:
         run: pnpm run ${{ matrix.script }}
 
       - name: 体积预算与样式覆盖门禁
-        if: matrix.script == 'build'
+        if: matrix.script == 'build:demo'
         run: node scripts/check-bundle-size.mjs
 
       - name: 产物 JWT 泄露扫描
@@ -102,7 +102,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build（GitHub Pages 产线）
-        run: pnpm run build:github
+        run: pnpm run build:github:demo
 
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium

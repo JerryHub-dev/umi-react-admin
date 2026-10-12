@@ -49,6 +49,7 @@ export const signIn = async (page: Page, { user = 'admin', locale = 'zh-CN' } = 
   await page.goto('login');
   await page.evaluate((l) => {
     localStorage.clear();
+    sessionStorage.clear();
     localStorage.setItem('umi_locale', l);
     // 导览只在首次进入工作台时出现，冒烟测试里关掉
     localStorage.setItem('umi-react-admin:tour-seen', '1');

@@ -48,7 +48,7 @@ jobs:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
           # 可选：为演示站开启 Clarity 统计时配置（模板默认不含任何统计脚本）
           CLARITY_ID: ${{ secrets.CLARITY_ID }}
-        run: pnpm run build:github
+        run: pnpm run build:github:demo
 
       - name: SPA fallback（子路由直链/刷新不 404）
         # GitHub Pages 对不存在的路径返回站点根的 404.html；复制入口页即可让前端路由接管

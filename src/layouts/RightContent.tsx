@@ -1,5 +1,4 @@
 import { OPEN_TOUR_EVENT } from '@/components/GuideTour';
-import { AUTH_TOKEN_KEY } from '@/constants';
 import { DEMO_MODE } from '@/demo/mode';
 import { useThemeMode } from '@/hooks/useThemeMode';
 import { logout } from '@/services/auth';
@@ -17,16 +16,6 @@ import {
 import { getLocale, history, setLocale, useIntl, useModel } from '@umijs/max';
 import type { MenuProps } from 'antd';
 import { App, Avatar, Button, Dropdown, Tooltip } from 'antd';
-
-const safeStorage = {
-  remove: (key: string) => {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // 存储不可用：内存中的登录态同样会被清除
-    }
-  },
-};
 
 const localeOptions = [
   // 语言名按惯例用该语言自身书写，不随界面语言翻译
@@ -50,15 +39,16 @@ const RightContent = () => {
     try {
       await logout();
     } catch {
-      // best-effort：退出接口失败不阻断本地登出
+      message.error(t('header.logoutFailed'));
+      return;
     }
-    safeStorage.remove(AUTH_TOKEN_KEY);
     await setInitialState(undefined);
     message.success(t('header.loggedOut'));
     history.push('/login');
   };
 
   const handleResetDemo = () => {
+    if (!DEMO_MODE) return;
     modal.confirm({
       title: t('header.resetDemo'),
       content: t('header.resetDemoConfirm'),

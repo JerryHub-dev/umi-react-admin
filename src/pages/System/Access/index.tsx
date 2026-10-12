@@ -1,13 +1,14 @@
 import DemoPage from '@/components/DemoPage';
 import UserAvatar from '@/components/UserAvatar';
-import { AUTH_TOKEN_KEY } from '@/constants';
+import { DEMO_MODE } from '@/demo/mode';
 import { useApi } from '@/hooks/useApi';
 import { useEnums } from '@/hooks/useEnums';
 import { login } from '@/services/auth';
 import { listDevices } from '@/services/ops';
+import { BizError } from '@/utils/BizError';
 import { CheckCircleFilled, LockFilled, SwapOutlined } from '@ant-design/icons';
 import { Access, Link, useAccess, useIntl, useModel } from '@umijs/max';
-import { Alert, Button, Card, Col, List, Row, Space, Table, Tag, Typography, theme } from 'antd';
+import { Alert, App, Button, Card, Col, List, Row, Space, Table, Tag, Typography, theme } from 'antd';
 
 /** 前端脱敏演示：坐标只保留一位小数（约 10 公里精度）。真实系统必须在服务端脱敏，这里只演示呈现效果 */
 const maskCoord = (value: number) => `${value.toFixed(1)}***`;
@@ -20,6 +21,7 @@ const ADMIN_ROUTES = [
 
 export default function AccessDemo() {
   const intl = useIntl();
+  const { message } = App.useApp();
   const t = (id: string) => intl.formatMessage({ id });
   /** 文案里嵌一段代码（代码不翻译，也不写进文案：ICU 会把花括号 / 尖括号当语法解析） */
   const withCode = (id: string, code: string) =>
@@ -34,9 +36,13 @@ export default function AccessDemo() {
 
   /** 切换身份：用另一个体验账号重新登录，整页刷新让路由、菜单、权限全部按新身份生效 */
   const switchIdentity = async () => {
-    const { token: next } = await login({ name: isAdmin ? 'guest' : 'admin', password: 'demo' });
-    localStorage.setItem(AUTH_TOKEN_KEY, next);
-    window.location.reload();
+    if (!DEMO_MODE) return;
+    try {
+      await login({ name: isAdmin ? 'guest' : 'admin', password: 'demo' });
+      window.location.reload();
+    } catch (error) {
+      message.error(error instanceof BizError ? error.message : t('login.failed'));
+    }
   };
 
   const rows = (sample ?? []).map((device) => ({
@@ -61,9 +67,11 @@ export default function AccessDemo() {
                 </Typography.Text>
               </div>
             </Space>
-            <Button type="primary" icon={<SwapOutlined />} onClick={switchIdentity}>
-              {t(isAdmin ? 'access.switchToGuest' : 'access.switchToAdmin')}
-            </Button>
+            {DEMO_MODE && (
+              <Button type="primary" icon={<SwapOutlined />} onClick={switchIdentity}>
+                {t(isAdmin ? 'access.switchToGuest' : 'access.switchToAdmin')}
+              </Button>
+            )}
           </div>
         </Card>
 

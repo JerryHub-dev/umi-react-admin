@@ -1,3 +1,4 @@
+import { DEMO_MODE } from '@/demo/mode';
 import { api, compact } from './client';
 import type { LogQuery, OperationLog, PageResult, Role, RoleKey } from './types';
 
@@ -12,4 +13,7 @@ export const listLogs = (query: LogQuery) =>
   api<PageResult<OperationLog>>('/api/v1/logs', { method: 'GET', params: compact(query) });
 
 /** 重置演示数据（仅演示模式可用） */
-export const resetDemoData = () => api<null>('/api/v1/demo/reset', { method: 'POST' });
+export const resetDemoData = () => {
+  if (!DEMO_MODE) throw new Error('Demo reset is disabled in real mode');
+  return api<null>('/api/v1/demo/reset', { method: 'POST' });
+};

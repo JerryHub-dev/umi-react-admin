@@ -1,6 +1,5 @@
 /**
- * 演示模式：未配置真实后端（UMI_APP_API_BASE）时，所有接口由浏览器内的演示后端响应
- * （dev、preview、GitHub Pages / Vercel / Docker 等静态部署一律如此）。
- * 配置了 UMI_APP_API_BASE 后请求直连真实后端，演示后端代码不会被加载。
+ * 演示模式必须在构建时显式启用；没有真实后端不再隐式启用任意密码的演示鉴权。
+ * 公开演示站与演示测试由部署/测试配置明确选择此模式。
  */
-export const DEMO_MODE = !UMI_APP_API_BASE;
+export const DEMO_MODE = UMI_APP_DEMO_MODE === true;
