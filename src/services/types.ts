@@ -10,6 +10,19 @@ export interface ApiEnvelope<T> {
   message?: string;
 }
 
+/** User presentation returned by a verified server session; authorization remains a server responsibility. */
+export interface CurrentUser {
+  name: string;
+  email: string;
+  nickName?: string;
+  role?: string;
+}
+
+/** Real login establishes a Secure HttpOnly SameSite cookie and returns no bearer to JavaScript. */
+export interface LoginResult {
+  user: CurrentUser;
+}
+
 export interface PageResult<T> {
   list: T[];
   total: number;

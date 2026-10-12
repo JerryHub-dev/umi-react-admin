@@ -35,6 +35,7 @@ export default {
   'header.github': 'GitHub repository',
   'header.logout': 'Sign out',
   'header.loggedOut': 'Signed out',
+  'header.logoutFailed': 'Sign-out failed. Your session is still active; please try again.',
   'header.resetDemo': 'Reset demo data',
   'header.resetDemoConfirm':
     'Discard every change you made on this demo (created, edited and deleted records, signatures…) and restore the initial data?',
@@ -59,8 +60,10 @@ export default {
   'login.passwordRequired': 'Please enter your password',
   'login.submit': 'Sign in',
   'login.success': 'Signed in',
+  'login.failed': 'Sign-in failed. Check your credentials or try again later.',
+  'login.invalidSession': 'Invalid sign-in response. Please contact the administrator.',
   'login.storageError':
-    'Cannot persist the session locally (storage disabled or full). Check browser settings and retry.',
+    'Cannot save the demo session in this tab (storage disabled or full). Check browser settings and retry.',
   'page.403.subTitle': 'Sorry, you are not authorized to access this page.',
   'page.404.subTitle': 'Sorry, the page you visited does not exist.',
   'page.500.subTitle': 'Something went wrong on the server. Please try again later.',

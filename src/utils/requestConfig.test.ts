@@ -29,12 +29,20 @@ vi.mock('@/utils/antdMessage', () => ({
 // UMI_APP_API_BASE 是构建期 define 注入的全局常量，测试环境需先声明再动态 import
 let requestConfig: (typeof import('./requestConfig'))['requestConfig'];
 type ErrorHandler = (error: unknown, opts?: { skipErrorHandler?: boolean }) => unknown;
-type Interceptor = (config: Record<string, unknown>) => { headers?: Record<string, string> };
+type Interceptor = (config: Record<string, unknown>) => {
+  url?: string;
+  baseURL?: string;
+  withCredentials?: boolean;
+  adapter?: unknown;
+  auth?: unknown;
+  headers?: Record<string, string>;
+};
 let errorHandler: ErrorHandler;
 let interceptor: Interceptor;
 
 beforeAll(async () => {
   (globalThis as Record<string, unknown>).UMI_APP_API_BASE = undefined;
+  (globalThis as Record<string, unknown>).UMI_APP_DEMO_MODE = true;
   // PUBLIC_PATH 与 UMI_APP_API_BASE 同为构建期 define 注入的全局常量（401 整页跳转用）
   (globalThis as Record<string, unknown>).PUBLIC_PATH = '/';
   // 401 走 window.location.assign（整页跳转重置内存态），jsdom 下需替换 location 才能断言
@@ -50,6 +58,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 const httpError = (status: number, data?: unknown) => ({ response: { status, data } });
@@ -65,36 +74,50 @@ const umiRequestFailing = (error: unknown, opts: { skipErrorHandler?: boolean } 
     reject(error);
   });
 
-describe('请求拦截器：token 注入范围', () => {
-  const withToken = () => localStorage.setItem(AUTH_TOKEN_KEY, 'admin-demo-token');
+describe('请求拦截器：显式演示会话边界', () => {
+  const withToken = () => sessionStorage.setItem(AUTH_TOKEN_KEY, 'admin-demo-token');
 
-  it('无 token 时配置原样返回', () => {
+  it('无演示 token 时保留非敏感请求头但不注入凭证', () => {
     const result = interceptor({ url: '/api/v1/x', headers: { 'X-Test': '1' } });
     expect(result.headers?.['X-Test']).toBe('1');
     expect(result.headers?.Authorization).toBeUndefined();
   });
 
-  it('相对路径（同源）注入 Authorization Bearer 头', () => {
+  it('现有 API 路径使用标签页内的演示 token', () => {
     withToken();
     expect(interceptor({ url: '/api/v1/x', headers: {} }).headers?.Authorization).toBe('Bearer admin-demo-token');
   });
 
-  it('同源绝对地址注入 token', () => {
+  it('同源绝对地址也必须改用固定 API 路径', () => {
     withToken();
     const url = `${window.location.origin}/api/v1/x`;
-    expect(interceptor({ url, headers: {} }).headers?.Authorization).toBe('Bearer admin-demo-token');
+    expect(() => interceptor({ url, headers: {} })).toThrow('under /api/v1/');
   });
 
-  it('配置的 baseURL 源注入 token', () => {
+  it('每次调用传入的 baseURL 不能声明自己的可信源', () => {
     withToken();
-    const result = interceptor({ url: '/api/v1/x', baseURL: 'https://api.example.com', headers: {} });
-    expect(result.headers?.Authorization).toBe('Bearer admin-demo-token');
+    expect(() => interceptor({ url: '/api/v1/x', baseURL: 'https://api.example.com', headers: {} })).toThrow(
+      'overrides are disabled',
+    );
   });
 
-  it('第三方绝对地址不注入 token（防止凭证外泄）', () => {
+  it('第三方绝对地址在附带任何凭证之前被拒绝', () => {
     withToken();
-    const result = interceptor({ url: 'https://third-party.example.org/data.json', headers: {} });
-    expect(result.headers?.Authorization).toBeUndefined();
+    expect(() => interceptor({ url: 'https://third-party.example.org/data.json', headers: {} })).toThrow(
+      'under /api/v1/',
+    );
+  });
+
+  it('旧 localStorage bearer 不会自动恢复到演示请求', () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, 'old-token');
+    expect(interceptor({ url: '/api/v1/x' }).headers?.Authorization).toBeUndefined();
+  });
+
+  it('演示 adapter 不能被单次调用替换成网络 adapter', () => {
+    const adapter = vi.fn();
+    const result = interceptor({ url: '/api/v1/x', adapter, withCredentials: true });
+    expect(result.adapter).not.toBe(adapter);
+    expect(result.withCredentials).toBe(false);
   });
 });
 
@@ -107,8 +130,10 @@ describe('errorHandler：HTTP 状态码分流（axios 形状）', () => {
 
   it('401 清除 token 并整页跳转登录页（重置内存中的 initialState）', () => {
     localStorage.setItem(AUTH_TOKEN_KEY, 'stale-token');
+    sessionStorage.setItem(AUTH_TOKEN_KEY, 'stale-demo-token');
     errorHandler(httpError(401));
     expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+    expect(sessionStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
     expect(assignMock).toHaveBeenCalledWith('/login');
   });
 
@@ -131,6 +156,78 @@ describe('errorHandler：HTTP 状态码分流（axios 形状）', () => {
   it('优先展示后端返回体中的 message', () => {
     errorHandler(httpError(400, { error: { message: '后端参数错误' } }));
     expect(errorMock).toHaveBeenCalledWith('后端参数错误');
+  });
+});
+
+describe('请求拦截器：真实 Cookie 会话', () => {
+  let realInterceptor: Interceptor;
+  beforeAll(async () => {
+    vi.resetModules();
+    (globalThis as Record<string, unknown>).UMI_APP_DEMO_MODE = false;
+    (globalThis as Record<string, unknown>).UMI_APP_API_BASE = '/backend';
+    const { requestConfig: realConfig } = await import('./requestConfig');
+    realInterceptor = realConfig.requestInterceptors![0] as unknown as Interceptor;
+  });
+
+  it('使用固定同源 API 前缀和 Cookie，不读取持久或演示 bearer', () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, 'old-bearer');
+    sessionStorage.setItem(AUTH_TOKEN_KEY, 'demo-bearer');
+    const result = realInterceptor({
+      url: '/api/v1/currentUser',
+      baseURL: '/backend',
+      headers: { authorization: 'manual-bearer', 'X-Test': '1' },
+    });
+    expect(result.url).toBe(`${window.location.origin}/backend/api/v1/currentUser`);
+    expect(result.baseURL).toBeUndefined();
+    expect(result.withCredentials).toBe(true);
+    expect(result.headers?.authorization).toBeUndefined();
+    expect(result.headers?.Authorization).toBeUndefined();
+    expect(result.headers?.['X-Test']).toBe('1');
+  });
+
+  it('写请求携带服务端必须验证的 CSRF 非简单请求头', () => {
+    const result = realInterceptor({
+      url: '/api/v1/logout',
+      method: 'POST',
+      headers: { 'x-requested-with': 'forged' },
+      withCredentials: false,
+      auth: { username: 'old', password: 'old' },
+    });
+    expect(result.headers?.['X-Requested-With']).toBe('XMLHttpRequest');
+    expect(result.headers?.['Content-Type']).toBe('application/json');
+    expect(result.withCredentials).toBe(true);
+    expect(result.auth).toBeUndefined();
+  });
+
+  it.each([
+    '//evil.test/api/v1/users',
+    '/\\evil.test/api/v1/users',
+    '/api/v1/../../outside',
+    '/api/v1/%2e%2e/outside',
+    '/api/v1/%252e%252e/outside',
+    '/api/v1/a%2fb',
+    '/api/v1/a%5cb',
+    '/api/v1/a\nb',
+    '/api/v1/a%0ab',
+    '/api/v1/bad%escape',
+  ])('拒绝地址别名与不同解析器的歧义输入：%s', (url) => {
+    expect(() => realInterceptor({ url })).toThrow();
+  });
+
+  it('拒绝单次调用切换真实凭证来源', () => {
+    expect(() => realInterceptor({ url: '/api/v1/users', baseURL: 'https://evil.test' })).toThrow(
+      'overrides are disabled',
+    );
+    expect(() => realInterceptor({ url: '/api/v1/users', baseURL: '/' })).toThrow('overrides are disabled');
+  });
+
+  it('开发环境没有配置真实 API 时也不会回落到演示认证', async () => {
+    vi.resetModules();
+    (globalThis as Record<string, unknown>).UMI_APP_API_BASE = undefined;
+    const { requestConfig: missingConfig } = await import('./requestConfig');
+    const missingInterceptor = missingConfig.requestInterceptors![0] as unknown as Interceptor;
+    expect(missingConfig.adapter).toBeUndefined();
+    expect(() => missingInterceptor({ url: '/api/v1/login' })).toThrow('configured same-origin API');
   });
 });
 

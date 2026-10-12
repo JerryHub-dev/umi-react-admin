@@ -1,9 +1,14 @@
 import { defineConfig } from '@umijs/max';
+import { resolveAuthConfig } from './auth';
 import { BUILD_INFO, addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
 import { configureSplitChunks } from './splitChunks';
 // import { routes } from './routes';
+const AUTH_CONFIG = resolveAuthConfig(process.env);
+if (!AUTH_CONFIG.demoMode) {
+  throw new Error('GitHub Pages supports public demo only; backend mode needs a host with security headers');
+}
 
 export default defineConfig({
   // 与 config.ts 同源：UMI_ENV=github 时本函数整体覆盖 config.ts 的 chainWebpack
@@ -18,7 +23,8 @@ export default defineConfig({
     CESIUM_BASE_URL: '/umi-react-admin/Cesium',
     CESIUM_ION_TOKEN: process.env.CESIUM_ION_TOKEN,
     PUBLIC_PATH: '/umi-react-admin/',
-    UMI_APP_API_BASE: process.env.UMI_APP_API_BASE,
+    UMI_APP_API_BASE: AUTH_CONFIG.apiBase,
+    UMI_APP_DEMO_MODE: AUTH_CONFIG.demoMode,
     AMAP_KEY: process.env.AMAP_KEY,
     AMAP_SECURITY_CODE: process.env.AMAP_SECURITY_CODE,
     // 构建信息（页脚与 dist/version.json 同源，见 ./buildInfo.ts）

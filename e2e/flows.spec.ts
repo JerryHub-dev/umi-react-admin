@@ -107,6 +107,7 @@ test('重置演示数据清除改动', async ({ page }) => {
     .click();
   await page.waitForLoadState('load');
   await page.waitForTimeout(1500);
+  await expect(page.locator('.ant-table-row').first()).toBeVisible();
   await expect(page.getByText('e2e@example.com')).toHaveCount(0);
 });
 
