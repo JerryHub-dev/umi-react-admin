@@ -46,6 +46,7 @@ const TicketDetail = ({ ticket }: { ticket: Ticket }) => {
     },
   ];
   const current = steps.findIndex((step) => !step.at);
+  const signature = safeSignature(ticket.acceptance?.signature);
 
   return (
     <>
@@ -88,9 +89,9 @@ const TicketDetail = ({ ticket }: { ticket: Ticket }) => {
             : step.planned && t('tickets.scheduled', { time: formatDateTime(step.planned, 'MM-DD HH:mm') }),
         }))}
       />
-      {ticket.acceptance && safeSignature(ticket.acceptance.signature) && (
+      {signature && (
         <img
-          src={safeSignature(ticket.acceptance.signature)}
+          src={signature}
           alt={t('tickets.step.accepted')}
           className="mt-2 block max-h-28 rounded border border-solid bg-white"
           style={{ borderColor: 'rgba(0, 0, 0, 0.12)' }}
