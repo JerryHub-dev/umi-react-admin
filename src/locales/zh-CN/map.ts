@@ -1,5 +1,6 @@
 /** 地图：高德、OpenLayers、Cesium 六个场景 */
 export default {
+  'map.keyRequired': '请配置受来源限制的高德 Web Key 后加载地图',
   'map.legend.status': '设备状态',
   'map.reset': '回到全国视图',
   'map.clear': '清除图层',

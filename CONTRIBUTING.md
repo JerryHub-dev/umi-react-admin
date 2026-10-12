@@ -10,7 +10,7 @@
 ```bash
 pnpm install
 cp .env.example .env.local   # 按需填写
-pnpm start
+pnpm start:demo
 ```
 
 ## 开发流程
