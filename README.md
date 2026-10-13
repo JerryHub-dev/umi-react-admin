@@ -1,5 +1,7 @@
 # umi-react-admin
 
+> **中文文档**：[README.zh-CN.md](./README.zh-CN.md) · 简体中文完整文档在此，欢迎翻译 PR。
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 
 [![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
@@ -8,35 +10,52 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE) [![Deploy](https://github.com/Jerry-CodeHub/umi-react-admin/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/Jerry-CodeHub/umi-react-admin/actions/workflows/deploy.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-`umi-react-admin` 是基于 **Umi Max 4 + React 19 + Ant Design 5 + ProComponents** 的开源后台模板。和多数模板不同，它的演示内容讲的是**同一个故事**：一个虚构的「物联网监测运营平台」——240 台监测站、近 90 天告警、由告警派生的工单、86 名运维人员、角色权限与操作审计，工作台上的每个数字都由这些明细实时聚合，经得起推敲。
+`umi-react-admin` is an open-source admin template built on **Umi Max 4 + React 19 + Ant Design 6 + ProComponents**. Unlike most templates, its demo tells **one coherent story**: a fictional IoT monitoring platform — 240+ stations, ~90 days of alarms, tickets derived from those alarms, 86 operators with role-based permissions and audit logs. Every number on the dashboard is aggregated live from those records, and holds up to scrutiny.
 
-**[在线演示](https://jerry-codehub.github.io/umi-react-admin/)** —— 登录页一键「以管理员体验」或「以访客体验（受限权限）」。
+**[Live demo](https://jerry-codehub.github.io/umi-react-admin/)** — one-click sign-in for five roles (`admin` / `lead` / `operator` / `analyst` / `guest`) sharing the same dataset, so you can compare permission differences across menus, buttons and API responses (see `docs/demo/role-matrix.md`).
 
-| 分组 | 页面 |
+| Group | Pages |
 | --- | --- |
-| 工作台 | KPI（在线设备、今日告警、工单时限达成率、平均响应）、告警趋势、类型占比、各大区在线率、处置流向、设备健康、设备分布、最新动态 |
-| 系统管理 | 用户管理（筛选 / 排序 / 批量 / 详情抽屉）、角色权限（权限点树）、操作日志、权限演示（路由级 / 按钮级 / 数据级） |
-| 设备运维 | 设备台账、告警中心（转工单 / 恢复 / 误报关闭）、工单看板（拖拽流转，支持键盘）、频谱占用（D3） |
-| 地图 | 高德、OpenLayers（同一批站点）；Cesium 六个场景：GeoHash 网格、方位测距、场强热力图、路线与覆盖、框选与测距、海空态势 |
-| 组件 | 日程（FullCalendar）、富文本（自托管 TinyMCE，预置按数据生成的周报）、电子签名（工单验收）、页面截图（html2canvas） |
-| 多媒体 / 文档 | 视频、音乐播放器、波形；浏览器内按数据生成的月报 PDF、Excel 导入导出（逐行校验） |
+| Dashboard | KPIs (online devices, alarms today, SLA rate, avg response), alarm trend, type mix, regional online rate, disposition flow, device health, distribution, latest activity |
+| System | Users (filter / sort / batch / detail drawer), roles (permission tree), audit logs, access demo (route-level / button-level / data-level) |
+| Operations | Device registry, alarm center (convert to ticket / recover / false positive), ticket board (drag & drop, keyboard accessible), spectrum occupancy (D3) |
+| Maps | AMap, OpenLayers (same station set); six Cesium scenes: GeoHash grid, direction & distance, heatmap, routes & coverage, box-select & measure, air/sea situation |
+| Components | Calendar (FullCalendar), rich text (self-hosted TinyMCE with data-generated weekly report), signature (ticket acceptance), page screenshot (html2canvas) |
+| Media / Documents | Video, music player, waveform; browser-side monthly PDF report and Excel import/export (row-level validation) generated live from the data |
 
-全站中英双语、明暗主题、手机端可用；每个页面右上角「查看源码」直达对应代码。
+Fully bilingual (zh-CN / en-US), light/dark themes, mobile-friendly; every page has a "view source" link in the top-right corner.
 
-## 环境要求
+![Dashboard (controlled demo scenario)](docs/demo/screenshots/02-dashboard-scenario.png)
 
-- Node.js 24 LTS（见 [.nvmrc](./.nvmrc)，推荐使用 nvm / fnm 管理）；最低 22.22.2（jsdom、Cesium 等依赖的引擎要求）
-- pnpm 11（`packageManager` 字段已钉住版本，pnpm 10 会自动切换）；新发布不足 24 小时的依赖版本会被 pnpm 11 默认的 `minimumReleaseAge` 拒绝
-- 国内开发者可在 `~/.npmrc` 自行配置镜像源（本仓库的 `.npmrc` 不携带镜像配置）
+![Ticket board with full-history lookup](docs/demo/screenshots/07-tickets-board.png)
 
-## 安装使用
+![Dark theme](docs/demo/screenshots/03-dashboard-dark.png)
+
+![Mobile (390px)](docs/demo/screenshots/12-mobile-users.png)
+
+> Screenshots are from the 2026-10-12 demo walkthrough (more in [docs/demo/screenshots/](./docs/demo/screenshots/)).
+
+## Contents
+
+- [Requirements](#requirements) / [Getting started](#getting-started) (incl. [Environment variables](#environment-variables))
+- [Scripts](#scripts) / [Directory layout](#directory-layout) / [Features](#features)
+- [Deployment](#deployment) / [Third-party licensing notes](#third-party-licensing-notes) / [Analytics & privacy](#analytics--privacy)
+- [Contributors](#contributors-) / [Changelog](./CHANGELOG.md) / [10-minute demo script](./docs/demo/demo-script.md)
+
+## Requirements
+
+- Node.js 24 LTS (see [.nvmrc](./.nvmrc); nvm / fnm recommended); minimum 22.22.2 (engine requirement of jsdom, Cesium and friends)
+- pnpm 11 (the `packageManager` field pins the version; pnpm 10 auto-switches); releases younger than 24 hours are rejected by pnpm 11's default `minimumReleaseAge`
+- Developers in China may configure a registry mirror in `~/.npmrc` (this repo's `.npmrc` intentionally carries none)
+
+## Getting started
 
 ```bash
 git clone https://github.com/Jerry-CodeHub/umi-react-admin.git
 
 cd umi-react-admin
 
-# 复制环境变量模板，按需填写（见下方环境变量说明）
+# Copy the env template and fill in as needed (see environment variables below)
 cp .env.example .env.local
 
 pnpm install
@@ -44,83 +63,83 @@ pnpm install
 pnpm start
 ```
 
-### 环境变量
+### Environment variables
 
-| 变量 | 必需 | 说明 |
+| Variable | Required | Notes |
 | --- | --- | --- |
-| `CESIUM_ION_TOKEN` | 可选 | 自行申请并限制来源与权限的公开 Web token；缺失时使用 HTTPS OSM，不使用 SDK 共享 token，Ion 地形需要自有 token |
-| `UMI_APP_DEMO_MODE` | 演示需显式开启 | 仅 `true` 启用纯前端演示；未设置或 `false` 为真实模式。`.env.example` 明确开启演示 |
-| `UMI_APP_API_BASE` | 真实生产构建需要 | 同源 API 路径前缀，例如 `/` 或 `/backend`；跨源后端须由同源入口代理。不可与演示模式同时配置 |
-| `AMAP_KEY` / `AMAP_SECURITY_CODE` | 高德功能需要 | 自行申请受来源与配额限制的公开 Web Key；未配置时不加载 SDK、不使用组件库共享 key |
-| `CLARITY_ID` | 暂不支持 | 模板缺少同意、内容遮蔽及对应 CSP 集成，设置该变量会拒绝构建；默认无统计脚本 |
+| `CESIUM_ION_TOKEN` | Optional | Your own public web token, restricted by origin and quota; without it the app falls back to HTTPS OSM (no SDK-shared token). Ion terrain requires your own token |
+| `UMI_APP_DEMO_MODE` | Required for demo | Only `true` enables the pure-frontend demo; unset or `false` means real mode. `.env.example` enables the demo explicitly |
+| `UMI_APP_API_BASE` | Required for real builds | Same-origin API path prefix such as `/` or `/backend`; cross-origin backends must be proxied at a same-origin entry. Mutually exclusive with demo mode |
+| `AMAP_KEY` / `AMAP_SECURITY_CODE` | For AMap features | Your own public web key restricted by origin and quota; without it the SDK is not loaded and no library-shared key is used |
+| `CLARITY_ID` | Not supported | The template lacks consent, content masking and matching CSP integration; setting it fails the build. No analytics scripts by default |
 
-## 常用脚本
+## Scripts
 
 ```bash
-pnpm start            # 开发服务器（端口 8000，读取 .env.local 的显式模式）
-pnpm start:demo       # 显式演示开发
-pnpm build            # 真实模式生产构建：必须配置同源 API
-pnpm build:demo       # 显式公开演示构建（主产线：Vercel / Docker）
-pnpm build:github:demo # GitHub Pages 公开演示构建（子路径 /umi-react-admin/）
-pnpm check            # typecheck + 严格 lint + vitest（提交前必跑）
-pnpm test             # vitest 单测（含演示数据合理性、接口、CSP 一致性、路由表）
-pnpm e2e              # Playwright：对 build:github:demo 产物逐页冒烟 + 英文完整性 + 关键流程
-pnpm e2e:build        # 构建并跑 e2e
-pnpm size             # 显式演示构建并执行体积预算门禁（size-budget.json）
-pnpm audit:security   # 全量原始依赖公告 + 已安装补丁源码及攻击回归校验
-pnpm analyze          # 构建并生成 bundle 组成分析
-pnpm format           # Prettier 格式化
+pnpm start             # Dev server (port 8000; reads the explicit mode from .env.local)
+pnpm start:demo        # Dev with the demo backend explicitly enabled
+pnpm build             # Real-mode production build: requires a same-origin API
+pnpm build:demo        # Public demo build (primary pipeline: Vercel / Docker)
+pnpm build:github:demo # Public demo build for GitHub Pages (sub-path /umi-react-admin/)
+pnpm check             # typecheck + strict lint + vitest (run before every commit)
+pnpm test              # vitest units (demo data sanity, API, CSP consistency, route table)
+pnpm e2e               # Playwright: per-route smoke on the build:github:demo output + English completeness + key flows
+pnpm e2e:build         # Build once, then run e2e
+pnpm size              # Public demo build + bundle-size budget gate (size-budget.json)
+pnpm audit:security    # Full raw dependency advisories + installed patch verification with attack regressions
+pnpm analyze           # Build with a bundle composition report
+pnpm format            # Prettier
 ```
 
-## 目录结构
+## Directory layout
 
 ```
 src/
-├── pages/            # 页面（按菜单分组：Dashboard / System / Ops / Map / Components / Media / Document / Exception）
-├── components/       # 通用组件（DemoPage 页面外壳、ChartCard、CesiumViewer、GuideTour、ErrorBoundary…）
-├── demo/             # 浏览器内的演示后端：数据生成器、补丁存储、REST 路由、axios adapter
-├── services/         # 接口调用与前后端契约（types.ts）
+├── pages/            # Pages grouped by menu (Dashboard / System / Ops / Map / Components / Media / Document / Exception)
+├── components/       # Shared components (DemoPage shell, ChartCard, CesiumViewer, GuideTour, ErrorBoundary…)
+├── demo/             # In-browser demo backend: data generator, patch store, REST routes, axios adapter
+├── services/         # API calls and the shared frontend/backend contract (types.ts)
 ├── hooks/            # useApi / useChartTheme / useEnums / useThemeMode
-├── locales/          # 中英文案（按领域拆分，键集一致由测试把关）
-├── constants/        # 枚举顺序、语义色、权限点树
-├── layouts/          # 顶栏
-└── utils/            # 请求层、格式化、地图计算（geodesy / geohash / turf 合并）
-config/               # umi 配置、路由（含旧路径重定向）、CSP 单一来源、分包、构建信息
-e2e/                  # Playwright 用例
+├── locales/          # zh-CN / en-US messages (split by domain; key parity enforced by tests)
+├── constants/        # Enum order, semantic colors, permission tree
+├── layouts/          # Top bar
+└── utils/            # Request layer, formatting, map math (geodesy / geohash / turf merged)
+config/               # umi config, routes (with legacy redirects), single-source CSP, chunking, build info
+e2e/                  # Playwright specs
 ```
 
-## 功能说明
+## Features
 
-- **演示后端**：仅 `UMI_APP_DEMO_MODE=true` 时使用浏览器内的演示接口（`src/demo`，经 axios adapter 接入）。登录 token 仅存在当前标签页的 sessionStorage；虚构业务数据的修改仍以补丁形式存 localStorage，头像菜单可「重置演示数据」。请勿导入真实业务或敏感数据。数据按日历日以固定种子生成，时间窗随今天滑动。
-- **数据合理性**：`src/demo/generate.test.ts` 把规则写成断言——级别比例、工作日 / 周末节律、时间线先后、设备状态与活动告警对应、KPI 与明细口径一致、邮箱只用 example.com、手机号只以脱敏形式出现、IP 只用文档保留段。
-- **接真实后端**：关闭演示，设置同源 `UMI_APP_API_BASE`，按 [src/services/types.ts](./src/services/types.ts) 实现接口。前端采用服务端会话 Cookie；登录返回用户信息，不保存 bearer。Cookie、CSRF、服务端权限与 TLS 契约见 [SECURITY.md](./SECURITY.md)，仓库没有后端实现。未配置后端的真实生产构建直接失败，真实页面不显示演示快捷入口。
-- **鉴权与权限**：演示账号 `admin`、`guest` 及任意其它用户名的密码均不校验；菜单、按钮和数据过滤只展示交互规则。真实后端必须独立校验每次操作及数据范围。登录回跳会规范化并限制在本站应用内。
-- **文档输入**：XLSX 限 5 MiB、实际解压 16 MiB、16 张表、1000 数据行、64 列、每字段 4096 字符；XML/合并/命名区域也在分配前检查。解析放入可终止 worker，超时 10 秒。PDF 限 20 MiB、1000 页，只渲染两页窗口，并检查图片及画布预算；切换文件会取消旧任务。
-- **多语言与主题**：中英双语（首次访问按浏览器语言选择），代码中直接写中文会被 ESLint 规则拦下，英文界面无遗漏由 e2e 断言；明暗主题下图表、地图、日历、富文本同步切换。
-- **构建信息**：页脚显示构建提交与时间，`dist/version.json` 同源，部署后可核对线上版本。
-- **无障碍**：`<html lang>` 随语言切换、页面允许缩放；顶栏与看板可键盘操作；图标按钮具可访问名称。
-- **浏览器基线**：Chrome 111+ / Firefox 128+ / Safari 16.4+（Tailwind CSS 4）；PDF 需要原生 `Promise.try`（Chrome 128+ / Firefox 134+ / Safari 18.2+）。
+- **Demo backend**: browser-resident demo APIs (`src/demo`, wired in via an axios adapter) used only when `UMI_APP_DEMO_MODE=true`. The login token lives in the current tab's sessionStorage; modifications to the fictional business data persist as patches in localStorage, and the avatar menu offers "reset demo data". Do not import real business or sensitive data. Data is generated deterministically per calendar day; the window slides with today.
+- **Data plausibility**: `src/demo/generate.test.ts` encodes the rules as assertions — level ratios, weekday/weekend rhythm, timeline ordering, device-status ↔ active-alarm correspondence, KPI/agreement parity, example.com-only emails, masked phone numbers, documentation-reserved IP ranges.
+- **Real backend**: disable the demo, set a same-origin `UMI_APP_API_BASE`, and implement the endpoints per [src/services/types.ts](./src/services/types.ts). The frontend expects server-side session cookies; login returns user info, no bearer is stored. The cookie/CSRF/server-auth/TLS contract lives in [SECURITY.md](./SECURITY.md); there is no backend implementation in this repo. Real production builds fail without a backend configured, and real-mode pages never show demo shortcuts.
+- **Auth & permissions**: permission points for the five roles (admin / lead / operator / analyst / viewer) are defined in `src/constants/permissions.ts` and act as the **single authorization source** for menus, buttons and the in-browser demo API — the demo backend resolves them per request from the role record, so permission edits apply to existing sessions immediately. Demo mode never validates passwords; a real backend must still authorize every operation and data scope itself. Login redirects are normalized and confined to this app.
+- **Document input**: XLSX capped at 5 MiB / 16 MiB actual decompression / 16 sheets / 1000 rows / 64 columns / 4096 chars per field; XML merges and named ranges are checked before allocation. Parsing runs in a terminable worker with a 10s timeout. PDF capped at 20 MiB / 1000 pages, two-page render window, image and canvas budgets checked; switching files cancels the previous task.
+- **i18n & theming**: bilingual UI (first visit follows the browser language); writing Chinese literals in code is blocked by an ESLint rule, and e2e asserts the English UI has no leftovers. Charts, maps, calendar and rich text all follow the light/dark theme.
+- **Build info**: the footer shows the build commit and time; `dist/version.json` is generated from the same source so you can verify the deployed version.
+- **Accessibility**: `<html lang>` follows the UI language, pinch-zoom is allowed; the top bar and the ticket board are keyboard-operable; icon buttons have accessible names.
+- **Browser baseline**: Chrome 111+ / Firefox 128+ / Safari 16.4+ (Tailwind CSS 4); the PDF page needs native `Promise.try` (Chrome 128+ / Firefox 134+ / Safari 18.2+).
 
-## 部署
+## Deployment
 
-Vercel 与 Docker 强制 CSP，并设置 `X-Content-Type-Options`、`Referrer-Policy`、`X-Frame-Options`、`Permissions-Policy` 和 HTTPS HSTS。CSP 来源见 [config/csp.ts](./config/csp.ts)，两份响应头副本由测试比对；生产 HTML 也带 meta CSP。`'unsafe-eval'` 服务于 Cesium Knockout 控件，样式内联服务于 antd；这些兼容需求要求保持第三方版本和所有 HTML 输入边界的检查。GitHub Pages 的 meta CSP 无法提供响应头级的防嵌入保护，只支持公开演示。
+Vercel and Docker enforce CSP plus `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` and HTTPS HSTS. The CSP source list lives in [config/csp.ts](./config/csp.ts); the two static header copies are compared by tests, and production HTML carries a meta CSP too. `'unsafe-eval'` serves the Cesium Knockout controls and inline styles serve antd; those compatibility needs require keeping the checks on third-party versions and every HTML input boundary. The GitHub Pages meta CSP cannot provide header-grade frame protection, so Pages hosts the public demo only.
 
-- **GitHub Pages**：push `master` 自动触发 [deploy.yml](./.github/workflows/deploy.yml)。构建、全量依赖检查及产物扫描在只读 job 中执行，下载已检查产物的发布 job 才拥有仓库写权限。`build:github:demo` 显式开启公开演示；真实模式拒绝该目标。复制 `404.html` 支持子路由，部署后按 `version.json` 校验版本并跑线上 `@smoke`。
-- **Vercel**：见 [vercel.json](./vercel.json)。公开演示明确设置 `UMI_APP_DEMO_MODE=true`；真实部署配置同源 API 代理及后端会话，不可将 SPA rewrite 作为 API 响应。锁文件以 `--frozen-lockfile` 安装。
-- **Docker**：公开演示使用 `docker build --build-arg UMI_APP_DEMO_MODE=true .`；真实目标使用 `--build-arg UMI_APP_API_BASE=/` 并在 HTTPS 入口配置 API 反向代理。镜像本身只有静态前端，`/api/` 返回 404。nginx 1.30 强制 CSP；哈希产物一年长缓存，入口和非哈希资源协商缓存。`CESIUM_ION_TOKEN` 为公开客户端凭据，需自行限制来源与权限；可选 `GIT_SHA` 用于版本信息。
+- **GitHub Pages**: pushing `master` triggers [deploy.yml](./.github/workflows/deploy.yml) automatically. Build, full dependency audit and artifact scanning run in a read-only job; only the publishing job — which downloads the checked artifacts — gets write access. `build:github:demo` enables the public demo explicitly; real mode refuses this target. A copied `404.html` supports sub-routes; after deploy the pipeline verifies `version.json` and runs the online `@smoke` suite.
+- **Vercel**: see [vercel.json](./vercel.json). The public demo sets `UMI_APP_DEMO_MODE=true` explicitly; real deployments configure a same-origin API proxy and backend sessions — the SPA rewrite must not answer API requests. Lockfile installs use `--frozen-lockfile`.
+- **Docker**: public demo via `docker build --build-arg UMI_APP_DEMO_MODE=true .`; real targets use `--build-arg UMI_APP_API_BASE=/` plus an API reverse proxy at your HTTPS entry. The image is static-frontend only (`/api/` returns 404). nginx 1.30 enforces CSP; hashed assets get one-year immutable caching, entries and non-hashed resources use conditional caching. `CESIUM_ION_TOKEN` is a public client credential — restrict its origins and quota; optional `GIT_SHA` feeds the version info.
 
-## 第三方许可说明
+## Third-party licensing notes
 
-本项目按 **MIT** 分发（见 [LICENSE](./LICENSE)），但以下第三方内容**不随 MIT 一并授权**：
+This project ships under **MIT** (see [LICENSE](./LICENSE)), but the following third-party content is **not licensed under MIT**:
 
-- **TinyMCE 8**：GPL-2.0-or-later 或 Tiny 商业许可双轨。本模板**自托管** npm 中的 TinyMCE（随富文本路由的异步 chunk 分发，不依赖 Tiny Cloud 与 API key），编辑器以 `license_key: 'gpl'` 运行。模板按 MIT 分发不等于授予 TinyMCE 闭源商用权利：对外提供包含 TinyMCE 的构建产物即构成分发，须遵守 GPL；闭源商用请购买 Tiny 商业许可，或替换为 TipTap（MIT）/ Quill 2（BSD-3）。仅内部使用等场景的义务请结合自身情况评估。
-- **Cesium**：Apache-2.0（构建产物已随附许可副本 `dist/Cesium/LICENSE.md`）。
-- **演示媒体**：仓库内的演示音频、PDF、视频封面与业务数据均为项目自制（业务数据由 `src/demo` 在浏览器内以固定种子确定性生成），仅作演示用途；视频播放器页的示例视频运行时引用 xgplayer 官方演示 CDN，不随仓库分发。
-- 完整依赖许可清单见 [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)。
+- **TinyMCE 8**: dual-licensed GPL-2.0-or-later / Tiny commercial. This template **self-hosts** TinyMCE from npm (served in the rich-text route's async chunk — no Tiny Cloud, no API key) and runs the editor with `license_key: 'gpl'`. Distributing the template under MIT does not grant TinyMCE rights for closed-source commercial use: offering builds containing TinyMCE is distribution and must comply with the GPL; for closed-source commercial use, buy a Tiny license or swap in TipTap (MIT) / Quill 2 (BSD-3). Evaluate your own situation for internal-use scenarios.
+- **Cesium**: Apache-2.0 (the build output ships the license copy at `dist/Cesium/LICENSE.md`).
+- **Demo media**: the bundled demo audio, PDFs, video posters and business data are project-made (business data is deterministically generated by `src/demo` in the browser) and provided for demo purposes only; the video player page hotlinks the official xgplayer demo CDN at runtime, which is not redistributed with the repo.
+- The full dependency license inventory lives in [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).
 
-## 统计与隐私
+## Analytics & privacy
 
-模板无统计或会话回放脚本，直接设置 `CLARITY_ID` 会阻止构建。另行集成统计时，应先完成同意、敏感输入遮蔽与匹配的 CSP，并验证拒绝同意时无请求。地图、视频等页面会按功能请求公开第三方服务；公开 Web Key 需限制来源与配额。
+The template ships no analytics or session-replay scripts; setting `CLARITY_ID` directly fails the build. If you add analytics, implement consent, sensitive-input masking and a matching CSP first, and verify that no request fires when consent is refused. Map and video pages call public third-party services as their features require; public web keys must be origin- and quota-restricted.
 
 ## Contributors ✨
 
@@ -145,7 +164,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" size="13px" colspan="7">
         <img src="https://raw.githubusercontent.com/all-contributors/all-contributors-cli/1b8533af435da9854653492b1327a23a4dbd0a10/assets/logo-small.svg">
-          <a href="https://all-contributors.js.org/docs/en/bot/usage">Add your contributions</a>
+          <a href="https://allcontributors.js.org/docs/en/bot/usage">Add your contributions</a>
         </img>
       </td>
     </tr>

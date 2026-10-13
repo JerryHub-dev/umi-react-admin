@@ -1,50 +1,52 @@
-# 安全策略
+# Security Policy
 
-## 报告漏洞
+> **中文版**：[SECURITY.zh-CN.md](./SECURITY.zh-CN.md) — the two copies are maintained in sync.
 
-**请勿使用公开 issue 报告安全问题。** 推荐渠道：
+## Reporting a vulnerability
 
-1. GitHub 私有漏洞报告：仓库页面 **Security** 标签 → **Report a vulnerability**（维护者需先在 Settings → Code security 中开启 Private vulnerability reporting）
-2. 邮件：lishuai4415@gmail.com（package.json author）
+**Please do not report security issues in public issues.** Preferred channels:
 
-请在报告中包含：影响版本/commit、复现步骤、影响评估。我们会在 **3 个工作日内确认收到**，修复进度会通过原渠道反馈。
+1. GitHub private vulnerability reporting: repo page → **Security** tab → **Report a vulnerability** (the maintainer must enable Private vulnerability reporting under Settings → Code security first)
+2. Email: lishuai4415@gmail.com (the `author` in package.json)
 
-## 支持版本
+Please include: affected version/commit, reproduction steps, and impact assessment. We will acknowledge receipt within **3 business days** and feed progress back through the original channel.
 
-| 版本            | 支持状态 |
-| --------------- | -------- |
-| master 分支最新 | ✅       |
-| 历史 tag        | ❌       |
+## Supported versions
 
-## 质量门禁
+| Version         | Supported |
+| --------------- | --------- |
+| Latest `master` | ✅        |
+| Historical tags | ❌        |
 
-- PR 阶段 CI：typecheck / 严格 lint（含 .mjs）/ vitest / 两条显式演示构建 / 体积预算与样式覆盖 / **产物密钥扫描**（仅核对已声明的公开客户端 token 指纹）/ 全量依赖公告与真实补丁验证 / Playwright（包含第三方引起的 CSP 违规，不作忽略）
-- 部署后：等待线上 `version.json` 切到本次提交，对线上地址跑 `@smoke` 用例
-- 提交阶段：pre-commit（lint-staged + typecheck）
-- 仓库卫生测试：可提交文件不含 JWT 形态秘钥与本地工件
+## Quality gates
 
-## 已知限制
+- PR-stage CI: typecheck / strict lint (including `.mjs`) / vitest / both explicit demo builds / bundle budget & style coverage / **artifact secret scanning** (fingerprint-verified against declared public client tokens only) / full dependency advisories with verified source patches / Playwright (CSP violations caused by third parties are not ignored)
+- Post-deploy: wait for the online `version.json` to switch to this commit, then run the `@smoke` cases against the live site
+- Commit stage: pre-commit (lint-staged + typecheck)
+- Repository hygiene tests: committable files must not contain JWT-shaped secrets or local artifacts
 
-仓库只有前端模板，没有真实后端。纯前端演示必须显式设置 `UMI_APP_DEMO_MODE=true`，账号和权限只供交互展示，不校验密码，也无法建立可信数据隔离。演示只使用虚构数据，登录 token 在 sessionStorage；启动会移除旧版 localStorage token。浏览器内的数据与脚本均由用户控制。
+## Known limitations
 
-默认关闭演示。真实生产构建必须设置同源 `UMI_APP_API_BASE`，否则失败；GitHub Pages 仅允许公开演示。真实模式采用 Cookie 会话，删除持久 bearer 入口，禁止跨源及单次请求覆盖 API 地址，登录回跳规范化后限制在本站应用内。前端权限展示不能替代服务端授权。
+This repository is a frontend template only — there is no real backend. The pure-frontend demo requires `UMI_APP_DEMO_MODE=true` explicitly. The demo never validates passwords and cannot establish trusted data isolation — permission points are enforced per request by the in-browser demo backend (which makes permission differences demonstrable), but every check runs inside the user's own browser and is not a real security boundary. The demo uses fictional data only; the login token lives in sessionStorage, and startup removes legacy localStorage tokens. In-browser data and scripts are under the user's control.
 
-Vercel 与 nginx 强制 CSP，生产 HTML 带 meta CSP。GitHub Pages 无法提供 `frame-ancestors`/`X-Frame-Options` 响应头，因此不能承载需要防嵌入保护的真实管理后台。Cesium 的 Knockout 控件需要 `unsafe-eval`，antd 样式需要内联样式；富文本须持续经 DOMPurify，PDF 禁用 eval/脚本，上传与 URL 输入须经过相应边界。未配置地图 key 时不使用第三方共享凭据，未审查的统计集成拒绝构建。
+The demo is off by default. Real production builds require a same-origin `UMI_APP_API_BASE` and fail otherwise; GitHub Pages hosts the public demo only. Real mode uses cookie sessions, removes the persistent bearer entry, forbids cross-origin API addresses and per-request API overrides, and normalizes login redirects to stay within this app. Frontend permission display never substitutes for server-side authorization.
 
-本地 preview 默认仅监听 127.0.0.1，拒绝目录越界、逃逸符号链接及异常编码。它用于本机验证；生产应使用 HTTPS 静态服务入口。nginx 监听内网 8080，TLS 在部署入口终止；HSTS 只有浏览器收到 HTTPS 响应时才生效。
+Vercel and nginx enforce CSP; production HTML carries a meta CSP. GitHub Pages cannot serve `frame-ancestors`/`X-Frame-Options` headers, so it must not host a real admin console that needs anti-framing protection. Cesium's Knockout controls require `unsafe-eval`, antd styles require inline styles; rich text must keep flowing through DOMPurify, PDF must keep eval/scripts disabled, and uploads and URL inputs must pass through their respective boundaries. Without configured map keys no third-party shared credentials are used; unreviewed analytics integrations fail the build.
 
-## 真实后端接入契约
+The local preview server binds to 127.0.0.1 only and rejects directory traversal, escaping symlinks and abnormal encodings. It is for local verification; production should use an HTTPS static entry. nginx listens on intranet 8080 with TLS terminated at the deployment entry; HSTS only takes effect once the browser has seen an HTTPS response.
 
-当前没有后端实现，以下要求在接入时由服务端落实，不能用前端测试代替：
+## Real backend integration contract
 
-- 会话 Cookie 使用 `Secure`、`HttpOnly`、合适的 `SameSite`，限制 Path，避免宽泛 Domain；登录重新签发会话，退出在服务端失效会话。
-- 每个业务接口独立校验身份、角色、对象归属及数据范围；不能接受客户端传来的角色或演示 token。
-- 状态变更使用 POST/PUT/PATCH/DELETE，检查可信 Origin 和前端发送的 `X-Requested-With: XMLHttpRequest`，拒绝跨源 CORS/简单请求；GET/HEAD 不得修改状态。若引入额外跨源场景须配套真正的 CSRF 方案。
-- 登录、退出、currentUser 响应 `Cache-Control: no-store`；错误使用正确 HTTP 状态，接口不得返回 SPA HTML。口令只发往固定同源 API，服务端负责限速、口令存储和会话寿命。
-- HTTPS 入口配置证书、同源 API 代理、CSP 和其他安全头，并验证真实响应与权限回归。模板本身没有可声明已通过的线上后端或 TLS 环境。
+There is no backend implementation today; the following must be delivered server-side when integrating — frontend tests cannot substitute:
 
-## 文档及依赖边界
+- Session cookies use `Secure`, `HttpOnly`, an appropriate `SameSite`, a restricted Path, and avoid a broad Domain; login re-issues the session, logout invalidates it server-side.
+- Every business endpoint independently verifies identity, role, object ownership and data scope; client-supplied roles or demo tokens are never accepted.
+- State changes use POST/PUT/PATCH/DELETE, check a trusted Origin plus the frontend-sent `X-Requested-With: XMLHttpRequest`, and reject cross-origin CORS/simple requests; GET/HEAD must not mutate state. Any additional cross-origin scenario needs a real CSRF scheme.
+- Login/logout/currentUser responses carry `Cache-Control: no-store`; errors use proper HTTP statuses, and endpoints must never return SPA HTML. Credentials go only to the fixed same-origin API; the server owns rate limiting, credential storage and session lifetime.
+- The HTTPS entry provides certificates, a same-origin API proxy, CSP and other security headers, and real responses plus permission regressions are verified. The template itself declares no verified online backend or TLS environment.
 
-XLSX 在交给 ExcelJS 前校验 ZIP、实际解压量、XML、坐标、合并和命名区域；有文件/行列/字段预算，可终止 worker 的 10 秒时限。PDF 有文件/页数/可见窗口/画布与图片预算，并取消旧任务。这些预算限制模板允许的输入，不能证明浏览器原生解码器对任意未知畸形文件不存在缺陷。
+## Document & dependency boundaries
 
-历史公告不再登记为无修复的接受项。真实升级、移除或源码补丁见 [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)。原始 `pnpm audit` 根据真实版本号仍可能命中本地已修补包；保留原始结果，`pnpm audit:security` 必须同时验证所有安装实例的源码哈希和真实攻击回归，新公告及未证明修补的实例均失败。不得通过忽略公告、伪造版本号或只评估不可达来让门禁通过。
+XLSX is checked for ZIP structure, actual decompressed size, XML, coordinates, merges and named ranges before reaching ExcelJS; file/row/column/field budgets apply and parsing runs in a terminable worker with a 10-second cap. PDF has file/page/visible-window/canvas/image budgets and cancels stale tasks. These budgets bound what the template accepts as input; they do not prove browser-native decoders are defect-free against arbitrary malformed files.
+
+Historical advisories are no longer recorded as accepted-without-fix. Real upgrades, removals or source patches are tracked in [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md). Raw `pnpm audit` may still flag locally patched packages by version number; the raw output is kept, and `pnpm audit:security` must additionally verify source hashes of every installed instance plus real attack regressions — new advisories and unproven instances fail. Gates must never be passed by ignoring advisories, faking version numbers, or assessing only unreachable paths.
