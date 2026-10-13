@@ -1,21 +1,23 @@
-# 行为准则
+# Code of Conduct
 
-## 我们的承诺
+> **中文版**：[CODE_OF_CONDUCT.zh-CN.md](./CODE_OF_CONDUCT.zh-CN.md) — the two copies are maintained in sync.
 
-为营造开放友好的社区，作为贡献者和维护者，我们承诺让参与本项目的每个人都不受骚扰困扰，无论年龄、体型、明显或不明显的残障、族裔、性征、性别认同与表达、经验水平、教育、社会经济地位、国籍、个人外貌、种族、宗教或性取向。
+## Our pledge
 
-## 我们的准则
+To foster an open and welcoming community, we as contributors and maintainers pledge to make participation in this project harassment-free for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual orientation.
 
-- 使用友好包容的语言
-- 尊重不同观点与经验
-- 优雅接受建设性批评
-- 以社区利益为重
-- 对其他成员保持同理心
+## Our standards
 
-不可接受的行为包括：性化语言或意象、人身攻击、挑衅、公开或私下骚扰、未经许可发布他人隐私（如地址、邮箱）。
+- Use welcoming and inclusive language
+- Respect differing viewpoints and experiences
+- Gracefully accept constructive criticism
+- Prioritize what is best for the community
+- Show empathy towards other members
 
-## 执行
+Unacceptable behavior includes: sexualized language or imagery, personal attacks, trolling, public or private harassment, and publishing others' private information (such as addresses or emails) without permission.
 
-辱骂、骚扰或其他不可接受行为可通过 GitHub 私有渠道或 lishuai4415@gmail.com 报告。维护者将审查并作出适当回应。
+## Enforcement
 
-本准则改编自 [Contributor Covenant](https://www.contributor-covenant.org) 2.1 版。
+Abuse, harassment, or other unacceptable conduct may be reported via GitHub private channels or lishuai4415@gmail.com. The maintainers will review and respond appropriately.
+
+This Code of Conduct is adapted from version 2.1 of the [Contributor Covenant](https://www.contributor-covenant.org).

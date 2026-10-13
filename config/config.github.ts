@@ -1,6 +1,6 @@
 import { defineConfig } from '@umijs/max';
 import { resolveAuthConfig } from './auth';
-import { BUILD_INFO, addVersionFile } from './buildInfo';
+import { addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
 import { configureSplitChunks } from './splitChunks';
@@ -12,6 +12,9 @@ if (!AUTH_CONFIG.demoMode) {
 
 export default defineConfig({
   // 与 config.ts 同源：UMI_ENV=github 时本函数整体覆盖 config.ts 的 chainWebpack
+  // chainWebpack 是函数、merge 时整体覆盖：内容与 config.ts 保持一致（三个共享步骤
+  // configureSplitChunks / addChunkGraph / addVersionFile 都来自各自单源模块）——
+  // 在 config.ts 新增链式步骤时需同步调整本副本（无表达式层面的共享手段）
   chainWebpack(config) {
     if (process.env.NODE_ENV === 'production') {
       configureSplitChunks(config);
@@ -19,16 +22,12 @@ export default defineConfig({
       addVersionFile(config);
     }
   },
+  // define 经 lodash.merge 逐键深合并（@umijs/core getUserConfig）：这里只覆盖与主产线的
+  // 差异键（PUBLIC_PATH / CESIUM_BASE_URL），其余（token/key/apiBase/demoMode/BUILD_INFO）
+  // 自动继承 config.ts —— 避免两份逐字复制导致的漂移
   define: {
     CESIUM_BASE_URL: '/umi-react-admin/Cesium',
-    CESIUM_ION_TOKEN: process.env.CESIUM_ION_TOKEN,
     PUBLIC_PATH: '/umi-react-admin/',
-    UMI_APP_API_BASE: AUTH_CONFIG.apiBase,
-    UMI_APP_DEMO_MODE: AUTH_CONFIG.demoMode,
-    AMAP_KEY: process.env.AMAP_KEY,
-    AMAP_SECURITY_CODE: process.env.AMAP_SECURITY_CODE,
-    // 构建信息（页脚与 dist/version.json 同源，见 ./buildInfo.ts）
-    BUILD_INFO,
   },
   // umi 对 metas 数组为整体覆盖（不与 config.ts 逐项合并），viewport 需一并带上。
   // meta CSP（审计 2026-09-22 H-3）：GitHub Pages 无法自定义响应头，只能走 meta；

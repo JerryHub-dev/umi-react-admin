@@ -1,18 +1,18 @@
 ---
-name: 功能建议
-about: 为模板提议新功能或改进
+name: Feature request
+about: Propose a new feature or improvement for the template
 title: '[feature] '
 labels: enhancement
 ---
 
-## 背景
+## Background
 
-<!-- 你遇到的问题或场景 -->
+<!-- The problem or scenario you ran into -->
 
-## 期望
+## Proposal
 
-<!-- 希望模板提供什么 -->
+<!-- What you would like the template to provide -->
 
-## 替代方案
+## Alternatives
 
-<!-- 考虑过的其他做法 -->
+<!-- Other approaches you have considered -->

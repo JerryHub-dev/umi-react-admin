@@ -72,7 +72,7 @@ export default defineConfig({
   ],
   define: {
     CESIUM_BASE_URL: '/Cesium',
-    CESIUM_ION_TOKEN: process.env.CESIUM_ION_TOKEN,
+    CESIUM_ION_TOKEN: process.env.CESIUM_ION_TOKEN || '',
     // 站点资源根路径：主产线 '/'，GitHub Pages 产线见 config.github.ts（'/umi-react-admin/'）。
     // 页面内引用 public 资源一律经 PUBLIC_PATH 拼接，保证两条产线可用。
     PUBLIC_PATH: '/',
@@ -82,8 +82,8 @@ export default defineConfig({
     UMI_APP_DEMO_MODE: AUTH_CONFIG.demoMode,
     // 高德 Web 端（JS API）Key 与安全密钥（审计 2026-09-22 M-6）：
     // 未配置时不加载第三方 SDK，也不使用组件库内置的共享 key。
-    AMAP_KEY: process.env.AMAP_KEY,
-    AMAP_SECURITY_CODE: process.env.AMAP_SECURITY_CODE,
+    AMAP_KEY: process.env.AMAP_KEY || '',
+    AMAP_SECURITY_CODE: process.env.AMAP_SECURITY_CODE || '',
     // 构建信息（页脚与 dist/version.json 同源，见 ./buildInfo.ts）
     BUILD_INFO,
   },
@@ -99,6 +99,7 @@ export default defineConfig({
   headScripts: [],
   // 产物文件名带内容哈希：配合 nginx 对哈希文件的长缓存（nginx/default.conf），发版后不会命中旧脚本
   hash: true,
+  // terser 而非 esbuild：产物里需要稳定的死代码消除与更细的压缩控制（切换时对比过体积）
   jsMinifier: 'terser',
   // 只注入 core-js 稳定特性（默认 `import 'core-js'` 会带上 176 个 esnext 提案 polyfill）。
   // umi 锁定的 core-js 3.34 中约 95 个提案实现带 forced:true，会强制覆盖浏览器原生实现，
@@ -134,7 +135,6 @@ export default defineConfig({
     baseSeparator: '-',
   },
   tailwindcss: {},
-  esbuildMinifyIIFE: true, // 开启 esbuild 压缩
   // MFSU eager 模式会扫描 src 下所有文件（含 *.test.ts）的 import，把 vitest 当成页面依赖预编译，
   // vitest → vite 引用 node:module，dev 每次启动都报 UnhandledSchemeError。测试依赖不进浏览器，排除即可
   mfsu: { exclude: ['vitest'] },

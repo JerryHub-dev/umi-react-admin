@@ -22,11 +22,11 @@ umi-react-admin 是一个基于 Umi Max 的企业级 React 后台管理系统模
 pnpm install          # 安装依赖
 pnpm start            # 启动开发服务器 (端口 8000)
 pnpm build            # 生产构建
-pnpm build:github     # GitHub Pages 构建
+pnpm build:github:demo # GitHub Pages 公开演示构建（子路径；非 demo 变体已被移除：公开产线仅允许演示模式）
 pnpm preview          # 构建并预览 (端口 8001)
 pnpm check            # typecheck + 严格 lint + vitest（提交前必跑）
 pnpm test             # vitest 单测（test:watch 监听 / test:coverage 覆盖率）
-pnpm e2e              # Playwright 冒烟（先 build:github；e2e:build 一步完成）
+pnpm e2e              # Playwright 冒烟（先 build:github:demo；e2e:build 一步完成）
 pnpm size             # 构建并执行体积预算门禁（size-budget.json）
 pnpm analyze          # 构建并生成 bundle 组成分析
 pnpm format           # Prettier 格式化代码
@@ -37,13 +37,14 @@ pnpm format           # Prettier 格式化代码
 ```
 src/
 ├── pages/            # 页面（Dashboard / System / Ops / Map / Components / Media / Document / Exception）
-├── components/       # DemoPage 外壳、ChartCard、CesiumViewer（useCesiumViewer）、GuideTour、ErrorBoundary
+├── components/       # DemoPage 外壳、ChartCard、CesiumViewer（useCesiumViewer）、GuideTour、ErrorBoundary、BuildFooter、UserAvatar
+├── layouts/          # 顶栏 RightContent（主题/语言/账户菜单、固定演示场景入口、演示时间标记）
 ├── demo/             # 浏览器内演示后端：generate（数据）、store（补丁持久化）、server（路由）、adapter
 ├── services/         # 接口调用；types.ts 是前后端契约
 ├── hooks/            # useApi / useChartTheme / useEnums / useThemeMode / useResponsiveTable
 ├── locales/          # zh-CN / en-US，按领域拆分到同名目录
 ├── constants/        # 枚举顺序、语义色、权限点树
-├── utils/            # 请求层、i18n 兜底、格式化、MapCompute（geodesy / geoHash / turf 合并）
+├── utils/            # 请求层、i18n 兜底、格式化、MapCompute（geodesy / geoHash / turf 合并）、now（演示时钟出口）、buildGlobals、Auth/（会话与初始状态）
 ├── app.tsx           # 运行时配置（布局、路由守卫、未授权回退、页脚、导览）
 └── access.ts         # 权限定义
 
@@ -135,6 +136,6 @@ config/
 
 ## 部署
 
-- **GitHub Pages**: `pnpm build:github` + GitHub Actions（部署前复制 404.html 做 SPA 回退；部署后等 `version.json` 切到本次提交再跑 `@smoke` e2e；部署提交用 github-actions[bot] 身份）
+- **GitHub Pages**: `pnpm build:github:demo` + GitHub Actions（部署前复制 404.html 做 SPA 回退；部署后等 `version.json` 切到本次提交再跑 `@smoke` e2e；部署提交用 github-actions[bot] 身份）
 - **Docker**: 根目录 Dockerfile + `nginx/`（仅带哈希文件长缓存，.mjs 需显式声明类型）
 - **Vercel**: 支持自动部署 (vercel.json，含 SPA rewrite)

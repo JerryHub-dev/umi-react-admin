@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussions
+    url: https://github.com/Jerry-CodeHub/umi-react-admin/discussions
+    about: Questions, deployment advice and ideas that are not bugs belong in Discussions
+  - name: Security vulnerabilities
+    url: https://github.com/Jerry-CodeHub/umi-react-admin/security
+    about: Do not open public issues for security problems — follow the channels in SECURITY.md

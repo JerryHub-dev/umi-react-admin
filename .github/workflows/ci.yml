@@ -21,6 +21,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,6 +49,7 @@ jobs:
   build:
     needs: check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -83,11 +85,25 @@ jobs:
         # CI 构建不注入 secret，产物里除 Cesium 自带的公开默认 token 外出现任何 JWT 都判失败
         run: node scripts/check-dist-secrets.mjs
 
+      - name: define 注入路径的可检测性校验（闭环 Vercel 同类盲区）
+        # 运行时构造一个公开的假 JWT（仓库卫生门禁禁止任何 JWT 形态字面量入库）注入构建：
+        # 未声明时扫描必须失败（证明「注入→产物→检出」链路受门禁约束），经 EXPECTED_TOKEN 声明后必须通过
+        if: matrix.script == 'build:demo'
+        run: |
+          DUMMY="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"dist-secret-scan-gate"}' | base64 | tr '/+' '_-' | tr -d =).gate-check-signature"
+          CESIUM_ION_TOKEN="$DUMMY" pnpm run build:demo
+          if node scripts/check-dist-secrets.mjs; then
+            echo "::error::注入的公开演示 JWT 未被产物扫描检出（扫描门禁存在盲区）"
+            exit 1
+          fi
+          EXPECTED_TOKEN="$DUMMY" node scripts/check-dist-secrets.mjs
+
   e2e:
     # 浏览器级冒烟：GitHub Pages 同构的静态产物（子路径 + 404 回退 + meta CSP）逐路由打开，
     # 断言无未捕获异常、无 console.error、无 CSP 违规；另验证英文界面无遗漏中文与关键业务流程
     needs: check
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -114,3 +130,11 @@ jobs:
 
       - name: Playwright
         run: pnpm e2e
+
+      - name: 上传 Playwright 报告（失败时）
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-pr
+          path: playwright-report/
+          retention-days: 7

@@ -8,7 +8,6 @@
       "Bash(pnpm typecheck)",
       "Bash(pnpm format)",
       "Bash(pnpm build)",
-      "Bash(pnpm build:github)",
       "Bash(pnpm preview)",
       "Bash(pnpm size)",
       "Read(./**)",
