@@ -10,17 +10,19 @@ import { useApi } from '@/hooks/useApi';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import { listAllDevices } from '@/services/ops';
 import type { Device } from '@/services/types';
+import { readBuildGlobal } from '@/utils/buildGlobals';
 import { AimOutlined, CloseOutlined } from '@ant-design/icons';
 import { load } from '@pansy/amap-api-loader';
-import { useIntl } from '@umijs/max';
+import { Link, useIntl } from '@umijs/max';
 import { Alert, Button, Card } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { StationCard, StatusFilterBar, StatusLegend, type StatusFilter } from '../components/stationUi';
+import { StationCard, StatusFilterBar, StatusLegend, type StatusFilter } from '../components/StationUi';
 
-// AMap JS API 2.0 的安全密钥必须在脚本加载前挂到 window（官方约定）
-if (typeof window !== 'undefined' && AMAP_SECURITY_CODE && !window._AMapSecurityConfig) {
-  window._AMapSecurityConfig = { securityJsCode: AMAP_SECURITY_CODE };
+// AMap JS API 2.0 的安全密钥必须在脚本加载前挂到 window（官方约定；未配置时为空串，跳过）
+const amapSecurityCode = readBuildGlobal('AMAP_SECURITY_CODE');
+if (typeof window !== 'undefined' && amapSecurityCode && !window._AMapSecurityConfig) {
+  window._AMapSecurityConfig = { securityJsCode: amapSecurityCode };
 }
 
 const CHINA_CENTER: [number, number] = [108.5, 34.5];
@@ -45,12 +47,13 @@ export default function Amap() {
 
   useEffect(() => {
     if (!devices || !containerRef.current) return undefined;
-    if (!AMAP_KEY) {
+    const amapKey = readBuildGlobal('AMAP_KEY');
+    if (!amapKey) {
       setLoadError(missingKeyMessage);
       return undefined;
     }
     let disposed = false;
-    load({ key: AMAP_KEY, version: '2.0' })
+    load({ key: amapKey, version: '2.0' })
       .then((AMapApi) => {
         if (disposed || !containerRef.current) return;
         const map = new AMapApi.Map(containerRef.current, {
@@ -118,13 +121,32 @@ export default function Amap() {
       extra={
         <>
           {devices && <StatusFilterBar devices={devices} value={filter} onChange={setFilter} />}
-          <Button icon={<AimOutlined />} onClick={() => mapRef.current?.setZoomAndCenter(CHINA_ZOOM, CHINA_CENTER)}>
+          <Button
+            icon={<AimOutlined />}
+            disabled={!mapRef.current}
+            onClick={() => mapRef.current?.setZoomAndCenter(CHINA_ZOOM, CHINA_CENTER)}
+          >
             {t('map.reset')}
           </Button>
         </>
       }
     >
-      {loadError && <Alert type="error" showIcon className="mb-4" title={t('map.loadFailed', { reason: loadError })} />}
+      {loadError && (
+        <Alert
+          type="error"
+          showIcon
+          className="mb-4"
+          title={t('map.loadFailed', { reason: loadError })}
+          // 缺 Key 时给明确的替代入口（默认地图已在运行期切到 OpenLayers，见 /map 入口）
+          action={
+            !readBuildGlobal('AMAP_KEY') ? (
+              <Link to="/map/openlayers" data-tour="amap-fallback">
+                {t('map.gotoOpenlayers')}
+              </Link>
+            ) : undefined
+          }
+        />
+      )}
       <Card styles={{ body: { padding: 0 } }}>
         <div className="relative h-[calc(100vh-280px)] min-h-[480px] overflow-hidden rounded-lg">
           <div ref={containerRef} className="absolute inset-0" />

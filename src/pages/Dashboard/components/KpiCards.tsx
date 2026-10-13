@@ -3,7 +3,7 @@ import type { DashboardOverview } from '@/services/types';
 import { formatNumber, formatPercent } from '@/utils/format';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Tiny } from '@ant-design/plots';
-import { useIntl } from '@umijs/max';
+import { Link, useIntl } from '@umijs/max';
 import { Card, Col, Progress, Row, Skeleton, Tooltip, Typography } from 'antd';
 import type { ReactNode } from 'react';
 import Delta from './Delta';
@@ -15,26 +15,33 @@ type KpiCardProps = {
   footer: ReactNode;
   chart?: ReactNode;
   loading: boolean;
+  /** 点击进入对应明细页（E02：从概览直接进入对象，指标与列表数量一致） */
+  to?: string;
 };
 
-const KpiCard = ({ title, hint, value, footer, chart, loading }: KpiCardProps) => (
-  <Card className="h-full" styles={{ body: { padding: '20px 24px 16px' } }}>
+const KpiCard = ({ title, hint, value, footer, chart, loading, to }: KpiCardProps) => (
+  <Card
+    className={to ? 'h-full transition-shadow hover:shadow-md' : 'h-full'}
+    styles={{ body: { padding: '20px 24px 16px' } }}
+  >
     <Skeleton active loading={loading} paragraph={{ rows: 2 }}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <Typography.Text type="secondary">
-            {title}
-            {hint && (
-              <Tooltip title={hint}>
-                <InfoCircleOutlined className="ml-1" />
-              </Tooltip>
-            )}
-          </Typography.Text>
-          <div className="mt-1">{value}</div>
+      <Link to={to ?? '#'} className="block text-inherit" aria-label={title}>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <Typography.Text type="secondary">
+              {title}
+              {hint && (
+                <Tooltip title={hint}>
+                  <InfoCircleOutlined className="ml-1" />
+                </Tooltip>
+              )}
+            </Typography.Text>
+            <div className="mt-1">{value}</div>
+          </div>
+          {chart && <div className="w-28 shrink-0 pt-2">{chart}</div>}
         </div>
-        {chart && <div className="w-28 shrink-0 pt-2">{chart}</div>}
-      </div>
-      <div className="mt-3 text-sm">{footer}</div>
+        <div className="mt-3 text-sm">{footer}</div>
+      </Link>
     </Skeleton>
   </Card>
 );
@@ -66,6 +73,7 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
           formatNumber(kpi.devicesOnline, locale),
           t('dashboard.kpi.devicesSuffix', { total: kpi.devicesTotal }),
         ),
+      to: '/ops/devices',
       footer: kpi && (
         <div>
           <Progress
@@ -82,6 +90,7 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
       loading,
     },
     {
+      to: '/ops/alarms',
       title: t('dashboard.kpi.alarmsToday'),
       value: kpi && bigNumber(formatNumber(kpi.alarmsToday, locale)),
       chart: kpi && (
@@ -107,6 +116,7 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
       loading,
     },
     {
+      to: '/ops/tickets',
       title: t('dashboard.kpi.sla'),
       hint: t('dashboard.kpi.slaHint'),
       value: kpi && bigNumber(formatPercent(kpi.slaRate, locale)),
@@ -121,6 +131,7 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
       loading,
     },
     {
+      to: '/ops/tickets',
       title: t('dashboard.kpi.response'),
       hint: t('dashboard.kpi.responseHint'),
       value: kpi && bigNumber(formatNumber(kpi.avgResponseMinutes, locale), t('dashboard.kpi.minutes')),

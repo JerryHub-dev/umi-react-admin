@@ -109,4 +109,20 @@ export default {
   'app.links.umi.desc': 'The application framework',
   'app.links.antv': 'AntV',
   'app.links.antv.desc': 'Charts on the dashboard',
+  'login.as.lead': 'Sign in as duty lead',
+  'login.as.operator': 'Sign in as operator',
+  'login.as.analyst': 'Sign in as analyst',
+  'login.as.guest': 'Sign in as guest',
+  'login.asRolesDesc': 'All five roles share the same demo data; see the role matrix for their permissions',
+  'header.scenario.enter': 'Enter fixed demo scenario',
+  'header.scenario.enterDesc':
+    'Freezes the demo clock and clears demo edits, restoring the fixed scenario baseline (mainline to-dos, acceptance samples, always ready).',
+  'header.scenario.enterDone': 'Fixed demo scenario entered (demo time {time})',
+  'header.scenario.exit': 'Exit controlled scenario',
+  'header.scenario.exitDesc':
+    'Resumes the live demo clock and clears demo edits, returning to data generated from the current time.',
+  'header.scenario.exitDone': 'Controlled scenario exited (live mode)',
+  'header.demoClock': 'Demo time {time}',
+  'header.demoClockTip':
+    'Controlled demo mode: the clock is frozen at {time}; data does not advance with real time until you exit.',
 };

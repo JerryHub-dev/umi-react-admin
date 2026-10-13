@@ -58,15 +58,23 @@ export const signIn = async (page: Page, { user = 'admin', locale = 'zh-CN' } = 
 
 export const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:4173/umi-react-admin/';
 
-/** 站内跳转（不整页刷新，避开静态托管的 404 回退）；path 为应用内路由，如 /system/users */
+/** 站内跳转（不整页刷新，避开静态托管的 404 回退）；path 为应用内路由（可带 query），如 /system/users */
 export const navigate = async (page: Page, path: string) => {
-  await page.evaluate(
-    (target) => {
-      window.history.pushState({}, '', target);
+  // pathname 会丢掉 ?query（深链 focus/keyword 依赖它），pathname + search 一并还原
+  const target =
+    new URL(path.replace(/^\//, ''), BASE_URL).pathname + new URL(path.replace(/^\//, ''), BASE_URL).search;
+  const go = () =>
+    page.evaluate((url) => {
+      window.history.pushState({}, '', url);
       window.dispatchEvent(new PopStateEvent('popstate'));
-    },
-    new URL(path.replace(/^\//, ''), BASE_URL).pathname,
-  );
+    }, target);
+  try {
+    await go();
+  } catch {
+    // 与整页刷新（如进入/退出演示场景）竞态时上下文会被销毁：等新文档就绪后重试一次
+    await page.waitForLoadState('domcontentloaded');
+    await go();
+  }
 };
 
 /** 页面可见文本中的中文（地图瓦片、三维场景、语言选择项等第三方或刻意保留的区域除外） */

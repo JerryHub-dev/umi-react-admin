@@ -18,13 +18,20 @@ export const useThemeMode = () => {
       // 存储不可用：本次会话内仍然生效
     }
     setAntdConfig({
-      theme: { algorithm: mode === 'realDark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm },
+      theme: {
+        algorithm: mode === 'realDark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        // 与 app.tsx 启动时的说明文字对比度覆盖同源（U04）：热切换只换 algorithm 不重算 token 覆盖，
+        // 这里随模式带上对应的中性灰，切换后立即生效而不是等刷新
+        token: { colorTextTertiary: mode === 'realDark' ? '#8f8f8f' : '#6f6f6f' },
+      },
     });
     setInitialState((prev: AppInitialState | undefined) => ({
       name: '',
       email: '',
       nickName: '',
       role: undefined,
+      roleKey: undefined,
+      permissions: new Set<string>(),
       ...prev,
       theme: mode,
     }));

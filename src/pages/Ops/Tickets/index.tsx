@@ -3,8 +3,8 @@ import { TICKET_STATUS_KEYS } from '@/constants/enums';
 import { TICKET_STATUS_COLOR } from '@/constants/semantic';
 import { useApi } from '@/hooks/useApi';
 import { useChartTheme } from '@/hooks/useChartTheme';
-import { listTickets, moveTicket } from '@/services/ops';
-import type { Ticket, TicketStatus } from '@/services/types';
+import { getTicket, listTickets, moveTicket } from '@/services/ops';
+import type { Ticket, TicketPriority, TicketStatus } from '@/services/types';
 import {
   DndContext,
   DragOverlay,
@@ -18,8 +18,24 @@ import {
   type DragEndEvent,
   type KeyboardCoordinateGetter,
 } from '@dnd-kit/core';
-import { useIntl } from '@umijs/max';
-import { Alert, App, Badge, Empty, Segmented, Skeleton, Typography, theme } from 'antd';
+import { history, useIntl, useLocation } from '@umijs/max';
+import {
+  Alert,
+  App,
+  Badge,
+  Button,
+  Card,
+  DatePicker,
+  Empty,
+  Input,
+  Segmented,
+  Select,
+  Skeleton,
+  Space,
+  Typography,
+  theme,
+} from 'antd';
+import type { Dayjs } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import TicketCard from './TicketCard';
 import TicketDrawer from './TicketDrawer';
@@ -115,16 +131,109 @@ const Column = ({
   );
 };
 
+/** 工单查询（F03）：按编号/关键字与状态、优先级、时间跨全量历史检索（不受看板三天窗口限制） */
+const TicketSearch = ({ onOpen }: { onOpen: (ticket: Ticket) => void }) => {
+  const intl = useIntl();
+  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  const { message } = App.useApp();
+  const [keyword, setKeyword] = useState('');
+  const [status, setStatus] = useState<TicketStatus | undefined>();
+  const [priority, setPriority] = useState<TicketPriority | undefined>();
+  const [range, setRange] = useState<[Dayjs, Dayjs] | undefined>();
+  const [results, setResults] = useState<Ticket[]>();
+  const [searching, setSearching] = useState(false);
+
+  const search = async () => {
+    const trimmed = keyword.trim();
+    if (!trimmed && !status && !priority && !range) {
+      message.info(t('tickets.search.hint'));
+      return;
+    }
+    setSearching(true);
+    try {
+      // 纯编号输入（如 WO-20261007-019 或 20261007-019）补全前缀后精确匹配
+      const normalized = /^(wo-)?(\d{8}-.+)$/i.test(trimmed) ? `WO-${trimmed.replace(/^wo-/i, '')}` : trimmed;
+      const page = await listTickets({
+        keyword: normalized || undefined,
+        status,
+        priority,
+        from: range?.[0]?.toISOString(),
+        to: range?.[1]?.toISOString(),
+        pageSize: 20,
+      });
+      setResults(page.list);
+      if (!page.list.length) message.info(t('tickets.search.empty'));
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <Card size="small" className="mb-4" title={t('tickets.search.title')} data-tour="ticket-search">
+      <Space wrap size={[12, 8]}>
+        <Input.Search
+          className="w-full sm:w-72"
+          allowClear
+          value={keyword}
+          onChange={(event) => setKeyword(event.target.value)}
+          placeholder={t('tickets.search.placeholder')}
+          onSearch={search}
+          loading={searching}
+          enterButton
+        />
+        <Select<TicketStatus>
+          allowClear
+          className="w-32"
+          placeholder={t('tickets.search.status')}
+          value={status}
+          onChange={setStatus}
+          options={TICKET_STATUS_KEYS.map((key) => ({ value: key, label: t(`ticketStatus.${key}`) }))}
+        />
+        <Select<TicketPriority>
+          allowClear
+          className="w-28"
+          placeholder={t('tickets.search.priority')}
+          value={priority}
+          onChange={setPriority}
+          options={(['P1', 'P2', 'P3'] as const).map((key) => ({ value: key, label: key }))}
+        />
+        <DatePicker.RangePicker
+          showTime={{ format: 'HH:mm' }}
+          value={range}
+          onChange={(value) => setRange(value?.[0] && value?.[1] ? [value[0], value[1]] : undefined)}
+          placeholder={[t('tickets.search.from'), t('tickets.search.to')]}
+        />
+        <Button onClick={search} loading={searching}>
+          {t('tickets.search.button')}
+        </Button>
+      </Space>
+      {results && (
+        <div className="mt-3 flex flex-col gap-1">
+          {results.length ? (
+            results.map((ticket) => (
+              <Button key={ticket.id} type="link" size="small" className="!px-0" onClick={() => onOpen(ticket)}>
+                {`${ticket.id} · ${ticket.title} · ${t(`ticketStatus.${ticket.status}`)}`}
+              </Button>
+            ))
+          ) : (
+            <Typography.Text type="secondary">{t('tickets.search.empty')}</Typography.Text>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 export default function Tickets() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { message } = App.useApp();
+  const location = useLocation();
   const { data, loading } = useApi(() => listTickets({ board: true }));
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [kind, setKind] = useState<KindFilter>('all');
   const [dragging, setDragging] = useState<Ticket>();
   const [viewingId, setViewingId] = useState<string>();
-  const viewing = tickets.find((ticket) => ticket.id === viewingId);
   // 鼠标移动 6px 才算拖动（单击留给「查看详情」）；触屏长按 250ms 才拖动，否则是正常滚动页面
   // （此前用 PointerSensor：触屏上浏览器先接管滚动手势，卡片根本拖不动）；
   // 键盘只用空格拿起 / 放下，回车留给「查看详情」
@@ -137,10 +246,43 @@ export default function Tickets() {
     }),
   );
 
+  const focusId = useMemo(() => new URLSearchParams(location.search).get('focus') ?? undefined, [location.search]);
+
   useEffect(() => {
-    if (data) setTickets(data.list);
+    // 看板数据刷新时保留看板窗口之外的工单（深链加载的历史工单），避免列表回写把它挤掉
+    if (data)
+      setTickets((current) => {
+        const incoming = new Set(data.list.map((ticket) => ticket.id));
+        return [...current.filter((ticket) => !incoming.has(ticket.id)), ...data.list];
+      });
   }, [data]);
 
+  // 深链接（F03）：?focus=WO-… 打开对应工单详情；不在看板窗口内（历史工单）时按 ID 独立加载
+  useEffect(() => {
+    if (!focusId) return;
+    const existing = tickets.find((ticket) => ticket.id === focusId);
+    if (existing) {
+      setViewingId(focusId);
+      return;
+    }
+    let cancelled = false;
+    void getTicket(focusId)
+      .then((ticket) => {
+        if (cancelled) return;
+        setTickets((list) => (list.some((item) => item.id === ticket.id) ? list : [ticket, ...list]));
+        setViewingId(ticket.id);
+      })
+      .catch(() => {
+        if (!cancelled) message.error(t('tickets.focus.missing', { id: focusId }));
+      });
+    return () => {
+      cancelled = true;
+    };
+    // 仅在 focus 参数变化时执行；看板数据到位后重试一次（首次加载时 tickets 还为空）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, data]);
+
+  const viewing = tickets.find((ticket) => ticket.id === viewingId);
   const columns = useMemo(() => {
     const visible = tickets.filter((ticket) => kind === 'all' || ticket.kind === kind);
     return Object.fromEntries(
@@ -168,6 +310,18 @@ export default function Tickets() {
     }
   };
 
+  /** 打开详情；带 focus 参数时同步地址栏（可复制/刷新的深链接），关闭时移除 */
+  const open = (ticket: Ticket) => {
+    setViewingId(ticket.id);
+    if (focusId !== ticket.id) {
+      history.replace(`/ops/tickets?focus=${encodeURIComponent(ticket.id)}`);
+    }
+  };
+  const close = () => {
+    setViewingId(undefined);
+    if (focusId) history.replace('/ops/tickets');
+  };
+
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setDragging(undefined);
     const ticket = tickets.find((item) => item.id === active.id);
@@ -191,6 +345,7 @@ export default function Tickets() {
       }
     >
       <Alert type="info" showIcon className="mb-4" title={t('tickets.dragHint')} />
+      <TicketSearch onOpen={open} />
       <Skeleton active loading={loading && !data} paragraph={{ rows: 10 }}>
         <DndContext
           sensors={sensors}
@@ -200,18 +355,18 @@ export default function Tickets() {
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {TICKET_STATUS_KEYS.map((status) => (
-              <Column
-                key={status}
-                status={status}
-                tickets={columns[status]}
-                onOpen={(ticket) => setViewingId(ticket.id)}
-              />
+              <Column key={status} status={status} tickets={columns[status]} onOpen={open} />
             ))}
           </div>
           <DragOverlay>{dragging && <TicketCard ticket={dragging} dragging />}</DragOverlay>
         </DndContext>
       </Skeleton>
-      <TicketDrawer ticket={viewing} onMove={move} onClose={() => setViewingId(undefined)} />
+      <TicketDrawer
+        ticket={viewing}
+        onMove={move}
+        onClose={close}
+        onChanged={(updated) => setTickets((list) => list.map((item) => (item.id === updated.id ? updated : item)))}
+      />
     </DemoPage>
   );
 }

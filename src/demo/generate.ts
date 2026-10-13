@@ -10,6 +10,7 @@
  *   工作台 KPI 由这些明细聚合，不单独写死。
  * - 隐私：邮箱只用 example.com；手机号只生成脱敏形式；IP 取文档保留段（RFC 5737）。
  */
+import { REGION_KEYS as REGIONS } from '@/constants/enums';
 import { DEFAULT_ROLE_PERMISSIONS, ROLE_KEYS } from '@/constants/permissions';
 import type {
   Alarm,
@@ -28,6 +29,7 @@ import type {
   User,
   UserStatus,
 } from '@/services/types';
+import { isBlockingKind } from './availability';
 import {
   CITIES,
   DEPARTMENTS,
@@ -35,7 +37,6 @@ import {
   EVENT_TITLES,
   FIRMWARES,
   GIVEN_NAMES,
-  REGIONS,
   REGION_OWNER,
   REPORT_NAMES,
   ROLE_NAMES,
@@ -46,6 +47,7 @@ import {
   type City,
 } from './catalog';
 import { allocate, createRng, type Rng } from './random';
+import { applyScenarios } from './scenarios';
 
 export type DemoLocale = 'zh-CN' | 'en-US';
 
@@ -184,14 +186,29 @@ const generateUsers = (locale: DemoLocale, now: Date): User[] => {
     lastLoginIp: draft.ip,
   }));
 
-  // 体验账号：admin（系统管理员）与 guest（访客），登录页一键体验使用
+  // 体验账号：admin（系统管理员）、guest（访客）与 lead / operator / analyst（值班长/运维工程师/数据分析员），
+  // 登录页一键体验使用——五种角色的快捷入口（DEMO_ACCOUNTS，见 scenarios.ts）
   const admin = users.find((u) => u.department === 'platform' && u.role === 'admin')!;
   Object.assign(admin, { username: 'admin', email: 'admin@example.com' });
   const guest = users.find((u) => u.department === 'support' && u.role === 'viewer')!;
   Object.assign(guest, { username: 'guest', email: 'guest@example.com' });
+  const demoAccounts: User[] = [];
+  (
+    [
+      ['lead', (u: User) => u.role === 'lead' && u.department === 'ops1'],
+      ['operator', (u: User) => u.role === 'operator' && u.department === 'ops1'],
+      ['analyst', (u: User) => u.role === 'analyst'],
+    ] as const
+  ).forEach(([username, predicate]) => {
+    const target = users.find((u) => u !== admin && u !== guest && !demoAccounts.includes(u) && predicate(u));
+    if (target) {
+      Object.assign(target, { username, email: `${username}@example.com` });
+      demoAccounts.push(target);
+    }
+  });
 
-  // 停用 / 锁定账号（体验账号除外）
-  const candidates = rng.shuffle(users.filter((u) => u !== admin && u !== guest));
+  // 停用 / 锁定账号（体验账号除外——快捷入口必须始终可登录）
+  const candidates = rng.shuffle(users.filter((u) => u !== admin && u !== guest && !demoAccounts.includes(u)));
   let cursor = 0;
   USER_STATUS_COUNTS.forEach(([status, count]) => {
     for (let i = 0; i < count; i++, cursor++) {
@@ -350,6 +367,26 @@ const generateAlarmsAndTickets = (locale: DemoLocale, now: Date, devices: Device
     drafts.forEach((draft, index) => {
       if (draft.occurredAt > nowMs) {
         return;
+      }
+      // 口径自洽（availability.ts 的派生规则）：在线设备不携带未恢复的阻断告警，
+      // 否则「按告警派生设备状态」会把种子在线设备翻成故障。落在在线设备上、且会
+      // 滞留到现在的阻断告警，把生命周期压缩到现在之前结束（只动时间，不动数量与分布）。
+      if (draft.device.status === 'online' && isBlockingKind(draft.type, draft.level)) {
+        const remaining = nowMs - draft.occurredAt;
+        if (draft.disposition === 'ticket') {
+          const total = draft.ticketDelay + draft.respond + draft.resolve;
+          // 预算随剩余时间收紧（复查 P3-1：剩余不足 6 分钟时也要钳制，否则存在
+          // 「在线设备带着未恢复阻断告警」的时间窗口，受控模式恰在该窗口进入会整场偏差）
+          const budget = Math.max(remaining - 2 * MINUTE, remaining * 0.5);
+          if (total > budget && total > 0) {
+            const scale = budget / total;
+            draft.ticketDelay *= scale;
+            draft.respond *= scale;
+            draft.resolve *= scale;
+          }
+        } else if (draft.closeAfter > remaining - MINUTE) {
+          draft.closeAfter = Math.max(5_000, remaining * 0.5);
+        }
       }
       const id = `ALM-${key}-${String(index + 1).padStart(3, '0')}`;
       const { device } = draft;
@@ -623,5 +660,8 @@ export const generateDataset = ({
     permissions: [...DEFAULT_ROLE_PERMISSIONS[id]],
     updatedAt: iso(startOfDay(now).getTime() - (40 + index * 17) * DAY + 10 * HOUR),
   }));
-  return { now: now.toISOString(), locale, users, roles, devices, alarms, tickets, logs, events };
+  const dataset: Dataset = { now: now.toISOString(), locale, users, roles, devices, alarms, tickets, logs, events };
+  // 固定演示场景叠加在自然分布之上（时间相对当前演示日，任意一天重置后都完整存在）
+  applyScenarios(dataset, now, locale);
+  return dataset;
 };

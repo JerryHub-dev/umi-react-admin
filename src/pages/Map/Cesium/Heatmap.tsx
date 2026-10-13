@@ -52,7 +52,7 @@ export default function Heatmap() {
   const pointsRef = useRef<Cesium.PointPrimitiveCollection>(null);
   const textureRef = useRef<Cesium.Entity>(null);
 
-  const { containerRef, viewer, error } = useCesiumViewer({
+  const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
     home: [106.64, 29.67, 60_000],
     onReady: (instance) => {
       // 悬停读取场强：点图元的 id 挂的是采样点本身
@@ -174,7 +174,14 @@ export default function Heatmap() {
       <Card styles={{ body: { padding: 0 } }}>
         <Spin spinning={loading} description={t('cesium.heatmap.loading')}>
           <div className="relative">
-            <CesiumStage containerRef={containerRef} viewer={viewer} error={error} overlay={legend} />
+            <CesiumStage
+              containerRef={containerRef}
+              viewer={viewer}
+              error={error}
+              basemapFailed={basemapFailed}
+              onRetryBasemap={retry}
+              overlay={legend}
+            />
             {tooltip && (
               <div
                 className="pointer-events-none absolute z-20 rounded bg-black/75 px-2 py-1 text-xs text-white"

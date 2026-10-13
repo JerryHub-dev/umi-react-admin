@@ -24,6 +24,11 @@ const MESSAGES = {
   },
   alarmClosed: { zh: '该告警已处置', en: 'This alarm has already been handled' },
   ticketNotDone: { zh: '工单完成后才能验收签字', en: 'A ticket can only be signed off after it is done' },
+  ticketAccepted: {
+    zh: '该工单已有生效验收，返工后才能重新验收',
+    en: 'This ticket already has a valid acceptance; rework it first',
+  },
+  signatureInvalid: { zh: '签名格式不正确', en: 'The signature format is invalid' },
   titleRequired: { zh: '请填写标题', en: 'Title is required' },
 } as const;
 

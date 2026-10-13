@@ -26,7 +26,8 @@ export default {
   'calendar.deleteConfirm': 'Delete "{title}"?',
   'calendar.saved': 'Event saved',
   'calendar.allDay': 'All day',
-  'calendar.hint': 'Select a time range to create an event; drag or resize events to reschedule. Changes are saved.',
+  'calendar.hint':
+    'Click "New event" or select a time range to create one; drag or resize events to reschedule. Changes are saved.',
   'richText.blockFormats': 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Quote=blockquote',
   'richText.tinymce.undo': 'Undo',
   'richText.preview': 'Preview',
@@ -106,4 +107,8 @@ export default {
   'pdf.report.alarms': 'Alarms',
   'pdf.report.disclaimer':
     'Demo data · generated in the browser from the current data (html2canvas rendering + a hand-written PDF wrapper)',
+  'signature.next': 'Accept next ticket',
+  'signature.allDone': 'All pending tickets were signed off this round ({count} total)',
+  'signature.refresh': 'Reload',
+  'screenshot.pickDevice': 'Pick a device (defaults to the latest critical alarm)',
 };

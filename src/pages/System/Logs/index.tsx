@@ -18,6 +18,9 @@ const ACTION_COLOR: Partial<Record<LogAction, string>> = {
   alarmHandle: 'purple',
   ticketAssign: 'purple',
   ticketClose: 'green',
+  ticketAccept: 'green',
+  ticketRework: 'orange',
+  userImport: 'blue',
   reportExport: 'cyan',
 };
 

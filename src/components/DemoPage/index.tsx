@@ -3,7 +3,7 @@ import { PageContainer, type PageContainerProps } from '@ant-design/pro-componen
 import { useIntl } from '@umijs/max';
 import { Button, Space, Typography } from 'antd';
 
-const REPO_BLOB = 'https://github.com/Jerry-CodeHub/umi-react-admin/blob/master/';
+import { repoBlob } from '@/constants/repo';
 
 type DemoPageProps = Omit<PageContainerProps, 'content'> & {
   /** 页面说明的 i18n 键（显示在标题下方） */
@@ -23,7 +23,7 @@ export default function DemoPage({ descriptionId, source, extra, children, ...re
       key="source"
       data-tour="source"
       icon={<GithubOutlined />}
-      href={REPO_BLOB + source}
+      href={repoBlob(source)}
       target="_blank"
       rel="noopener noreferrer"
     >

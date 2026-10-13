@@ -1,3 +1,4 @@
+import { ROLE_KEYS } from '@/constants/permissions';
 import { DEMO_MODE } from '@/demo/mode';
 import { verifyDemoToken } from '@/demo/token';
 import { clearDemoToken, saveDemoToken } from '@/utils/Auth/session';
@@ -25,11 +26,21 @@ const currentUser = (value: unknown): CurrentUser => {
     /[\u0000-\u001f\u007f]/.test(value.name) ||
     typeof value.email !== 'string' ||
     (value.nickName !== undefined && typeof value.nickName !== 'string') ||
-    (value.role !== undefined && typeof value.role !== 'string')
+    (value.role !== undefined && typeof value.role !== 'string') ||
+    (value.roleKey !== undefined && typeof value.roleKey !== 'string') ||
+    (value.permissions !== undefined &&
+      (!Array.isArray(value.permissions) || value.permissions.some((p) => typeof p !== 'string')))
   ) {
     throw new BizError({ message: t('login.invalidSession') });
   }
-  return { name: value.name, email: value.email, nickName: value.nickName, role: value.role };
+  return {
+    name: value.name,
+    email: value.email,
+    nickName: value.nickName,
+    role: value.role,
+    roleKey: ROLE_KEYS.includes(value.roleKey as never) ? (value.roleKey as CurrentUser['roleKey']) : undefined,
+    permissions: value.permissions,
+  };
 };
 
 /** Real mode authenticates with a server cookie; the plaintext demo bearer stays in the current browser tab. */

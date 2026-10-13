@@ -60,7 +60,13 @@ export const routes: RouteItem[] = [
     // 登录页按全屏独立页设计，脱离 ProLayout 管理框架外壳
     layout: false,
   },
-  { name: 'dashboard', path: '/dashboard', icon: 'DashboardOutlined', component: './Dashboard' },
+  {
+    name: 'dashboard',
+    path: '/dashboard',
+    icon: 'DashboardOutlined',
+    component: './Dashboard',
+    access: 'dashboardView',
+  },
   {
     name: 'system',
     path: '/system',
@@ -72,21 +78,21 @@ export const routes: RouteItem[] = [
         path: '/system/users',
         icon: 'TeamOutlined',
         component: './System/Users',
-        access: 'canSeeAdmin',
+        access: 'systemUserView',
       },
       {
         name: 'roles',
         path: '/system/roles',
         icon: 'KeyOutlined',
         component: './System/Roles',
-        access: 'canSeeAdmin',
+        access: 'systemRoleView',
       },
       {
         name: 'logs',
         path: '/system/logs',
         icon: 'FileSearchOutlined',
         component: './System/Logs',
-        access: 'canSeeAdmin',
+        access: 'systemLogView',
       },
       { name: 'access', path: '/system/access', icon: 'SafetyCertificateOutlined', component: './System/Access' },
     ],
@@ -97,10 +103,28 @@ export const routes: RouteItem[] = [
     icon: 'ClusterOutlined',
     routes: [
       { path: '/ops', redirect: '/ops/devices' },
-      { name: 'devices', path: '/ops/devices', icon: 'HddOutlined', component: './Ops/Devices' },
-      { name: 'alarms', path: '/ops/alarms', icon: 'AlertOutlined', component: './Ops/Alarms' },
-      { name: 'tickets', path: '/ops/tickets', icon: 'ProjectOutlined', component: './Ops/Tickets' },
-      { name: 'spectrum', path: '/ops/spectrum', icon: 'BarChartOutlined', component: './Ops/Spectrum' },
+      {
+        name: 'devices',
+        path: '/ops/devices',
+        icon: 'HddOutlined',
+        component: './Ops/Devices',
+        access: 'opsDeviceView',
+      },
+      { name: 'alarms', path: '/ops/alarms', icon: 'AlertOutlined', component: './Ops/Alarms', access: 'opsAlarmView' },
+      {
+        name: 'tickets',
+        path: '/ops/tickets',
+        icon: 'ProjectOutlined',
+        component: './Ops/Tickets',
+        access: 'opsTicketView',
+      },
+      {
+        name: 'spectrum',
+        path: '/ops/spectrum',
+        icon: 'BarChartOutlined',
+        component: './Ops/Spectrum',
+        access: 'opsDeviceView',
+      },
     ],
   },
   {
@@ -108,7 +132,8 @@ export const routes: RouteItem[] = [
     path: '/map',
     icon: 'GlobalOutlined',
     routes: [
-      { path: '/map', redirect: '/map/amap' },
+      // 默认入口在运行期决定：未配置高德 Key 时进入无需凭据的 OpenLayers（见 src/pages/Map/Redirect.tsx）
+      { path: '/map', component: './Map/Redirect' },
       { name: 'amap', path: '/map/amap', icon: 'EnvironmentOutlined', component: './Map/Amap' },
       { name: 'openlayers', path: '/map/openlayers', icon: 'CompassOutlined', component: './Map/OpenLayers' },
       {

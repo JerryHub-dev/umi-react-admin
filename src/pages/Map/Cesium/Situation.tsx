@@ -140,7 +140,7 @@ export default function Situation() {
   const [picked, setPicked] = useState<Target>();
   const entitiesRef = useRef<Cesium.Entity[]>([]);
 
-  const { containerRef, viewer, error } = useCesiumViewer({
+  const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
     home: [124.4, 29.2, 1_300_000],
     onReady: (instance) => {
       new CesiumNavigation(instance, { enableCompass: true, enableZoomControls: true, enableDistanceLegend: true });
@@ -217,7 +217,7 @@ export default function Situation() {
 
   const legend = (
     <Card size="small" className="opacity-95">
-      <Space direction="vertical" size={2} className="text-xs">
+      <Space orientation="vertical" size={2} className="text-xs">
         {(['ship', 'aircraft'] as Kind[]).map((kind) => (
           <span key={kind} className="flex items-center gap-2">
             <span
@@ -267,7 +267,14 @@ export default function Situation() {
         }
       />
       <Card styles={{ body: { padding: 0 } }}>
-        <CesiumStage containerRef={containerRef} viewer={viewer} error={error} overlay={legend} />
+        <CesiumStage
+          containerRef={containerRef}
+          viewer={viewer}
+          error={error}
+          basemapFailed={basemapFailed}
+          onRetryBasemap={retry}
+          overlay={legend}
+        />
       </Card>
     </DemoPage>
   );

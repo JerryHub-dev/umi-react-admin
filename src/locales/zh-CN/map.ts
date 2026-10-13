@@ -55,4 +55,9 @@ export default {
   'cesium.situation.area': '关注海域',
   'cesium.situation.target': '{name} · {kind} · {speed} 节',
   'cesium.situation.hint': '目标位置随时间插值（SampledPositionProperty），点击目标查看详情；航迹、速度均为模拟数据。',
+  'map.gotoOpenlayers': '前往 OpenLayers 地图 →',
+  'cesium.basemapFailed.title': '底图瓦片加载失败',
+  'cesium.basemapFailed.desc':
+    '在线底图（OpenStreetMap）无法访问：可能是离线、网络受限或安全策略拦截。业务图层仍在渲染，但缺少地理参照；可重试或检查网络后刷新。',
+  'cesium.basemapFailed.retry': '重试底图',
 };

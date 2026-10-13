@@ -1,10 +1,10 @@
 import DemoPage from '@/components/DemoPage';
-import type { User } from '@/services/types';
-import { createUser, listUsers } from '@/services/users';
-import { DownloadOutlined, FileExcelOutlined, InboxOutlined } from '@ant-design/icons';
-import { Link, useIntl } from '@umijs/max';
-import { Alert, App, Button, Card, Space, Spin, Table, Tag, Typography, Upload } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import type { User, UserImportRow } from '@/services/types';
+import { importUsers, listUsers } from '@/services/users';
+import { CloseOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, RedoOutlined } from '@ant-design/icons';
+import { Link, useAccess, useIntl } from '@umijs/max';
+import { Alert, App, Button, Card, Dropdown, Space, Spin, Table, Tag, Typography, Upload } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { importUsersFile } from './importFile';
 import { FIELDS, buildUsersWorkbook, downloadWorkbook, type ParsedRow } from './userSheet';
 import { WorkbookInputError, checkWorkbookFileSize } from './xlsxBoundary';
@@ -12,17 +12,38 @@ import { WorkbookInputError, checkWorkbookFileSize } from './xlsxBoundary';
 /** exceljs 体积较大，只在点击导入 / 导出时加载 */
 const loadExcel = () => import('exceljs');
 
-const fetchAllUsers = async () => (await listUsers({ pageSize: 200 })).list;
+/** 全量用户（跨分页；导出去重与重复登录名判断都必须覆盖全部页，>200 人时 pageSize 上限截断会漏） */
+const fetchAllUsers = async (): Promise<User[]> => {
+  const users: User[] = [];
+  let current = 1;
+  // 演示后端 pageSize 上限 200：循环取完所有分页
+  for (;;) {
+    const page = await listUsers({ pageSize: 200, current });
+    users.push(...page.list);
+    if (users.length >= page.total || !page.list.length) return users;
+    current += 1;
+  }
+};
 
 const TEMPLATE_ROWS: Pick<User, (typeof FIELDS)[number]>[] = [
   { name: 'Sample A', username: 'sample.a', email: 'sample.a@example.com', department: 'ops1', role: 'operator' },
   { name: 'Sample B', username: 'sample.b', email: 'sample.b@example.com', department: 'analytics', role: 'analyst' },
 ];
 
+/** 随项目附带的可下载示例（scripts/make-demo-samples.mjs 生成，场景约定见 docs/demo/） */
+const SAMPLE_FILES = [
+  { file: 'users-valid.xlsx', key: 'valid' },
+  { file: 'users-partial.xlsx', key: 'partial' },
+  { file: 'users-invalid.xlsx', key: 'invalid' },
+  { file: 'users-duplicate.xlsx', key: 'duplicate' },
+] as const;
+
 export default function Excel() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { message } = App.useApp();
+  const access = useAccess();
+  const canImport = access.permission('system.user.create');
   const [busy, setBusy] = useState<'export' | 'template' | 'import' | 'save'>();
   const [rows, setRows] = useState<ParsedRow[]>();
   const busyRef = useRef<typeof busy>(undefined);
@@ -108,29 +129,67 @@ export default function Excel() {
 
   const valid = rows?.filter((row) => row.input) ?? [];
 
+  /**
+   * 提交导入（F04）：整份原始行交给服务端逐行复核——准确计数（创建/重复/无效），
+   * 重复与无效不写入；重复导入时服务端把重复行报回来，预览就地标注，不丢可重试信息。
+   */
   const handleSave = async () => {
-    if (busyRef.current) return;
+    if (busyRef.current || !rows) return;
     start('save');
-    const created = new Set<string>();
     try {
-      for (const row of valid) {
-        if (!mounted.current) return;
-        await createUser(row.input!);
-        created.add(row.key);
-      }
-      if (mounted.current) {
-        message.success(t('excel.imported', { count: valid.length }));
+      const payload: (UserImportRow & { row: number })[] = rows.map((row) => ({ row: row.row, ...row.values }));
+      const result = await importUsers(payload);
+      if (!mounted.current) return;
+      const serverIssues = new Map(result.issues.map((issue) => [issue.row, issue]));
+      const createdUsernames = new Set(result.users.map((u) => u.username.toLowerCase()));
+      const remaining = rows
+        .filter((row) => serverIssues.has(row.row) || !createdUsernames.has((row.values.username ?? '').toLowerCase()))
+        .map((row) => {
+          const issue = serverIssues.get(row.row);
+          return issue ? { ...row, input: undefined, errors: [issue.message] } : row;
+        });
+      if (result.created && !result.duplicated && !result.invalid) {
+        message.success(t('excel.imported', { count: result.created }));
         setRows(undefined);
+      } else if (result.created) {
+        message.warning(
+          t('excel.import.partial', {
+            created: result.created,
+            duplicated: result.duplicated,
+            invalid: result.invalid,
+          }),
+        );
+        setRows(remaining.length ? remaining : undefined);
+      } else {
+        message.warning(t('excel.import.none', { duplicated: result.duplicated, invalid: result.invalid }));
+        setRows(remaining.length ? remaining : rows);
       }
     } catch {
-      if (mounted.current) {
-        setRows((current) => current?.filter((row) => !created.has(row.key)));
-        message.error(t('excel.saveFailed', { count: created.size }));
-      }
+      if (mounted.current) message.error(t('excel.saveFailed', { count: 0 }));
     } finally {
       finish();
     }
   };
+
+  /** 预览态恢复入口（F04）：重新选择文件 / 取消导入，任何预览状态（全有效、部分有效、全无效）都可用 */
+  const resetPicker = () => {
+    importController.current?.abort();
+    setRows(undefined);
+  };
+
+  const sampleMenu = useMemo(
+    () => ({
+      items: SAMPLE_FILES.map(({ file, key }) => ({
+        key,
+        label: (
+          <a href={`${PUBLIC_PATH}demo/${file}`} download={file}>
+            {t(`excel.sample.${key}`)}
+          </a>
+        ),
+      })),
+    }),
+    [t],
+  );
 
   return (
     <DemoPage
@@ -138,6 +197,11 @@ export default function Excel() {
       source="src/pages/Document/Excel/userSheet.ts"
       extra={
         <>
+          <Dropdown menu={sampleMenu}>
+            <Button icon={<DownloadOutlined />} disabled={!!busy && busy !== 'template'}>
+              {t('excel.samples')}
+            </Button>
+          </Dropdown>
           <Button
             icon={<DownloadOutlined />}
             disabled={!!busy && busy !== 'export'}
@@ -181,26 +245,53 @@ export default function Excel() {
         <Card
           title={t('excel.previewTitle')}
           extra={
-            <Button
-              type="primary"
-              disabled={!valid.length || (!!busy && busy !== 'save')}
-              loading={busy === 'save'}
-              onClick={handleSave}
-            >
-              {t('excel.importValid', { count: valid.length })}
-            </Button>
+            <Space size={8} wrap>
+              <Button
+                icon={<RedoOutlined />}
+                disabled={!!busy && busy !== 'import'}
+                onClick={resetPicker}
+                data-tour="excel-reselect"
+              >
+                {t('excel.reselect')}
+              </Button>
+              <Button icon={<CloseOutlined />} disabled={!!busy} onClick={resetPicker}>
+                {t('excel.cancelImport')}
+              </Button>
+              <Button
+                type="primary"
+                disabled={!valid.length || (!!busy && busy !== 'save') || !canImport}
+                loading={busy === 'save'}
+                onClick={handleSave}
+              >
+                {t('excel.importValid', { count: valid.length })}
+              </Button>
+            </Space>
           }
         >
           <Alert
             className="mb-4"
             showIcon
-            type={valid.length === rows.length ? 'success' : 'warning'}
-            title={t('excel.summary', {
-              total: rows.length,
-              valid: valid.length,
-              invalid: rows.length - valid.length,
-            })}
-            action={<Link to="/system/users">{t('menu.system.users')}</Link>}
+            type={valid.length === 0 ? 'error' : valid.length === rows.length ? 'success' : 'warning'}
+            title={
+              valid.length === 0
+                ? t('excel.allInvalid', {
+                    total: rows.length,
+                    invalid: rows.length - valid.length,
+                  })
+                : t('excel.summary', {
+                    total: rows.length,
+                    valid: valid.length,
+                    invalid: rows.length - valid.length,
+                  })
+            }
+            description={
+              valid.length === 0 ? (
+                <Space size={8} wrap>
+                  {t('excel.allInvalidHint')}
+                  <Link to="/system/users">{t('menu.system.users')}</Link>
+                </Space>
+              ) : undefined
+            }
           />
           <Table<ParsedRow>
             rowKey="key"

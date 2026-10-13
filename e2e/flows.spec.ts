@@ -43,7 +43,8 @@ test('告警转工单后出现在看板，拖到「处理中」并写回', async
   await page.locator('.ant-switch').first().click();
   const row = page.locator('.ant-table-row').first();
   await expect(row).toBeVisible();
-  await row.getByRole('button', { name: /处置/ }).hover();
+  // 未恢复口径（F08）包含已转工单未恢复的行（无处置按钮），取第一个带处置按钮的行
+  await page.locator('.ant-table-row').getByRole('button', { name: /处置/ }).first().hover();
   await page.getByRole('menuitem', { name: '转工单' }).click();
   await expect(page.locator('.ant-message')).toContainText('已处置');
 
@@ -52,14 +53,23 @@ test('告警转工单后出现在看板，拖到「处理中」并写回', async
   const todo = columns.nth(0).locator('.ant-card');
   await expect(todo.first()).toBeVisible();
   const before = await columns.nth(1).locator('.ant-card').count();
-  const card = await todo.first().boundingBox();
-  const target = await columns.nth(1).boundingBox();
-  await page.mouse.move(card!.x + 40, card!.y + 20);
-  await page.mouse.down();
-  await page.mouse.move(card!.x + 60, card!.y + 40, { steps: 5 });
-  await page.mouse.move(target!.x + target!.width / 2, target!.y + 120, { steps: 15 });
-  await page.mouse.up();
-  await expect(columns.nth(1).locator('.ant-card')).toHaveCount(before + 1);
+  // 并发负载下首帧布局可能未稳（boundingBox 取到动画中的位置导致拖拽落空）：整段拖拽重试一次
+  for (let attempt = 1; ; attempt += 1) {
+    await page.waitForTimeout(600);
+    const card = await todo.first().boundingBox();
+    const target = await columns.nth(1).boundingBox();
+    await page.mouse.move(card!.x + 40, card!.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(card!.x + 60, card!.y + 40, { steps: 5 });
+    await page.mouse.move(target!.x + target!.width / 2, target!.y + 120, { steps: 15 });
+    await page.mouse.up();
+    try {
+      await expect(columns.nth(1).locator('.ant-card')).toHaveCount(before + 1, { timeout: 8000 });
+      break;
+    } catch (error) {
+      if (attempt >= 2) throw error;
+    }
+  }
 });
 
 test('点击看板卡片查看详情，并在详情里流转状态（不用拖拽，手机上同样可用）', async ({ page }) => {

@@ -2,15 +2,16 @@ import DemoPage from '@/components/DemoPage';
 import { useApi } from '@/hooks/useApi';
 import { listAllDevices } from '@/services/ops';
 import { useIntl } from '@umijs/max';
-import { Card, Progress, Skeleton, Table, Tag } from 'antd';
+import { Card, Grid, Progress, Skeleton, Table, Tag, Typography } from 'antd';
 import { useMemo } from 'react';
 import { KEY_BANDS, coverageByModel, devicesCovering } from './bands';
-import CoverageChart from './CoverageChart';
+import CoverageChart, { formatMHz } from './CoverageChart';
 
 export default function Spectrum() {
   const intl = useIntl();
-  const t = (id: string) => intl.formatMessage({ id });
+  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { data: devices, loading } = useApi(listAllDevices);
+  const { md } = Grid.useBreakpoint();
 
   const models = useMemo(() => coverageByModel(devices ?? []), [devices]);
   const online = devices?.filter((d) => d.status === 'online').length ?? 0;
@@ -30,9 +31,20 @@ export default function Spectrum() {
     [devices, intl],
   );
 
+  // 窄屏摘要（审计 U03）：图 minimum 720px 宽、只能横滚，先把整体频段范围说清楚
+  const monitoredRange = models.length
+    ? `${formatMHz(Math.min(...models.map((m) => m.band[0])))} – ${formatMHz(Math.max(...models.map((m) => m.band[1])))}`
+    : undefined;
+
   return (
     <DemoPage descriptionId="page.spectrum.desc" source="src/pages/Ops/Spectrum/CoverageChart.tsx">
       <Card title={t('spectrum.coverage')} className="mb-4">
+        {!md && monitoredRange && (
+          <Typography.Text type="secondary" className="block text-xs">
+            {t('spectrum.rangeSummary', { range: monitoredRange, bands: KEY_BANDS.length })} ·{' '}
+            {t('spectrum.scrollHint')}
+          </Typography.Text>
+        )}
         <Skeleton active loading={loading && !devices}>
           <CoverageChart models={models} />
         </Skeleton>

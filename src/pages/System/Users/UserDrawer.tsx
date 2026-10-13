@@ -16,7 +16,7 @@ export default function UserDrawer({ user, onClose }: { user?: User; onClose: ()
   const { data, loading } = useApi(() => (user ? listUserLogs(user.id) : Promise.resolve(undefined)), [user?.id]);
 
   return (
-    <Drawer open={!!user} onClose={onClose} width={520} title={t('users.detail')} destroyOnHidden>
+    <Drawer open={!!user} onClose={onClose} size={520} title={t('users.detail')} destroyOnHidden>
       {user && (
         <>
           <UserAvatar name={user.name} description={user.email} size={48} />
@@ -52,7 +52,8 @@ export default function UserDrawer({ user, onClose }: { user?: User; onClose: ()
                 items={data.list.map((log) => ({
                   key: log.id,
                   color: log.result === 'success' ? 'green' : 'red',
-                  children: (
+                  // antd 6：items.children 已弃用，改用 items.content
+                  content: (
                     <div>
                       <span>{enums.label('logAction', log.action)}</span>
                       {log.target && <Typography.Text type="secondary"> · {log.target}</Typography.Text>}

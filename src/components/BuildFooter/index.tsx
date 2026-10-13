@@ -2,7 +2,7 @@ import { formatDateTime } from '@/utils/format';
 import { useIntl } from '@umijs/max';
 import { Typography } from 'antd';
 
-const REPO = 'https://github.com/Jerry-CodeHub/umi-react-admin';
+import { REPO_URL as REPO } from '@/constants/repo';
 
 /** 页脚：构建提交、时间与部署目标（与 dist/version.json 同源），一眼看出线上跑的是哪个版本 */
 export default function BuildFooter() {

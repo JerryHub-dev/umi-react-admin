@@ -8,7 +8,7 @@ import { DemoStore, type StorageLike } from '../store';
 import { verifyDemoToken } from '../token';
 import { BizFailure, HttpError, type DemoRequest, type DemoResponse } from './http';
 import { message } from './messages';
-import { routes, type Route, type Session } from './routes';
+import { resolvePermissions, routes, type Route, type Session } from './routes';
 
 export type { DemoRequest, DemoResponse } from './http';
 
@@ -38,6 +38,11 @@ export const createDemoServer = (options: { locale: DemoLocale; storage?: Storag
   const store = new DemoStore(options);
   const { locale } = options;
 
+  /**
+   * 会话 → 生效权限（F02 核心）：每次请求都按「用户记录的角色 → 角色权限记录」现算
+   * （resolvePermissions），不进 token、不缓存——角色权限被修改后，已有会话与重新登录的
+   * 会话立即执行同一份权限。
+   */
   const resolveSession = (authorization?: string): Session | undefined => {
     const matched = /^Bearer (.+)$/.exec(authorization ?? '');
     const payload = matched ? verifyDemoToken(matched[1]) : null;
@@ -45,7 +50,12 @@ export const createDemoServer = (options: { locale: DemoLocale; storage?: Storag
     const user = store.dataset.users.find((u) => u.username.toLowerCase() === payload.name.toLowerCase());
     // 种子用户被停用后，已签发的 token 随之失效
     if (user && user.status !== 'active') return undefined;
-    return { username: payload.name, role: payload.role, user };
+    return {
+      username: payload.name,
+      role: payload.role,
+      user,
+      ...resolvePermissions(store.dataset, user, payload.role),
+    };
   };
 
   const handle = (request: DemoRequest): DemoResponse => {
@@ -54,12 +64,16 @@ export const createDemoServer = (options: { locale: DemoLocale; storage?: Storag
     const route = compiled.find((r) => r.method === method && r.pattern.test(url.pathname));
     try {
       if (!route) throw new HttpError(404, message('notFound', locale));
+      // 时钟推进检查（F09）：live 模式下跨过阈值按当前时间重建基础数据（补丁保留）；受控模式时钟冻结不会触发
+      store.refreshIfStale();
       const values = route.pattern.exec(url.pathname)!.slice(1);
       const params = Object.fromEntries(route.keys.map((key, i) => [key, decodeURIComponent(values[i])]));
       const query = { ...Object.fromEntries(url.searchParams), ...(request.params ?? {}) };
       const session = resolveSession(request.headers?.Authorization ?? request.headers?.authorization);
       if (route.access !== 'public' && !session) throw new HttpError(401, message('unauthorized', locale));
-      if (route.access === 'admin' && session?.role !== 'admin') throw new HttpError(403, message('forbidden', locale));
+      if (route.access && route.access !== 'public' && !session!.permissions.includes(route.access)) {
+        throw new HttpError(403, message('forbidden', locale));
+      }
       const data = route.handle({ params, query, body: parseBody(request.body), store, session, locale });
       return { status: 200, body: { success: true, data: data ?? null, errorCode: 0 } };
     } catch (error) {

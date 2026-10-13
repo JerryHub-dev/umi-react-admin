@@ -94,4 +94,10 @@ export default {
   'permission.ops.ticket.close': '完成工单',
   'permission.doc': '文档',
   'permission.doc.export': '导出报表',
+  'permission.system.demo.reset': '演示场景与重置',
+  'permission.ops.ticket.accept': '验收工单',
+  'permission.ops.schedule.update': '管理日程',
+  'logAction.userImport': '批量导入用户',
+  'logAction.ticketAccept': '工单验收',
+  'logAction.ticketRework': '工单返工',
 };

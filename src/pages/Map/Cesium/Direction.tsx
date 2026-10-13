@@ -42,7 +42,7 @@ export default function Direction() {
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { data } = useApi(loadEnvelopes);
   const layerRef = useRef<Cesium.CustomDataSource>(null);
-  const { containerRef, viewer, error } = useCesiumViewer({ home: [116.52, 30.39, 1_200_000] });
+  const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({ home: [116.52, 30.39, 1_200_000] });
 
   useEffect(() => {
     if (!viewer || !data) return undefined;
@@ -119,7 +119,7 @@ export default function Direction() {
 
   const legend = (
     <Card size="small" className="pointer-events-auto opacity-95">
-      <Space direction="vertical" size={2}>
+      <Space orientation="vertical" size={2}>
         {stats.map((row) => (
           <Badge
             key={row.key}
@@ -159,7 +159,14 @@ export default function Direction() {
     >
       <Alert type="info" showIcon className="mb-4" title={t('cesium.direction.hint')} />
       <Card styles={{ body: { padding: 0 } }}>
-        <CesiumStage containerRef={containerRef} viewer={viewer} error={error} overlay={data && legend} />
+        <CesiumStage
+          containerRef={containerRef}
+          viewer={viewer}
+          error={error}
+          basemapFailed={basemapFailed}
+          onRetryBasemap={retry}
+          overlay={data && legend}
+        />
       </Card>
     </DemoPage>
   );

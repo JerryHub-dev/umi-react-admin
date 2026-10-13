@@ -9,8 +9,8 @@ const MARGIN = { top: 56, right: 24, bottom: 44, left: 120 };
 const MIN_WIDTH = 720;
 const ROW_HEIGHT = 44;
 
-/** 以 MHz 为单位的频率标签：≥1000 显示 GHz */
-const formatMHz = (value: number) => (value >= 1000 ? `${value / 1000} GHz` : `${value} MHz`);
+/** 以 MHz 为单位的频率标签：≥1000 显示 GHz（窄屏摘要也复用） */
+export const formatMHz = (value: number) => (value >= 1000 ? `${value / 1000} GHz` : `${value} MHz`);
 
 /**
  * D3 绘制的频谱覆盖图：对数频率轴 + 每个型号一条覆盖带 + 重点频段半透明叠加。

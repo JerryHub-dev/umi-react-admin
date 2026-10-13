@@ -6,7 +6,7 @@ import { listAllDevices } from '@/services/ops';
 import { centerGeoHash, geohashBounds } from '@/utils/MapCompute/geoHash';
 import { AimOutlined, AppstoreOutlined, ClearOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Alert, Button, Card, InputNumber, List, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Card, InputNumber, Listy, Space, Tag, Typography } from 'antd';
 import * as Cesium from 'cesium';
 import { useEffect, useRef, useState } from 'react';
 
@@ -19,7 +19,7 @@ export default function GeoHashPage() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { data: devices } = useApi(listAllDevices);
-  const { containerRef, viewer, error } = useCesiumViewer();
+  const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer();
   const [precision, setPrecision] = useState(3);
   const [cells, setCells] = useState<Cell[]>([]);
   const [center, setCenter] = useState<string>();
@@ -118,7 +118,13 @@ export default function GeoHashPage() {
       <Alert type="info" showIcon className="mb-4" title={t('cesium.geohash.hint')} />
       <div className="flex flex-col gap-4 xl:flex-row">
         <Card className="min-w-0 flex-1" styles={{ body: { padding: 0 } }}>
-          <CesiumStage containerRef={containerRef} viewer={viewer} error={error} />
+          <CesiumStage
+            containerRef={containerRef}
+            viewer={viewer}
+            error={error}
+            basemapFailed={basemapFailed}
+            onRetryBasemap={retry}
+          />
         </Card>
         {(cells.length > 0 || center) && (
           <Card className="xl:w-72" size="small">
@@ -128,14 +134,15 @@ export default function GeoHashPage() {
                 <Typography.Paragraph type="secondary">
                   {t('cesium.geohash.cells', { cells: cells.length, max: cells[0].count })}
                 </Typography.Paragraph>
-                <List
-                  size="small"
-                  dataSource={cells.slice(0, 12)}
-                  renderItem={(cell) => (
-                    <List.Item className="px-0!">
+                <Listy
+                  items={cells.slice(0, 12)}
+                  rowKey="hash"
+                  styles={{ item: { paddingBlock: 8, paddingInline: 0 } }}
+                  itemRender={(cell) => (
+                    <div className="flex items-center justify-between gap-2">
                       <Typography.Text code>{cell.hash}</Typography.Text>
                       <Tag>{cell.count}</Tag>
-                    </List.Item>
+                    </div>
                   )}
                 />
               </>

@@ -7,10 +7,10 @@ import { useResponsiveTable } from '@/hooks/useResponsiveTable';
 import type { User, UserBatchAction, UserInput } from '@/services/types';
 import { batchUsers, createUser, deleteUser, listUsers, updateUser } from '@/services/users';
 import { formatDateTime, fromNow } from '@/utils/format';
-import { DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { DownOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { history, useIntl } from '@umijs/max';
-import { App, Button, Dropdown, Popconfirm, Space, Tag, Tooltip } from 'antd';
+import { App, Button, Dropdown, Grid, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
 import { useRef, useState } from 'react';
 import UserDrawer from './UserDrawer';
 import UserForm from './UserForm';
@@ -26,6 +26,8 @@ export default function Users() {
   const [editing, setEditing] = useState<User | null | undefined>(undefined);
   const [viewing, setViewing] = useState<User>();
   const table = useResponsiveTable();
+  // 手机上只留「用户 + 状态 + 操作」三列（审计 U02：其余字段靠详情抽屉看，操作不再要横滚去找）
+  const { md } = Grid.useBreakpoint();
 
   const reload = () => actionRef.current?.reload();
 
@@ -54,20 +56,27 @@ export default function Users() {
       dataIndex: 'name',
       search: false,
       width: 220,
-      render: (_, user) => <UserAvatar name={user.name} description={user.email} onClick={() => setViewing(user)} />,
+      // 点姓名/邮箱看字段摘要（详情抽屉）：与设备页一致的链接样式，手机上这是主要入口
+      render: (_, user) => (
+        <Typography.Link onClick={() => setViewing(user)}>
+          <UserAvatar name={user.name} description={user.email} />
+        </Typography.Link>
+      ),
     },
-    { title: t('users.column.id'), dataIndex: 'id', search: false, width: 90, sorter: true },
+    { title: t('users.column.id'), dataIndex: 'id', search: false, width: 90, sorter: true, responsive: ['md'] },
     {
       title: t('users.column.department'),
       dataIndex: 'department',
       valueEnum: enums.valueEnum('department', DEPARTMENT_KEYS),
       width: 130,
+      responsive: ['md'],
     },
     {
       title: t('users.column.role'),
       dataIndex: 'role',
       valueEnum: enums.valueEnum('role', ROLE_KEYS),
       width: 120,
+      responsive: ['md'],
       render: (_, user) => (
         <Tag color={user.role === 'admin' ? 'blue' : undefined}>{enums.label('role', user.role)}</Tag>
       ),
@@ -87,6 +96,7 @@ export default function Users() {
       search: false,
       sorter: true,
       width: 130,
+      responsive: ['md'],
       render: (_, user) =>
         user.lastLoginAt ? (
           <Tooltip title={formatDateTime(user.lastLoginAt)}>{fromNow(user.lastLoginAt, intl.locale)}</Tooltip>
@@ -106,11 +116,53 @@ export default function Users() {
     {
       title: t('common.actions'),
       valueType: 'option',
-      // 英文「Edit / Disable / Delete」比中文宽，按英文留足，避免最后一个按钮被截断
-      width: 210,
+      // 英文「Edit / Disable / Delete」比中文宽，按英文留足，避免最后一个按钮被截断；
+      // 手机上收成一个「···」菜单（md 以下），不用横向滚动去找操作列
+      width: md ? 210 : 56,
       fixed: table.fixedRight,
       render: (_, user) => {
         const locked = PROTECTED.has(user.username);
+        if (!md) {
+          return [
+            <Dropdown
+              key="more"
+              menu={{
+                items: [
+                  { key: 'edit', label: t('common.edit') },
+                  user.status === 'active'
+                    ? { key: 'toggle', label: t('common.disable'), disabled: locked }
+                    : { key: 'toggle', label: t('common.enable') },
+                  { key: 'delete', label: t('common.delete'), danger: true, disabled: locked },
+                ],
+                // 手机菜单里没有 Popconfirm 的落点，停用 / 删除改用 modal.confirm（与批量操作一致）
+                onClick: ({ key }) => {
+                  if (key === 'edit') {
+                    setEditing(user);
+                  } else if (key === 'toggle') {
+                    if (user.status !== 'active') toggleStatus(user);
+                    else
+                      modal.confirm({
+                        title: t('users.disableConfirm', { name: user.name }),
+                        onOk: () => toggleStatus(user),
+                      });
+                  } else if (key === 'delete') {
+                    modal.confirm({
+                      title: t('users.deleteConfirm', { name: user.name }),
+                      okButtonProps: { danger: true },
+                      onOk: async () => {
+                        await deleteUser(user.id);
+                        message.success(t('common.deleted'));
+                        reload();
+                      },
+                    });
+                  }
+                },
+              }}
+            >
+              <Button type="text" size="small" icon={<MoreOutlined />} aria-label={t('common.actions')} />
+            </Dropdown>,
+          ];
+        }
         return [
           <Button key="edit" type="link" size="small" onClick={() => setEditing(user)}>
             {t('common.edit')}

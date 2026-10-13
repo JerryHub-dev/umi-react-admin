@@ -7,13 +7,18 @@ import { handleAlarm, listAlarms } from '@/services/ops';
 import type { Alarm, AlarmHandleAction } from '@/services/types';
 import { humanizeDuration } from '@/utils/duration';
 import { formatDateTime, fromNow } from '@/utils/format';
+import { nowMs } from '@/utils/now';
 import { DownOutlined } from '@ant-design/icons';
-import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
-import { Link, useIntl } from '@umijs/max';
+import { ProTable, type ActionType, type ProColumns, type ProFormInstance } from '@ant-design/pro-components';
+import { Link, useAccess, useIntl, useLocation } from '@umijs/max';
 import { App, Button, Dropdown, Switch, Tag, Tooltip, Typography } from 'antd';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const ACTIONS: AlarmHandleAction[] = ['ticket', 'recover', 'falsePositive'];
+
+/** 业务恢复语义（与演示后端一致）：ticketed 且无恢复时间 = 仍未恢复 */
+const alarmRecovered = (alarm: Alarm) =>
+  alarm.status === 'recovered' || alarm.status === 'falsePositive' || !!alarm.recoveredAt;
 
 export default function Alarms() {
   const intl = useIntl();
@@ -21,8 +26,36 @@ export default function Alarms() {
   const enums = useEnums();
   const table = useResponsiveTable();
   const { message } = App.useApp();
+  const access = useAccess();
+  const location = useLocation();
   const actionRef = useRef<ActionType>(undefined);
-  const [activeOnly, setActiveOnly] = useState(false);
+  const formRef = useRef<ProFormInstance>(undefined);
+  // 深链接可带初始筛选（工作台动态/演示脚本跳转）：?keyword=ALM-…&unrecovered=1。
+  // 用 useMemo 跟随 location.search：同路由跳转（只变 query）不会重挂载组件，也要能生效
+  const urlQuery = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const [activeOnly, setActiveOnly] = useState(
+    () => new URLSearchParams(window.location.search).get('unrecovered') === '1',
+  );
+  const canHandle = access.permission('ops.alarm.handle');
+
+  useEffect(() => {
+    const keyword = urlQuery.get('keyword');
+    if (!keyword) return undefined;
+    // actionRef.reload() 只会沿用上一次提交的参数（不吃表单当前值），要走一次真正的提交才能
+    // 把关键字带上。formRef 在 ProTable 挂载后才可用：轮询到它就绪再填值提交（不依赖固定延时）
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (formRef.current) {
+        formRef.current.setFieldsValue({ keyword });
+        formRef.current.submit();
+        clearInterval(timer);
+      } else if (tries > 50) {
+        clearInterval(timer);
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [urlQuery]);
 
   const handle = async (alarm: Alarm, action: AlarmHandleAction) => {
     await handleAlarm(alarm.id, action);
@@ -89,9 +122,10 @@ export default function Alarms() {
       search: false,
       width: 130,
       render: (_, alarm) => {
-        const end = alarm.recoveredAt ? new Date(alarm.recoveredAt).getTime() : Date.now();
+        // 受控演示模式下用演示时钟算「持续中」时长（与「演示时间」口径一致）
+        const end = alarm.recoveredAt ? new Date(alarm.recoveredAt).getTime() : nowMs();
         const text = humanizeDuration(end - new Date(alarm.occurredAt).getTime(), t);
-        return alarm.recoveredAt ? (
+        return alarmRecovered(alarm) ? (
           text
         ) : (
           <Typography.Text type="warning">{t('alarms.ongoing', { duration: text })}</Typography.Text>
@@ -108,8 +142,14 @@ export default function Alarms() {
       render: (dom, alarm) =>
         alarm.ticketId ? (
           <div>
-            {dom}
-            <Link to="/ops/tickets" className="block text-xs">
+            {/* 已随工单恢复的转单告警按恢复语义展示，未恢复的仍算「未恢复」池的一部分（F08） */}
+            {alarmRecovered(alarm) && alarm.status === 'ticketed' ? (
+              <Tag color="Success">{enums.label('alarmStatus', 'recovered')}</Tag>
+            ) : (
+              dom
+            )}
+            {/* 工单深链接：携带 ID 直接打开对应工单（F03），含超出看板窗口的历史工单 */}
+            <Link to={`/ops/tickets?focus=${encodeURIComponent(alarm.ticketId)}`} className="block text-xs">
               {alarm.ticketId}
             </Link>
           </div>
@@ -131,7 +171,7 @@ export default function Alarms() {
       width: 110,
       fixed: table.fixedRight,
       render: (_, alarm) =>
-        alarm.status === 'active' ? (
+        alarm.status === 'active' && canHandle ? (
           <Dropdown
             menu={{
               items: ACTIONS.map((action) => ({ key: action, label: t(`alarms.handle.${action}`) })),
@@ -151,6 +191,7 @@ export default function Alarms() {
       <ProTable<Alarm>
         rowKey="id"
         actionRef={actionRef}
+        formRef={formRef}
         columns={columns}
         scroll={table.scroll}
         search={{ labelWidth: 'auto' }}
@@ -163,7 +204,8 @@ export default function Alarms() {
           </span>,
         ]}
         request={async ({ activeOnly: onlyActive, ...params }) => {
-          const page = await listAlarms({ ...params, status: onlyActive ? 'active' : params.status });
+          // 只看未恢复 = 按业务恢复语义筛选（活动 + 已转工单但未恢复），不是只看 active（F08）
+          const page = await listAlarms({ ...params, unrecovered: onlyActive ? true : undefined });
           return { data: page.list, total: page.total, success: true };
         }}
       />
