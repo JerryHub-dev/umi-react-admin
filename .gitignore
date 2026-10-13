@@ -33,3 +33,8 @@ coverage/
 # Playwright
 /playwright-report/
 /test-results/
+
+# 本机工具与本地配置（对所有克隆统一忽略）
+.mimosa/
+.v2c/
+.claude/settings.local.json

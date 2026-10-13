@@ -1,6 +1,6 @@
 {
   "private": true,
-  "description": "基于 Umi Max + React 19 + Ant Design 5 的开箱即用后台管理模板（Cesium/OpenLayers 地图、暗色模式、双语、CRUD 演示）",
+  "description": "Open-source admin template on Umi Max 4, React 19 and Ant Design 6: Cesium/OpenLayers maps, dark mode, i18n and a coherent live-data CRUD demo",
   "keywords": [
     "react",
     "antd",
@@ -27,7 +27,6 @@
     "audit:security": "node scripts/dependency-audit.mjs",
     "build": "max build",
     "build:demo": "cross-env UMI_APP_DEMO_MODE=true max build",
-    "build:github": "cross-env UMI_ENV=github max build",
     "build:github:demo": "cross-env UMI_ENV=github UMI_APP_DEMO_MODE=true max build",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "e2e": "playwright test",
@@ -43,7 +42,6 @@
     "size": "pnpm build:demo && node scripts/check-bundle-size.mjs",
     "start": "max dev",
     "start:demo": "cross-env UMI_APP_DEMO_MODE=true max dev",
-    "start:github": "cross-env UMI_ENV=github max dev",
     "start:github:demo": "cross-env UMI_ENV=github UMI_APP_DEMO_MODE=true max dev",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

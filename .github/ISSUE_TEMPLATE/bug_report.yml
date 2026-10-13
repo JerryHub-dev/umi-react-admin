@@ -1,0 +1,58 @@
+name: Bug report
+description: A page or feature is not working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please first confirm the issue reproduces both on the
+        [live demo](https://jerry-codehub.github.io/umi-react-admin/) and your local build,
+        and search the [existing issues](https://github.com/Jerry-CodeHub/umi-react-admin/issues) to avoid duplicates.
+        中文也可直接填写。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Expected vs actual behavior; give reproduction steps that can be followed as-is
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Live demo (GitHub Pages)
+        - Local dev (pnpm start)
+        - Self-built deployment (Vercel / Docker / other static hosting)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Build commit / version
+      description: The build commit shown in the page footer, or the sha in the demo's /version.json; optional for the live demo
+      placeholder: e.g. 00826b6
+  - type: dropdown
+    id: locale
+    attributes:
+      label: UI language & theme
+      options:
+        - 中文 / Light
+        - 中文 / Dark
+        - English / Light
+        - English / Dark
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & device
+      description: e.g. Chrome 141 / macOS; for mobile issues include the device and OS
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / network errors
+      description: F12 console errors and failed requests (paste if present; redact any sensitive local information)
+      render: shell
