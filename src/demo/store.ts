@@ -5,13 +5,17 @@
  * 数据永远新鲜；用户做过的改动按记录 ID 叠加回去，带着它们真实发生的时间。
  * 补丁存储键带版本号：生成规则或数据结构变化时升级 STORE_VERSION，旧补丁整体作废，
  * 老访客不会带着过期结构的缓存看到错乱数据。
+ *
+ * v3（2026-10-12 审查整改）：固定演示场景（SCN 记录）、工单验收历史（acceptanceHistory）、
+ * 权限点口径扩展（ops.ticket.accept / ops.schedule.update / system.demo.reset）与派生设备状态；
+ * v2 补丁里可能引用已不存在的字段结构，整体作废（重置即恢复）。
  */
 import { generateDataset, type Dataset, type DemoLocale } from './generate';
 
-export const STORE_VERSION = 2;
+export const STORE_VERSION = 3;
 export const STORE_KEY = `umi-react-admin:demo-store:v${STORE_VERSION}`;
 /** 历史版本遗留的存储键（加载时顺手清理） */
-const LEGACY_KEYS = ['umi-react-admin-demo-users', 'umi-react-admin:demo-store:v1'];
+const LEGACY_KEYS = ['umi-react-admin-demo-users', 'umi-react-admin:demo-store:v1', 'umi-react-admin:demo-store:v2'];
 
 export type CollectionName = 'users' | 'roles' | 'tickets' | 'alarms' | 'logs' | 'events';
 const COLLECTIONS: CollectionName[] = ['users', 'roles', 'tickets', 'alarms', 'logs', 'events'];
@@ -47,6 +51,7 @@ const toPatchValues = (changes: Record<string, unknown>) =>
 export class DemoStore {
   private data!: Dataset;
   private patches: Patches = {};
+  private builtAtMs = 0;
 
   constructor(private readonly options: { storage?: StorageLike; now?: () => Date; locale: DemoLocale }) {
     this.patches = this.readPatches();
@@ -59,6 +64,24 @@ export class DemoStore {
 
   now(): Date {
     return this.options.now?.() ?? new Date();
+  }
+
+  /**
+   * 时钟推进检查（F09）：基础数据按「现在」生成，长开会话不会随时间补充新数据。
+   * 每个请求前调用：演示时钟离开上次构建时刻超过阈值（受控模式冻结时不会发生），
+   * 就按当前时钟重建基础数据——补丁照常叠加，用户改动与删除都保留。
+   */
+  refreshIfStale(thresholdMs = 60_000) {
+    const current = this.now().getTime();
+    if (Math.abs(current - this.builtAtMs) > thresholdMs) {
+      this.rebuild();
+    }
+  }
+
+  /** 多标签页：另一标签页写入补丁后，本标签页重新读取并重建（storage 事件触发，见 adapter.ts） */
+  syncFromStorage() {
+    this.patches = this.readPatches();
+    this.rebuild();
   }
 
   /** 新建记录（放在集合最前面，与列表默认的倒序一致） */
@@ -131,6 +154,7 @@ export class DemoStore {
   }
 
   private rebuild() {
+    this.builtAtMs = this.now().getTime();
     this.data = generateDataset({ now: this.now(), locale: this.options.locale });
     (Object.keys(this.patches) as CollectionName[]).forEach((name) => {
       const patch = this.patches[name]!;

@@ -35,7 +35,7 @@ export default function Trajectory() {
   const layerRef = useRef<Cesium.CustomDataSource>(null);
   const samplesRef = useRef<Cesium.PointPrimitiveCollection>(null);
 
-  const { containerRef, viewer, error } = useCesiumViewer({
+  const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
     // 初始视角对准三种能力包络（进入页面即自动合并展示）；覆盖多边形在东北，点按钮时再飞过去
     home: [116.52, 30.39, 1_200_000],
     onReady: (instance) => {
@@ -205,7 +205,13 @@ export default function Trajectory() {
         title={drawing ? t('cesium.route.drawing') : (result ?? t('cesium.route.hint'))}
       />
       <Card styles={{ body: { padding: 0 } }}>
-        <CesiumStage containerRef={containerRef} viewer={viewer} error={error} />
+        <CesiumStage
+          containerRef={containerRef}
+          viewer={viewer}
+          error={error}
+          basemapFailed={basemapFailed}
+          onRetryBasemap={retry}
+        />
       </Card>
     </DemoPage>
   );

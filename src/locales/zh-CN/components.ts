@@ -26,7 +26,7 @@ export default {
   'calendar.deleteConfirm': '删除日程「{title}」？',
   'calendar.saved': '日程已保存',
   'calendar.allDay': '全天',
-  'calendar.hint': '在日历上框选时间段新建日程；拖动或拉伸日程可改期，改动会保存。',
+  'calendar.hint': '点「新建日程」或在日历上框选时间段新建；拖动或拉伸日程可改期，改动会保存。',
   'richText.blockFormats': '段落=p; 一级标题=h1; 二级标题=h2; 三级标题=h3; 引用=blockquote',
   'richText.tinymce.undo': '撤销',
   'richText.preview': '预览内容',
@@ -101,4 +101,8 @@ export default {
   'pdf.report.rank': '排名',
   'pdf.report.alarms': '告警数',
   'pdf.report.disclaimer': '演示数据 · 在浏览器内由当前数据实时生成（html2canvas 渲染 + 手写 PDF 封装）',
+  'signature.next': '继续验收下一单',
+  'signature.allDone': '本轮待验收工单已全部签完（共 {count} 张）',
+  'signature.refresh': '重新拉取',
+  'screenshot.pickDevice': '选择截图对象（默认最近严重告警）',
 };

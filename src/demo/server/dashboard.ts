@@ -1,5 +1,6 @@
+import { REGION_KEYS as REGIONS } from '@/constants/enums';
 import type { AlarmLevel, AlarmType, DashboardOverview, RegionKey, Ticket } from '@/services/types';
-import { REGIONS } from '../catalog';
+import { applyDerivedStatus } from '../availability';
 import { ALARM_WINDOW_DAYS, DAY, addDays, startOfDay, type Dataset } from '../generate';
 
 const LEVELS: AlarmLevel[] = ['critical', 'major', 'minor', 'info'];
@@ -9,12 +10,14 @@ const time = (value: string) => new Date(value).getTime();
 const localDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-/** 工作台汇总：全部由明细聚合，口径与 generate.test.ts 的断言一致 */
+/** 工作台汇总：全部由明细聚合，口径与 generate.test.ts 的断言一致；设备状态按可用性规则派生（F07） */
 export const buildOverview = (data: Dataset, now: Date): DashboardOverview => {
   const nowMs = now.getTime();
   const today = startOfDay(now);
   const todayMs = today.getTime();
-  const { devices, alarms, tickets } = data;
+  const alarms = data.alarms;
+  const tickets = data.tickets;
+  const devices = applyDerivedStatus(data.devices, alarms, now.toISOString());
 
   // ---- KPI ----
   const devicesOnline = devices.filter((d) => d.status === 'online').length;

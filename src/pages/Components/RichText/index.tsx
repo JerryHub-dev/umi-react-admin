@@ -73,13 +73,15 @@ export default function RichText() {
             init={{
               height: 560,
               menubar: false,
+              // 界面语言跟随 umi locale：zh-CN 语言包已在 tinymceBundle.ts 注册（addI18n），en 为内置默认
+              language: intl.locale === 'zh-CN' ? 'zh-CN' : 'en',
               skin: dark ? 'oxide-dark' : 'oxide',
               content_css: dark ? 'dark' : 'default',
               plugins: ['advlist', 'autolink', 'lists', 'link', 'table', 'charmap', 'searchreplace', 'wordcount'],
               toolbar:
                 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright | ' +
                 'bullist numlist outdent indent | table link | removeformat',
-              // 段落格式下拉跟随界面语言（没有打包 TinyMCE 语言包，工具栏其余部分是图标）
+              // 段落格式下拉的显示名以项目文案为准（语言包只覆盖控件文字）
               block_formats: t('richText.blockFormats'),
               // 正文限宽居中，像一页文档：满宽的长行不好读
               content_style:

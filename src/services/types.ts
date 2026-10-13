@@ -16,6 +16,10 @@ export interface CurrentUser {
   email: string;
   nickName?: string;
   role?: string;
+  /** 五种业务角色之一（演示后端按用户记录解析；真实后端可沿用同一枚举） */
+  roleKey?: RoleKey;
+  /** 当前会话生效的权限点（服务端逐请求按角色记录解析，改权限立即对已有会话生效） */
+  permissions?: string[];
 }
 
 /** Real login establishes a Secure HttpOnly SameSite cookie and returns no bearer to JavaScript. */
@@ -88,11 +92,16 @@ export type LogAction =
   | 'userCreate'
   | 'userUpdate'
   | 'userDisable'
+  | 'userImport'
   | 'alarmHandle'
   | 'ticketAssign'
   | 'ticketClose'
+  | 'ticketAccept'
+  | 'ticketRework'
   | 'reportExport'
-  | 'roleUpdate';
+  | 'roleUpdate'
+  | 'demoScenario'
+  | 'demoReset';
 
 export interface OperationLog {
   id: string;
@@ -170,9 +179,12 @@ export interface Alarm {
 
 export interface AlarmQuery extends PageQuery {
   keyword?: string;
+  deviceId?: string;
   level?: AlarmLevel;
   type?: AlarmType;
   status?: AlarmStatus;
+  /** 只看未恢复：包含活动告警与已转工单但尚未恢复的告警（业务恢复语义，见 src/demo/availability.ts） */
+  unrecovered?: boolean;
   region?: RegionKey;
   from?: string;
   to?: string;
@@ -182,6 +194,21 @@ export type AlarmHandleAction = 'ticket' | 'falsePositive' | 'recover';
 
 export type TicketStatus = 'todo' | 'doing' | 'done';
 export type TicketPriority = 'P1' | 'P2' | 'P3';
+
+/** 一次有效验收签字（当前生效） */
+export interface TicketAcceptance {
+  signerName: string;
+  signedAt: string;
+  /** 白底黑字 PNG 的 data URL */
+  signature: string;
+}
+
+/** 返工后归档的历史验收（已失效，仅留痕） */
+export interface TicketAcceptanceRecord extends TicketAcceptance {
+  /** 该验收因返工失效的时间 */
+  invalidatedAt: string;
+  invalidatorName?: string;
+}
 
 export interface Ticket {
   id: string;
@@ -202,14 +229,45 @@ export interface Ticket {
   resolvedAt?: string;
   /** 时限（小时），按优先级：P1 4h / P2 12h / P3 48h；例行巡检 14 天 */
   slaHours: number;
-  /** 验收签字（签名页演示） */
-  acceptance?: { signerName: string; signedAt: string; signature: string };
+  /** 当前生效的验收签字 */
+  acceptance?: TicketAcceptance;
+  /** 已失效的历史验收（返工归档，最新在最后） */
+  acceptanceHistory?: TicketAcceptanceRecord[];
 }
 
 export interface TicketQuery extends PageQuery {
   status?: TicketStatus;
   /** 看板：只取进行中 + 近 N 天完成的工单 */
   board?: boolean;
+  keyword?: string;
+  priority?: TicketPriority;
+  kind?: 'fault' | 'maintenance';
+  deviceId?: string;
+  from?: string;
+  to?: string;
+}
+
+/** 批量导入用户的一行输入（Excel 导入提交给服务端复核） */
+export interface UserImportRow {
+  name?: string;
+  username?: string;
+  email?: string;
+  department?: string;
+  role?: string;
+}
+
+export interface UserImportResult {
+  /** 成功创建数 */
+  created: number;
+  /** 与现有用户或文件内重复而跳过的行数 */
+  duplicated: number;
+  /** 校验失败行数 */
+  invalid: number;
+  /** 新建用户的 ID（按提交顺序） */
+  createdIds: string[];
+  /** 每行的失败原因（行号为 Excel 里的原始行号；重复行也标注） */
+  issues: { row: number; reason: 'duplicate' | 'invalid'; message: string }[];
+  users: User[];
 }
 
 // ---------------- 工作台 ----------------
@@ -270,3 +328,14 @@ export interface CalendarEvent {
 }
 
 export type CalendarEventInput = Omit<CalendarEvent, 'id'>;
+
+// ---------------- 演示时钟与场景（仅演示模式） ----------------
+
+/** live 跟随真实时间；frozen 固定在进入场景那一刻（受控演示，页面明确展示「演示时间」） */
+export interface DemoClockState {
+  mode: 'live' | 'frozen';
+  /** frozen 模式的锚点（epoch ms） */
+  anchor?: number;
+  /** 服务端当前生效的演示时间（ISO） */
+  demoTime: string;
+}

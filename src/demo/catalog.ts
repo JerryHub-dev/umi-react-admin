@@ -16,7 +16,7 @@ export type City = {
   weight: number;
 };
 
-export const REGIONS: RegionKey[] = ['north', 'east', 'south', 'central', 'southwest', 'northwest', 'northeast'];
+// 大区顺序的唯一定义在 @/constants/enums 的 REGION_KEYS（此处不再重复定义，防漂移）
 
 export const CITIES: City[] = [
   { code: 'BJ', zh: '北京', en: 'Beijing', region: 'north', lng: 116.407, lat: 39.904, weight: 10 },

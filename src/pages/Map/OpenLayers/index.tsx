@@ -21,7 +21,7 @@ import OSM from 'ol/source/OSM';
 import VectorSource from 'ol/source/Vector';
 import { Circle, Fill, Stroke, Style } from 'ol/style';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StationCard, StatusFilterBar, StatusLegend, type StatusFilter } from '../components/stationUi';
+import { StationCard, StatusFilterBar, StatusLegend, type StatusFilter } from '../components/StationUi';
 import './openlayers.css';
 
 /** 每种状态一个共享样式对象（OpenLayers 推荐复用 Style，避免每个要素各建一份） */
@@ -43,8 +43,11 @@ export default function OpenLayersPage() {
   const popupRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map>(undefined);
   const sourceRef = useRef<VectorSource>(undefined);
+  const popupRefOl = useRef<Overlay>(undefined);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [selected, setSelected] = useState<Device>();
+  // 深链接定位（E03：设备详情 → 地图）：?focus=DEV-… 定位到站点并打开详情卡
+  const [focusId] = useState(() => new URLSearchParams(window.location.search).get('focus') ?? undefined);
 
   const chinaExtent = useMemo(
     () => (devices ? boundingExtent(devices.map((d) => fromLonLat([d.lng, d.lat]))) : undefined),
@@ -61,6 +64,7 @@ export default function OpenLayersPage() {
       offset: [0, -12],
       stopEvent: true,
     });
+    popupRefOl.current = popup;
     const map = new Map({
       target: containerRef.current,
       // 暗色主题下瓦片层加 CSS 滤镜反色（见 openlayers.css），矢量点位颜色不受影响
@@ -96,6 +100,19 @@ export default function OpenLayersPage() {
         }),
     );
   }, [devices, filter]);
+
+  // 深链接定位：视图飞到目标站点并打开详情卡（与单击选点同一条路径）
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !devices || !focusId) return;
+    const device = devices.find((item) => item.id === focusId);
+    if (!device) return;
+    const view = map.getView();
+    view.setCenter(fromLonLat([device.lng, device.lat]));
+    view.setZoom(9);
+    setSelected(device);
+    popupRefOl.current?.setPosition(fromLonLat([device.lng, device.lat]));
+  }, [devices, focusId]);
 
   const resetView = () => {
     if (chinaExtent) mapRef.current?.getView().fit(chinaExtent, { padding: [48, 48, 48, 48], duration: 600 });

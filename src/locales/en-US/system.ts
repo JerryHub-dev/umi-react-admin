@@ -86,4 +86,17 @@ export default {
   'excel.dropTitle': 'Click or drag an .xlsx file here to import',
   'excel.dropHint':
     'Columns: {fields}. Every row is validated first and invalid rows are skipped. Not sure about the format? Download the template.',
+  'excel.samples': 'Sample files',
+  'excel.sample.valid': 'All valid (3 rows · for the mainline import)',
+  'excel.sample.partial': 'Partially valid (2 valid + 2 different errors)',
+  'excel.sample.invalid': 'All invalid (bad email / illegal login / missing fields)',
+  'excel.sample.duplicate': 'Duplicate logins (in-file + existing conflicts)',
+  'excel.reselect': 'Choose another file',
+  'excel.cancelImport': 'Cancel import',
+  'excel.allInvalid': '0 valid rows: {total} total, {invalid} invalid',
+  'excel.allInvalidHint': 'Submit is disabled: fix the file or pick another one before importing.',
+  'excel.import.partial': 'Partially imported: {created} created, {duplicated} duplicated, {invalid} invalid',
+  'excel.import.none': 'No users imported: {duplicated} duplicated, {invalid} invalid',
+  'access.permissions.count':
+    'Active permission keys for this session: {count} (resolved per request from the role record)',
 };

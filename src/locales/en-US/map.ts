@@ -59,4 +59,9 @@ export default {
   'cesium.situation.target': '{name} · {kind} · {speed} kn',
   'cesium.situation.hint':
     'Positions are interpolated over time (SampledPositionProperty). Click a target for details; tracks and speeds are simulated.',
+  'map.gotoOpenlayers': 'Open OpenLayers map →',
+  'cesium.basemapFailed.title': 'Basemap tiles failed to load',
+  'cesium.basemapFailed.desc':
+    'The online basemap (OpenStreetMap) is unreachable: the device may be offline, the network restricted, or the requests blocked by security policy. Business layers still render but lack geographic context; retry or refresh after checking the network.',
+  'cesium.basemapFailed.retry': 'Retry basemap',
 };

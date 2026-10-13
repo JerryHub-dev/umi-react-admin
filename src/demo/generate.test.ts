@@ -20,9 +20,16 @@ describe('确定性与时间滑动', () => {
   it('按日播种：明天再生成，昨天及以前的告警 ID 与发生时间不变', () => {
     const tomorrow = generateDataset({ now: new Date(NOW.getTime() + DAY) });
     const cutoff = startOfDay(NOW).getTime();
+    // ALM-LIVE 与固定场景（ALM-SCN）都按「现在」相对生成，不参与按日播种的稳定性断言
     const before = (list: typeof data.alarms) =>
       list
-        .filter((a) => !a.id.startsWith('ALM-LIVE') && t(a.occurredAt) < cutoff && t(a.occurredAt) > cutoff - 60 * DAY)
+        .filter(
+          (a) =>
+            !a.id.startsWith('ALM-LIVE') &&
+            !a.id.startsWith('ALM-SCN') &&
+            t(a.occurredAt) < cutoff &&
+            t(a.occurredAt) > cutoff - 60 * DAY,
+        )
         .map((a) => `${a.id}@${a.occurredAt}`);
     expect(before(tomorrow.alarms)).toEqual(before(data.alarms));
   });
@@ -74,8 +81,10 @@ describe('用户', () => {
 });
 
 describe('设备', () => {
-  it(`${DEVICE_TOTAL} 台，每个城市至少 2 台，一线城市多于西北城市`, () => {
-    expect(data.devices).toHaveLength(DEVICE_TOTAL);
+  it(`${DEVICE_TOTAL} 台自然分布 + 3 台固定场景设备，每个城市至少 2 台，一线城市多于西北城市`, () => {
+    // 固定演示场景（D02）追加 3 台 SCN 设备：总量级仍为 240 上下
+    expect(data.devices).toHaveLength(DEVICE_TOTAL + 3);
+    expect(data.devices.filter((d) => d.id.startsWith('DEV-SCN-'))).toHaveLength(3);
     const byCity = new Map<string, number>();
     data.devices.forEach((d) => byCity.set(d.city, (byCity.get(d.city) ?? 0) + 1));
     expect(Math.min(...byCity.values())).toBeGreaterThanOrEqual(2);
@@ -235,8 +244,8 @@ describe('工作台口径', () => {
   });
 
   it('大区设备数合计等于设备总数', () => {
-    expect(overview.regionOnline.reduce((s, r) => s + r.total, 0)).toBe(DEVICE_TOTAL);
-    expect(overview.regionTree.flatMap((r) => r.cities).reduce((s, c) => s + c.count, 0)).toBe(DEVICE_TOTAL);
+    expect(overview.regionOnline.reduce((s, r) => s + r.total, 0)).toBe(DEVICE_TOTAL + 3);
+    expect(overview.regionTree.flatMap((r) => r.cities).reduce((s, c) => s + c.count, 0)).toBe(DEVICE_TOTAL + 3);
   });
 });
 

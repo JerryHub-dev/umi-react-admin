@@ -10,7 +10,11 @@ const { logoutMock, stateMock, successMock, errorMock, pushMock, account } = vi.
   account: { click: undefined as ((value: { key: string }) => unknown) | undefined },
 }));
 vi.mock('@/services/auth', () => ({ logout: logoutMock }));
-vi.mock('@/services/system', () => ({ resetDemoData: vi.fn() }));
+vi.mock('@/services/system', () => ({
+  resetDemoData: vi.fn(),
+  getDemoClock: vi.fn().mockResolvedValue({ mode: 'live', demoTime: '2026-10-12T00:00:00.000Z' }),
+  switchDemoScenario: vi.fn(),
+}));
 vi.mock('@/components/GuideTour', () => ({ OPEN_TOUR_EVENT: 'tour' }));
 vi.mock('@/hooks/useThemeMode', () => ({ useThemeMode: () => ({ dark: false, toggle: vi.fn() }) }));
 vi.mock('@umijs/max', () => ({
@@ -19,6 +23,7 @@ vi.mock('@umijs/max', () => ({
   useModel: () => ({ initialState: { name: 'alice' }, setInitialState: stateMock }),
   getLocale: () => 'en-US',
   setLocale: vi.fn(),
+  useAccess: () => ({ permission: (key: string) => key === 'system.demo.reset' }),
 }));
 vi.mock('antd', async () => {
   const React = await import('react');
@@ -28,6 +33,7 @@ vi.mock('antd', async () => {
     Avatar: wrapper,
     Button: wrapper,
     Tooltip: wrapper,
+    Tag: wrapper,
     Dropdown: ({
       children,
       menu,

@@ -3,17 +3,26 @@ import { ALARM_LEVEL_KEYS } from '@/constants/enums';
 import { LEVEL_COLOR } from '@/constants/semantic';
 import { useApi } from '@/hooks/useApi';
 import { useChartTheme } from '@/hooks/useChartTheme';
-import { getDevice, listAlarms } from '@/services/ops';
+import { getDevice, listAlarms, listAllDevices } from '@/services/ops';
+import type { Device } from '@/services/types';
 import { formatDateTime } from '@/utils/format';
 import { CameraOutlined, DownloadOutlined } from '@ant-design/icons';
 import { Tiny } from '@ant-design/plots';
 import { useIntl } from '@umijs/max';
-import { App, Button, Card, Descriptions, Image, Modal, Skeleton, Space, Tag, Typography } from 'antd';
+import { App, Button, Card, Descriptions, Image, Modal, Select, Skeleton, Space, Tag, Typography } from 'antd';
 import html2canvas from 'html2canvas';
 import { useRef, useState } from 'react';
 
-/** 取最近一条严重告警及其设备详情，作为被截图的业务卡片 */
-const loadCard = async () => {
+/** 取最近一条严重告警及其设备详情，作为被截图的业务卡片；指定设备时取该设备最近的告警 */
+const loadCard = async (deviceId?: string) => {
+  if (deviceId) {
+    const device = await getDevice(deviceId);
+    const alarm =
+      device.recentAlarms.find((item) => item.level === 'critical') ??
+      device.recentAlarms[0] ??
+      (await listAlarms({ deviceId, pageSize: 1 })).list[0];
+    return { alarm, device };
+  }
   const { list } = await listAlarms({ level: 'critical', pageSize: 1 });
   const alarm = list[0] ?? (await listAlarms({ pageSize: 1 })).list[0];
   const device = await getDevice(alarm.deviceId);
@@ -28,7 +37,14 @@ export default function Screenshot() {
   const captureRef = useRef<HTMLDivElement>(null);
   const [image, setImage] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const { data, loading } = useApi(loadCard);
+  // 截图对象可选（E07：主线演示时选「演示 · 主线故障站」）；默认继承最近严重告警的设备
+  const [deviceId, setDeviceId] = useState<string>();
+  const { data: devices } = useApi(() => listAllDevices().then((list) => list.slice(0, 300)));
+  const { data, loading } = useApi(() => loadCard(deviceId), [deviceId]);
+  const deviceOptions = (devices ?? []).map((device: Device) => ({
+    value: device.id,
+    label: `${device.name} · ${device.id}`,
+  }));
 
   /** html2canvas 渲染 DOM：背景取当前主题色，按设备像素比输出清晰图片 */
   const capture = async () => {
@@ -66,6 +82,17 @@ export default function Screenshot() {
       source="src/pages/Components/Screenshot/index.tsx"
       extra={
         <Space>
+          <Select
+            className="min-w-56"
+            showSearch
+            allowClear
+            placeholder={t('screenshot.pickDevice')}
+            value={deviceId}
+            onChange={setDeviceId}
+            options={deviceOptions}
+            optionFilterProp="label"
+            data-tour="screenshot-device"
+          />
           <Button icon={<CameraOutlined />} loading={busy} onClick={async () => setImage(await capture())}>
             {t('screenshot.capture')}
           </Button>

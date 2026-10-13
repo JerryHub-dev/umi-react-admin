@@ -5,6 +5,7 @@ import { useChartTheme } from '@/hooks/useChartTheme';
 import { listTickets, signTicket } from '@/services/ops';
 import type { Ticket } from '@/services/types';
 import { formatDateTime } from '@/utils/format';
+import { nowMs } from '@/utils/now';
 import { safeSignature } from '@/utils/signature';
 import {
   CheckOutlined,
@@ -63,13 +64,14 @@ const exportSignature = (canvas: HTMLCanvasElement) => {
 /** 近 3 天完成、尚未验收签字的工单 */
 const loadPending = async () => {
   const { list } = await listTickets({ status: 'done', pageSize: 200 });
-  const since = Date.now() - 3 * DAY;
+  // 受控演示模式下用演示时钟裁剪 3 天窗口（复查 P3-2：与「演示时间」口径一致）
+  const since = nowMs() - 3 * DAY;
   return list.filter((ticket) => !ticket.acceptance && new Date(ticket.resolvedAt!).getTime() >= since);
 };
 
 export default function Signature() {
   const intl = useIntl();
-  const t = (id: string, values?: Record<string, string>) => intl.formatMessage({ id }, values);
+  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { message } = App.useApp();
   const chart = useChartTheme();
   const penColor = chart.dark ? chart.token.colorText : PAPER_INK;
@@ -78,14 +80,28 @@ export default function Signature() {
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const [ticketId, setTicketId] = useState<string>();
   const [signed, setSigned] = useState<Ticket>();
+  /** 本轮会话里已签过的工单：全部候选签完后展示「已完成」空态（而不是退回普通空态） */
+  const [signedCount, setSignedCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [empty, setEmpty] = useState(true);
   const { data: pending, loading, reload } = useApi(loadPending);
   const ticket = pending?.find((item) => item.id === ticketId);
 
   useEffect(() => {
-    if (!ticketId && pending?.length) setTicketId(pending[0].id);
+    // 选择有效工单（F05）：初始化、刷新后（reload 会把已签工单移出候选）都取第一张有效工单，
+    // 绝不保留已不在候选集里的旧 ID
+    if ((!ticketId || !pending?.some((item) => item.id === ticketId)) && pending) {
+      setTicketId(pending[0]?.id);
+    }
   }, [pending, ticketId]);
+
+  // 切换工单清空画板：不串签名（F05）
+  useEffect(() => {
+    const pad = padRef.current;
+    if (!pad) return;
+    pad.clear();
+    setEmpty(true);
+  }, [ticketId]);
 
   // 画布按容器宽度与设备像素比重设分辨率（否则高分屏上笔迹模糊），尺寸变化时保留已有笔迹
   useEffect(() => {
@@ -151,8 +167,14 @@ export default function Signature() {
     }
     setSaving(true);
     try {
-      setSigned(await signTicket(ticket.id, exportSignature(canvasRef.current!)));
-      reload();
+      try {
+        const updated = await signTicket(ticket.id, exportSignature(canvasRef.current!));
+        setSigned(updated);
+        setSignedCount((count) => count + 1);
+        reload();
+      } catch {
+        // 错误提示由请求层统一弹出；这里兜住避免 unhandled rejection
+      }
     } finally {
       setSaving(false);
     }
@@ -173,7 +195,8 @@ export default function Signature() {
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={9}>
           <Card title={t('signature.ticket')} loading={loading && !pending}>
-            {pending?.length || signed ? (
+            {/* 有候选才渲染选择器；签完最后一张（pending 清空）落到 allDone 完成空态（复查 P2-1） */}
+            {pending?.length ? (
               <>
                 <Select
                   className="w-full"
@@ -199,6 +222,13 @@ export default function Signature() {
                   </Descriptions>
                 )}
               </>
+            ) : signedCount > 0 ? (
+              /* 本轮签完了全部候选（或 reload 后候选清空）：明确的完成空态（F05），可刷新重新拉取 */
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('signature.allDone', { count: signedCount })}>
+                <Button type="primary" onClick={() => void reload()}>
+                  {t('signature.refresh')}
+                </Button>
+              </Empty>
             ) : (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('signature.noTickets')} />
             )}
@@ -233,7 +263,7 @@ export default function Signature() {
                         onClick={() => setSigned(undefined)}
                         disabled={!pending?.length}
                       >
-                        {t('signature.ticketPlaceholder')}
+                        {t('signature.next')}
                       </Button>,
                     ]}
                   />

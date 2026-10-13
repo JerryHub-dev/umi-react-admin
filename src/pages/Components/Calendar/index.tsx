@@ -6,6 +6,7 @@ import { useEnums } from '@/hooks/useEnums';
 import { createEvent, deleteEvent, listEvents, updateEvent } from '@/services/events';
 import type { CalendarEvent, EventType } from '@/services/types';
 import { formatDateTime } from '@/utils/format';
+import { PlusOutlined } from '@ant-design/icons';
 import FullCalendar, {
   type DateSelectInfo,
   type EventApi,
@@ -29,10 +30,11 @@ import {
   Card,
   Checkbox,
   Col,
+  Empty,
   Form,
   Grid,
   Input,
-  List,
+  Listy,
   Modal,
   Popconfirm,
   Row,
@@ -40,7 +42,7 @@ import {
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useCallback, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/palette.css';
@@ -58,6 +60,9 @@ export const EVENT_COLOR: Record<EventType, PresetColor> = {
 };
 
 type Draft = { start: string; end: string; allDay: boolean };
+
+/** 「接下来」独立向前查询的天数 */
+const UPCOMING_DAYS = 14;
 
 /** 日程时间的可读形式：全天日程只写日期（跨天写起止），定时日程写「日期 时:分–时:分」 */
 const describeTime = (event: EventApi, allDayLabel: string) => {
@@ -107,22 +112,29 @@ export default function Calendar() {
     extendedProps: { type: event.type },
   });
 
-  /** 按视图范围向接口拉取日程；顺带刷新侧栏的「接下来」列表 */
+  /** 按视图范围向接口拉取日程（只服务日历本身） */
   const fetchEvents = useCallback(
-    async (info: EventSourceFuncInfo) => {
-      const list = await listEvents(info.startStr, info.endStr);
-      const now = Date.now();
-      setUpcoming(
-        list
-          .filter((event) => new Date(event.start).getTime() >= now)
-          .sort((a, b) => a.start.localeCompare(b.start))
-          .slice(0, 6),
-      );
-      return list.map(toInput);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    },
+    async (info: EventSourceFuncInfo) => (await listEvents(info.startStr, info.endStr)).map(toInput),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [version, chart],
   );
+
+  /** 「接下来」独立查询未来 14 天：不再跟随日历当前视图范围，否则周末视图会漏掉次日的值班交接 */
+  const fetchUpcoming = useCallback(async () => {
+    const now = Date.now();
+    const to = new Date(now + UPCOMING_DAYS * 86_400_000).toISOString();
+    const list = await listEvents(new Date(now).toISOString(), to);
+    setUpcoming(
+      list
+        .filter((event) => new Date(event.start).getTime() >= now)
+        .sort((a, b) => a.start.localeCompare(b.start))
+        .slice(0, 6),
+    );
+  }, []);
+
+  useEffect(() => {
+    void fetchUpcoming();
+  }, [fetchUpcoming, version]);
 
   const refetch = () => setVersion((v) => v + 1);
 
@@ -130,6 +142,13 @@ export default function Calendar() {
     info.view.calendar.unselect();
     form.setFieldsValue({ title: '', type: 'inspection' });
     setDraft({ start: info.startStr, end: info.endStr, allDay: info.allDay });
+  };
+
+  /** 常驻的新建入口（审计 U03：手机上框选手势不易发现）：默认下一个整点起 1 小时 */
+  const openCreate = () => {
+    form.setFieldsValue({ title: '', type: 'inspection' });
+    const start = dayjs().startOf('hour').add(1, 'hour');
+    setDraft({ start: start.toISOString(), end: start.add(1, 'hour').toISOString(), allDay: false });
   };
 
   const handleCreate = async () => {
@@ -186,12 +205,12 @@ export default function Calendar() {
             <Typography.Title level={5} className="mt-6">
               {t('calendar.upcoming')}
             </Typography.Title>
-            <List
-              size="small"
-              dataSource={upcoming}
-              locale={{ emptyText: t('calendar.noUpcoming') }}
-              renderItem={(event) => (
-                <List.Item className="px-0!">
+            {upcoming.length > 0 ? (
+              <Listy
+                items={upcoming}
+                rowKey="id"
+                styles={{ item: { paddingBlock: 8, paddingInline: 0 } }}
+                itemRender={(event) => (
                   <div className="min-w-0">
                     <Badge color={chart.color(EVENT_COLOR[event.type])} text={event.title} className="truncate" />
                     <Typography.Text type="secondary" className="block pl-3.5 text-xs">
@@ -200,13 +219,26 @@ export default function Calendar() {
                         : formatDateTime(event.start, 'MM-DD HH:mm')}
                     </Typography.Text>
                   </div>
-                </List.Item>
-              )}
-            />
+                )}
+              />
+            ) : (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('calendar.noUpcoming')} />
+            )}
           </Card>
         </Col>
         <Col xs={{ span: 24, order: 1 }} xl={{ span: 18, order: 2 }}>
           <Card>
+            {/* 新建按钮常驻（审计 U03：手机上只能靠框选新建，入口不可见）；窄屏收成图标按钮省宽度 */}
+            <div className="mb-2 flex justify-end">
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                aria-label={narrow ? t('calendar.newEvent') : undefined}
+                onClick={openCreate}
+              >
+                {narrow ? null : t('calendar.newEvent')}
+              </Button>
+            </div>
             {/* v7 经典主题的调色板按祖先 [data-color-scheme] 切换暗色变量；calendar-skin 再把颜色接到 antd token */}
             <div className="calendar-skin" data-color-scheme={chart.dark ? 'dark' : 'light'}>
               {mounted && (
@@ -225,6 +257,11 @@ export default function Calendar() {
                       ? { left: 'prev,next', center: 'title', right: 'listWeek,dayGridMonth' }
                       : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }
                   }
+                  views={{
+                    // 手机默认的按周列表：范围标题改短格式（默认的「2025年9月8日 – 14日」在 390px 上太长）；
+                    // 桌面工具栏不含 listWeek，不受影响
+                    listWeek: { titleFormat: { month: 'short', day: 'numeric' } },
+                  }}
                   initialView={compact ? 'listWeek' : 'dayGridMonth'}
                   height="auto"
                   editable

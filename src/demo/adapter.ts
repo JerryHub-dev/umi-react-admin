@@ -6,9 +6,13 @@
  * adapter 方案零依赖、任何托管方式都能用，同一套 handler 同时服务 dev 与所有静态部署。
  *
  * 演示后端代码（生成器 + 路由）经动态 import 单独分包，首个请求时才加载，不进入口 chunk。
+ * 演示时钟（src/demo/clock.ts）决定「现在」：实时模式跟随系统时间，受控场景冻结在进入时刻。
+ * 多标签页经 storage 事件互通：其他标签页的补丁写入/重置会让本标签页重新加载演示数据。
  */
 import { getLocale } from '@umijs/max';
+import { demoClock } from './clock';
 import type { DemoServer } from './server';
+import { STORE_KEY } from './store';
 
 type AdapterConfig = {
   method?: string;
@@ -25,10 +29,19 @@ const loadServer = () => {
     createDemoServer({
       locale: getLocale() === 'en-US' ? 'en-US' : 'zh-CN',
       storage: typeof window === 'undefined' ? undefined : window.localStorage,
+      now: () => demoClock.now(),
     }),
   );
   return serverPromise;
 };
+
+// 多标签页：其他标签页写入补丁/重置演示数据时，本标签页重新加载，不再静默沿用旧数据
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key !== STORE_KEY) return;
+    void loadServer().then((server) => server.store.syncFromStorage());
+  });
+}
 
 /** 上一个请求的「轮到它返回」的时刻：所有请求排成一队 */
 let queue: Promise<void> = Promise.resolve();
@@ -72,10 +85,4 @@ export const demoAdapter = async (config: AdapterConfig) => {
     });
   }
   return response;
-};
-
-/** 重置演示数据（头像菜单「重置演示数据」） */
-export const resetDemoData = async () => {
-  const server = await loadServer();
-  server.store.reset();
 };

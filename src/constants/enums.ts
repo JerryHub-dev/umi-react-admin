@@ -35,9 +35,12 @@ export const LOG_ACTION_KEYS: LogAction[] = [
   'userCreate',
   'userUpdate',
   'userDisable',
+  'userImport',
   'alarmHandle',
   'ticketAssign',
   'ticketClose',
+  'ticketAccept',
+  'ticketRework',
   'reportExport',
   'roleUpdate',
 ];

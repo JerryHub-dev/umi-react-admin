@@ -7,9 +7,10 @@ import { useResponsiveTable } from '@/hooks/useResponsiveTable';
 import { getDevice, listDevices } from '@/services/ops';
 import type { Device } from '@/services/types';
 import { formatDateTime, fromNow } from '@/utils/format';
+import { AimOutlined } from '@ant-design/icons';
 import { ProTable, type ProColumns } from '@ant-design/pro-components';
-import { useIntl } from '@umijs/max';
-import { Badge, Descriptions, Drawer, Empty, List, Progress, Skeleton, Tag, Tooltip, Typography } from 'antd';
+import { history, Link, useIntl } from '@umijs/max';
+import { Badge, Button, Descriptions, Drawer, Empty, Listy, Progress, Skeleton, Tag, Tooltip, Typography } from 'antd';
 import { useState } from 'react';
 
 const MODELS = ['MX-200', 'MX-300', 'RX-500'];
@@ -23,7 +24,7 @@ const DeviceDrawer = ({ id, onClose }: { id?: string; onClose: () => void }) => 
   const enums = useEnums();
   const { data, loading } = useApi(() => (id ? getDevice(id) : Promise.resolve(undefined)), [id]);
   return (
-    <Drawer open={!!id} onClose={onClose} width={520} title={t('devices.detail')} destroyOnHidden>
+    <Drawer open={!!id} onClose={onClose} size={520} title={t('devices.detail')} destroyOnHidden>
       <Skeleton active loading={loading || !data}>
         {data && (
           <>
@@ -55,21 +56,34 @@ const DeviceDrawer = ({ id, onClose }: { id?: string; onClose: () => void }) => 
                 {formatDateTime(data.installedAt, 'YYYY-MM-DD')}
               </Descriptions.Item>
             </Descriptions>
+            {/* 同一业务对象的跳转链（E03）：地图定位 + 告警明细，浏览器返回可回到这里 */}
+            <Button
+              className="mt-4"
+              icon={<AimOutlined />}
+              data-tour="device-locate"
+              onClick={() => history.push(`/map/openlayers?focus=${encodeURIComponent(data.id)}`)}
+            >
+              {t('devices.locateOnMap')}
+            </Button>
             <Typography.Title level={5} className="mt-8">
               {t('devices.recentAlarms')}
             </Typography.Title>
             {data.recentAlarms.length ? (
-              <List
-                size="small"
-                dataSource={data.recentAlarms}
-                renderItem={(alarm) => (
-                  <List.Item
-                    extra={<Typography.Text type="secondary">{fromNow(alarm.occurredAt, intl.locale)}</Typography.Text>}
-                  >
-                    <Tag color={LEVEL_COLOR[alarm.level]}>{enums.label('alarmLevel', alarm.level)}</Tag>
-                    {enums.label('alarmType', alarm.type)}
-                    <Typography.Text type="secondary"> · {enums.label('alarmStatus', alarm.status)}</Typography.Text>
-                  </List.Item>
+              <Listy
+                items={data.recentAlarms}
+                rowKey="id"
+                styles={{ item: { paddingBlock: 8, paddingInline: 0 } }}
+                itemRender={(alarm) => (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <Tag color={LEVEL_COLOR[alarm.level]}>{enums.label('alarmLevel', alarm.level)}</Tag>
+                      <Link to={`/ops/alarms?keyword=${encodeURIComponent(alarm.id)}`}>
+                        {enums.label('alarmType', alarm.type)}
+                      </Link>
+                      <Typography.Text type="secondary"> · {enums.label('alarmStatus', alarm.status)}</Typography.Text>
+                    </span>
+                    <Typography.Text type="secondary">{fromNow(alarm.occurredAt, intl.locale)}</Typography.Text>
+                  </div>
                 )}
               />
             ) : (

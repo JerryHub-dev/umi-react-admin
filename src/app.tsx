@@ -86,7 +86,7 @@ const AccessFallback = () => {
   return <Forbidden />;
 };
 
-const REPO = 'https://github.com/Jerry-CodeHub/umi-react-admin';
+import { REPO_URL as REPO } from '@/constants/repo';
 
 /** 左上角应用列表：项目相关链接（图标用内置图标，不再热链第三方图片，CSP 随之收紧） */
 const appList = () => {
@@ -158,6 +158,19 @@ export const antd: RuntimeAntdConfig = (memo) => {
   memo.theme ??= {};
   // 启动初始算法与 layout 的 navTheme 同源（读同一 localStorage 键）
   memo.theme.algorithm = readTheme() === 'realDark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm;
+  // U04 文本对比度：说明文字（Typography secondary → colorTextDescription → colorTextTertiary）默认是
+  // rgba(0,0,0,.45)，白底 14px 只有 3.36:1，低于正文 4.5:1 的目标。按启动主题换成达标的中性灰：
+  // 浅色 #6f6f6f —— colorBgContainer #fff 上 5.02:1、colorBgLayout #f5f5f5 上 4.61:1；
+  // 深色 #8f8f8f —— colorBgContainer #141414 上 5.69:1、colorBgElevated #1f1f1f 上 5.10:1
+  // （默认的 rgba(255,255,255,.45) 在浮层背景上只有 4.41:1）。
+  // 用不透明灰而不是 rgba：运行时热切换主题只换 algorithm、不重算 token 覆盖（见 useThemeMode），
+  // 不透明灰在被带错的主题下仍可读（约 3.2~3.7:1），带透明度的黑/白会直接融进背景。
+  // colorTextQuaternary（禁用态文字 / 占位符，白底 1.84:1）属 WCAG 豁免态，保持默认不动；
+  // colorTextSecondary 默认浅色 7.0:1 / 深色 8.2:1 已达标，同样不动。
+  memo.theme.token = {
+    ...memo.theme.token,
+    colorTextTertiary: readTheme() === 'realDark' ? '#8f8f8f' : '#6f6f6f',
+  };
   // antd 6 默认注入 CSS 变量：--ant-* 变量挂在 antd 组件根的 .css-var-* 作用域（不在 :root），
   // tailwind 侧 token 类经 var() 桥接随算法联动，只在 antd 组件树内生效（见 tailwind.css 的 @theme inline）
   // 暗色主题下 ProLayout 用 dark 菜单，选中项默认整块主色填充，比浅色主题（浅灰底）重得多、抢视线；

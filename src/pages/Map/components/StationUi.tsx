@@ -41,7 +41,7 @@ export const StatusLegend = () => {
   return (
     <Card size="small" className="pointer-events-none opacity-95">
       <div className="mb-1 text-xs opacity-70">{intl.formatMessage({ id: 'map.legend.status' })}</div>
-      <Space direction="vertical" size={0}>
+      <Space orientation="vertical" size={0}>
         {DEVICE_STATUS_KEYS.map((status) => (
           <Badge key={status} color={STATUS_CSS[status]} text={enums.label('deviceStatus', status)} />
         ))}

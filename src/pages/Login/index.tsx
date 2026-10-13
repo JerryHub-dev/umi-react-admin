@@ -75,7 +75,7 @@ const Login: React.FC = () => {
             ))}
           </ul>
         </div>
-        <div className="text-xs opacity-60">Umi Max · React 19 · Ant Design 5 · AntV · Cesium · OpenLayers</div>
+        <div className="text-xs opacity-60">Umi Max · React 19 · Ant Design 6 · AntV · Cesium · OpenLayers</div>
       </aside>
 
       <main className="relative flex flex-1 items-center justify-center px-4 py-16">
@@ -132,17 +132,22 @@ const Login: React.FC = () => {
                 <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
                   {t('login.asAdminDesc')}
                 </Typography.Text>
-                <Button
-                  size="large"
-                  block
-                  icon={<EyeOutlined />}
-                  loading={pending === 'guest'}
-                  onClick={() => signIn({ name: 'guest', password: 'demo' })}
-                >
-                  {t('login.asGuest')}
-                </Button>
-                <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
-                  {t('login.asGuestDesc')}
+                {/* 五种角色的快捷体验（F02）：一次点击即以对应角色进入，权限差异见角色矩阵文档 */}
+                <div className="grid grid-cols-2 gap-2">
+                  {(['lead', 'operator', 'analyst', 'guest'] as const).map((name) => (
+                    <Button
+                      key={name}
+                      block
+                      icon={name === 'guest' ? <EyeOutlined /> : undefined}
+                      loading={pending === name}
+                      onClick={() => signIn({ name, password: 'demo' })}
+                    >
+                      {t(`login.as.${name}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Typography.Text type="secondary" className="-mt-1 text-center text-xs">
+                  {t('login.asRolesDesc')}
                 </Typography.Text>
               </div>
             )}

@@ -9,7 +9,7 @@ import type { Device } from '@/services/types';
 import { distanceKm } from '@/utils/MapCompute/geodesy';
 import { BorderOutlined, ClearOutlined, ColumnWidthOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Alert, Badge, Button, Card, List, Space, Typography } from 'antd';
+import { Alert, Badge, Button, Card, Listy, Space, Typography } from 'antd';
 import * as Cesium from 'cesium';
 import { useEffect, useRef, useState } from 'react';
 
@@ -30,7 +30,7 @@ export default function BoxSelect() {
   devicesRef.current = devices ?? [];
   toolRef.current = tool;
 
-  const { containerRef, viewer, error } = useCesiumViewer({
+  const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
     onReady: (instance) => {
       const layer = new Cesium.CustomDataSource('select');
       instance.dataSources.add(layer);
@@ -114,7 +114,7 @@ export default function BoxSelect() {
 
   const legend = (
     <Card size="small" className="opacity-95">
-      <Space direction="vertical" size={2}>
+      <Space orientation="vertical" size={2}>
         {DEVICE_STATUS_KEYS.map((status) => (
           <Badge key={status} color={STATUS_CSS[status]} text={enums.label('deviceStatus', status)} />
         ))}
@@ -167,20 +167,28 @@ export default function BoxSelect() {
       <Alert type={tool ? 'warning' : 'info'} showIcon className="mb-4" title={hint} />
       <div className="flex flex-col gap-4 xl:flex-row">
         <Card className="min-w-0 flex-1" styles={{ body: { padding: 0 } }}>
-          <CesiumStage containerRef={containerRef} viewer={viewer} error={error} overlay={legend} />
+          <CesiumStage
+            containerRef={containerRef}
+            viewer={viewer}
+            error={error}
+            basemapFailed={basemapFailed}
+            onRetryBasemap={retry}
+            overlay={legend}
+          />
         </Card>
         {selected && selected.length > 0 && (
           <Card size="small" className="xl:w-72" styles={{ body: { maxHeight: 560, overflowY: 'auto' } }}>
-            <List
-              size="small"
-              dataSource={selected}
-              renderItem={(device) => (
-                <List.Item className="px-0!">
+            <Listy
+              items={selected}
+              rowKey="id"
+              styles={{ item: { paddingBlock: 8, paddingInline: 0 } }}
+              itemRender={(device) => (
+                <div className="flex items-center justify-between gap-2">
                   <Badge color={STATUS_CSS[device.status]} text={device.name} />
                   <Typography.Text type="secondary" className="text-xs">
                     {device.uptime30d}%
                   </Typography.Text>
-                </List.Item>
+                </div>
               )}
             />
           </Card>

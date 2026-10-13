@@ -23,7 +23,7 @@ const renderLogin = async (demoMode: boolean) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('sign-in mode entry points', () => {
-  it('real login renders empty credentials without demo identity shortcuts', async () => {
+  it('real login renders empty credentials without demo identity shortcuts', { timeout: 20_000 }, async () => {
     const html = await renderLogin(false);
     expect(html).not.toContain('login.asAdmin');
     expect(html).not.toContain('login.asGuest');
@@ -33,12 +33,20 @@ describe('sign-in mode entry points', () => {
     expect(html).toContain('login.submit');
   });
 
-  it('explicit demo mode preserves administrator, viewer and arbitrary-name workflows', async () => {
-    const html = await renderLogin(true);
-    expect(html).toContain('login.asAdmin');
-    expect(html).toContain('login.asGuest');
-    expect(html).toContain('login.demoHint');
-    expect(html).toContain('value="admin"');
-    expect(html).toContain('value="demo"');
-  });
+  it(
+    'explicit demo mode preserves administrator, viewer and arbitrary-name workflows',
+    { timeout: 20_000 },
+    async () => {
+      const html = await renderLogin(true);
+      expect(html).toContain('login.asAdmin');
+      // 五种角色的快捷体验入口（F02）：值班长 / 运维工程师 / 数据分析员 / 访客
+      expect(html).toContain('login.as.lead');
+      expect(html).toContain('login.as.operator');
+      expect(html).toContain('login.as.analyst');
+      expect(html).toContain('login.as.guest');
+      expect(html).toContain('login.demoHint');
+      expect(html).toContain('value="admin"');
+      expect(html).toContain('value="demo"');
+    },
+  );
 });

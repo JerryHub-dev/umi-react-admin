@@ -1,6 +1,6 @@
 import { DEMO_MODE } from '@/demo/mode';
 import { api, compact } from './client';
-import type { LogQuery, OperationLog, PageResult, Role, RoleKey } from './types';
+import type { DemoClockState, LogQuery, OperationLog, PageResult, Role, RoleKey } from './types';
 
 export const listRoles = () => api<Role[]>('/api/v1/roles');
 
@@ -16,4 +16,17 @@ export const listLogs = (query: LogQuery) =>
 export const resetDemoData = () => {
   if (!DEMO_MODE) throw new Error('Demo reset is disabled in real mode');
   return api<null>('/api/v1/demo/reset', { method: 'POST' });
+};
+
+// ---------------- 演示时钟与固定场景（仅演示模式；写操作需 system.demo.reset 权限） ----------------
+
+export const getDemoClock = () => api<DemoClockState>('/api/v1/demo/clock');
+
+/** 进入/退出固定演示场景：进入 = 冻结演示时钟 + 清空补丁；退出 = 回实时 + 清空补丁 */
+export const switchDemoScenario = (action: 'enter' | 'exit') => {
+  if (!DEMO_MODE) throw new Error('Demo scenario is disabled in real mode');
+  return api<{ mode: 'live' | 'frozen'; demoTime: string }>('/api/v1/demo/scenario', {
+    method: 'POST',
+    data: { action },
+  });
 };

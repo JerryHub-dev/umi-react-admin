@@ -1,0 +1,247 @@
+{
+  "version": 3,
+  "storeKey": "umi-react-admin:demo-store:v3",
+  "generatedBy": "src/demo/scenarios.ts（src/demo/manifest.test.ts 生成）",
+  "accounts": [
+    {
+      "username": "admin",
+      "password": "demo",
+      "roleKey": "admin"
+    },
+    {
+      "username": "lead",
+      "password": "demo",
+      "roleKey": "lead"
+    },
+    {
+      "username": "operator",
+      "password": "demo",
+      "roleKey": "operator"
+    },
+    {
+      "username": "analyst",
+      "password": "demo",
+      "roleKey": "analyst"
+    },
+    {
+      "username": "guest",
+      "password": "demo",
+      "roleKey": "viewer"
+    }
+  ],
+  "clock": {
+    "live": "跟随真实时间；演示后端每请求检查，跨过 60 秒即按当前时钟重建基础数据（补丁保留）",
+    "frozen": "进入固定演示场景时冻结；页面展示「演示时间」标记（src/demo/clock.ts）"
+  },
+  "availability": {
+    "unrecovered": "active，或 ticketed 且无 recoveredAt（转单不等于恢复）",
+    "blocking": "严重/重要 × 掉线/供电/链路/温度；干扰、信号与一般级别不阻断",
+    "derivedStatus": "未恢复 offline 型阻断 → 离线；其他未恢复阻断 → 故障；否则在线（全部解除才上线）"
+  },
+  "scenarios": [
+    {
+      "key": "mainline",
+      "title": {
+        "zh": "主线故障",
+        "en": "Mainline fault"
+      },
+      "objects": [
+        "DEV-SCN-01",
+        "ALM-SCN-MAIN"
+      ],
+      "initialState": "离线设备 + 一条严重未转单的阻断告警（该设备唯一的阻断故障）",
+      "demonstrates": "转 P1 工单 → 处理 → 完成 → 验收 → 设备上线（在线 +1）且未恢复告警减一"
+    },
+    {
+      "key": "multi-alarm",
+      "title": {
+        "zh": "多告警设备",
+        "en": "Multi-alarm device"
+      },
+      "objects": [
+        "DEV-SCN-02",
+        "ALM-SCN-MULTI-1",
+        "ALM-SCN-MULTI-2"
+      ],
+      "initialState": "同一设备两条未恢复阻断告警（电源·严重 / 温度·重要），设备故障",
+      "demonstrates": "只处理一条设备仍为故障，全部处理后才恢复在线"
+    },
+    {
+      "key": "urgent",
+      "title": {
+        "zh": "紧急待办",
+        "en": "Urgent todo"
+      },
+      "objects": [
+        "ALM-SCN-URGENT",
+        "WO-SCN-URGENT"
+      ],
+      "initialState": "一张未完成 P1（待处理，挂在自然分布设备上），不与主线待转单告警矛盾",
+      "demonstrates": "紧急优先级与看板排序"
+    },
+    {
+      "key": "sla",
+      "title": {
+        "zh": "时限对比",
+        "en": "SLA contrast"
+      },
+      "objects": [
+        "ALM-SCN-SLA-NEAR",
+        "WO-SCN-SLA-NEAR",
+        "ALM-SCN-SLA-OVER",
+        "WO-SCN-SLA-OVER",
+        "ALM-SCN-SLA-OK",
+        "WO-SCN-SLA-OK",
+        "ALM-SCN-SLA-LATE",
+        "WO-SCN-SLA-LATE"
+      ],
+      "initialState": "接近时限（P2 剩约 2h）/ 已逾期未完成（P1 超时约 3h）/ 时限内完成 / 逾期完成",
+      "demonstrates": "SLA 提示、不同状态样式与统计口径"
+    },
+    {
+      "key": "acceptance",
+      "title": {
+        "zh": "连续验收",
+        "en": "Consecutive acceptance"
+      },
+      "objects": [
+        "ALM-SCN-ACC-1",
+        "WO-SCN-ACC-1",
+        "ALM-SCN-ACC-2",
+        "WO-SCN-ACC-2"
+      ],
+      "initialState": "两张彼此独立、已完成未验收的工单",
+      "demonstrates": "连续签字、自动选择有效下一单、签完空态"
+    },
+    {
+      "key": "rework",
+      "title": {
+        "zh": "已验收与返工",
+        "en": "Accepted & rework"
+      },
+      "objects": [
+        "ALM-SCN-REWORK",
+        "WO-SCN-REWORK"
+      ],
+      "initialState": "含合成签名验收的已完成工单（签字人为值班长演示账号）",
+      "demonstrates": "查看/导出签名 → 返工（旧验收归档失效）→ 重新完成 → 重新验收"
+    },
+    {
+      "key": "history",
+      "title": {
+        "zh": "历史工单",
+        "en": "Historical ticket"
+      },
+      "objects": [
+        "WO-SCN-HIST",
+        "ALM-SCN-HIST"
+      ],
+      "initialState": "完成超过三天、关联已恢复告警（看板近三天窗口之外）",
+      "demonstrates": "从告警链接或工单查询直接打开详情"
+    },
+    {
+      "key": "false-positive",
+      "title": {
+        "zh": "误报关闭",
+        "en": "False positive"
+      },
+      "objects": [
+        "ALM-SCN-FP"
+      ],
+      "initialState": "在线设备上的活动告警（干扰·一般，不阻断可用性，设备保持在线）",
+      "demonstrates": "误报关闭、未恢复过滤中消失、日志与统计一致"
+    },
+    {
+      "key": "maintenance",
+      "title": {
+        "zh": "例行巡检",
+        "en": "Maintenance"
+      },
+      "objects": [
+        "WO-SCN-MT-1",
+        "WO-SCN-MT-2",
+        "WO-SCN-MT-3",
+        "WO-SCN-MT-4"
+      ],
+      "initialState": "已排期（3 天后）/ 今日待开始 / 处理中 / 已完成 各一张",
+      "demonstrates": "与故障工单的文案、时限（14 天）和日程区分"
+    },
+    {
+      "key": "normal",
+      "title": {
+        "zh": "正常设备",
+        "en": "Normal device"
+      },
+      "objects": [
+        "DEV-SCN-03"
+      ],
+      "initialState": "无活动阻断故障的在线设备",
+      "demonstrates": "正常详情、正常地图点、合理空态"
+    },
+    {
+      "key": "schedule",
+      "title": {
+        "zh": "日程",
+        "en": "Schedule"
+      },
+      "objects": [
+        "EV-SCN-TODAY",
+        "EV-SCN-TOMORROW",
+        "EV-SCN-ALLDAY",
+        "EV-SCN-MULTIDAY",
+        "EV-SCN-CROSSMONTH"
+      ],
+      "initialState": "今天稍后 / 明天 / 明天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）",
+      "demonstrates": "新建/编辑/改期/详情/空态/未来列表"
+    },
+    {
+      "key": "reports",
+      "title": {
+        "zh": "报表与导出",
+        "en": "Reports & export"
+      },
+      "objects": [
+        "DEV-SCN-01",
+        "ALM-SCN-MAIN"
+      ],
+      "initialState": "聚合同源：KPI/地图/PDF/截图都从同一数据派生",
+      "demonstrates": "PDF、截图与页面指标能对上当前状态"
+    }
+  ],
+  "objectIds": {
+    "mainDevice": "DEV-SCN-01",
+    "multiDevice": "DEV-SCN-02",
+    "okDevice": "DEV-SCN-03",
+    "mainAlarm": "ALM-SCN-MAIN",
+    "multiAlarm1": "ALM-SCN-MULTI-1",
+    "multiAlarm2": "ALM-SCN-MULTI-2",
+    "historyAlarm": "ALM-SCN-HIST",
+    "falsePositiveAlarm": "ALM-SCN-FP",
+    "urgentAlarm": "ALM-SCN-URGENT",
+    "urgentTicket": "WO-SCN-URGENT",
+    "slaNearAlarm": "ALM-SCN-SLA-NEAR",
+    "slaNear": "WO-SCN-SLA-NEAR",
+    "slaOverAlarm": "ALM-SCN-SLA-OVER",
+    "slaOver": "WO-SCN-SLA-OVER",
+    "slaOkAlarm": "ALM-SCN-SLA-OK",
+    "slaOk": "WO-SCN-SLA-OK",
+    "slaLateAlarm": "ALM-SCN-SLA-LATE",
+    "slaLate": "WO-SCN-SLA-LATE",
+    "accept1Alarm": "ALM-SCN-ACC-1",
+    "accept1": "WO-SCN-ACC-1",
+    "accept2Alarm": "ALM-SCN-ACC-2",
+    "accept2": "WO-SCN-ACC-2",
+    "reworkAlarm": "ALM-SCN-REWORK",
+    "reworkTicket": "WO-SCN-REWORK",
+    "historyTicket": "WO-SCN-HIST",
+    "maintenanceScheduled": "WO-SCN-MT-1",
+    "maintenanceToday": "WO-SCN-MT-2",
+    "maintenanceDoing": "WO-SCN-MT-3",
+    "maintenanceDone": "WO-SCN-MT-4",
+    "eventToday": "EV-SCN-TODAY",
+    "eventTomorrow": "EV-SCN-TOMORROW",
+    "eventAllDay": "EV-SCN-ALLDAY",
+    "eventMultiDay": "EV-SCN-MULTIDAY",
+    "eventCrossMonth": "EV-SCN-CROSSMONTH"
+  }
+}

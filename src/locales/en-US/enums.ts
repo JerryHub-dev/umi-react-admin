@@ -94,4 +94,10 @@ export default {
   'permission.ops.ticket.close': 'Complete tickets',
   'permission.doc': 'Documents',
   'permission.doc.export': 'Export reports',
+  'permission.system.demo.reset': 'Demo scenario & reset',
+  'permission.ops.ticket.accept': 'Accept tickets',
+  'permission.ops.schedule.update': 'Manage schedules',
+  'logAction.userImport': 'Bulk user import',
+  'logAction.ticketAccept': 'Ticket acceptance',
+  'logAction.ticketRework': 'Ticket rework',
 };
