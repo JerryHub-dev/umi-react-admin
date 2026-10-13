@@ -24,3 +24,13 @@ updates:
         update-types:
           - patch
           - minor
+
+  # Dockerfile 的基镜像按 digest 钉固（nginx 线与多架构 index 需要成对升级），
+  # 由 dependabot 每周提出 tag+digest 成对更新的 PR，人工复核 nginx 线与 CVE 公告后合并
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      docker-digests:
+        patterns: ["*"]

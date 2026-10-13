@@ -153,7 +153,6 @@ const umiTestRules = {
 export default defineConfig(
   {
     ignores: [
-      'public/Cesium/',
       'public/js/',
       'dist/',
       'src/.umi/',
