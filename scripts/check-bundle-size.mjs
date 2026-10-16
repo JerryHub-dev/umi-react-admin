@@ -1,6 +1,8 @@
 // 首屏体积度量与预算门禁（审计 perf-11：84ada98 声称减小体积却无产物体积记录）
 // 用法：node scripts/check-bundle-size.mjs（需先 pnpm build；CI 在构建后自动执行）
 // 阈值见仓库根 size-budget.json；任一超限 exit 1。
+// 门禁还要求「实测 ≤ 预算 × 0.95」：预算贴着实测值时，一次轻微回退就会先用尽余量，
+// 压线通过等于没有预算，见 HEADROOM 注释。
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,14 +24,32 @@ const budget = JSON.parse(readFileSync(join(root, 'size-budget.json'), 'utf8'));
 const L = budget.limits;
 const failures = [];
 
-/** 产物内路径（可带 publicPath 前缀，如 /umi-react-admin/umi.js）→ dist 内文件 */
+/**
+ * 最低余量比例：实测 > 预算 × 0.95 即失败（预算本身不动，见 size-budget.json）。
+ * 起因：多个指标实测曾贴到预算的 99%（入口 690/700、首页 1247/1250），预算失去预警作用——
+ * 任何一次依赖升级或新增组件都会直接冲线，而"刚好压线通过"看起来仍是绿灯。
+ * 留 5% 后：入口/登录 ≤665KB、首页 ≤1187KB、dist ≤28.5MB、public ≤3.8MB。
+ */
+const HEADROOM = 0.95;
+/** 预算的 95% 余量线；整数量纲（KB/MB/个数）与门禁的展示口径一致 */
+const ceiling = (limit) => limit * HEADROOM;
+/** 实测是否超过余量线（等于余量线视为通过，与"实测 > 预算 × 0.95 即失败"一致） */
+const overCeiling = (measured, limit) => measured > ceiling(limit);
+const headroomNote = (limit) => `，95% 余量线 ≤${Math.round(ceiling(limit) * 10) / 10}`;
+
+/**
+ * 产物内路径（可带 publicPath 前缀，如 /umi-react-admin/umi.js）→ dist 内文件。
+ * 只接受**普通文件**：`existsSync` 对目录同样为真，返回目录会让后面的 readFileSync 以
+ * EISDIR 崩掉（独立复审 2026-10-14 发现的既有缺陷）。
+ */
 const distFile = (src) => {
   const rel = src.replace(/^https?:\/\/[^/]+/, '').replace(/^\//, '');
+  const isFile = (candidate) => existsSync(candidate) && statSync(candidate).isFile();
   const direct = join(distDir, rel);
-  if (existsSync(direct)) return direct;
+  if (isFile(direct)) return direct;
   // 兼容 GitHub Pages 构建的 /umi-react-admin/ 前缀
   const stripped = join(distDir, rel.split('/').slice(1).join('/'));
-  return existsSync(stripped) ? stripped : null;
+  return isFile(stripped) ? stripped : null;
 };
 
 const sizeOf = (file) => {
@@ -50,29 +70,46 @@ for (const tag of html.match(/<script\b[^>]*>/g) || []) {
 let initialRaw = 0;
 let initialGzip = 0;
 const rows = [];
+/** index.html 引用了、但在产物里找不到的脚本：必须判失败，不能静默跳过 */
+const unresolvedScripts = [];
 for (const src of syncScripts) {
   const file = distFile(src);
-  if (!file) continue;
+  if (!file) {
+    // 静默 continue 会让「同步脚本计数」与「体积合计」脱钩：缺失的大 chunk 不计入总量，
+    // 门禁就会少算（独立复审 2026-10-14 发现的既有缺陷）。
+    unresolvedScripts.push(src);
+    continue;
+  }
   const { raw, gzip } = sizeOf(file);
   initialRaw += raw;
   initialGzip += gzip;
   rows.push({ src, raw, gzip });
 }
+if (unresolvedScripts.length) {
+  failures.push(`index.html 引用的同步脚本在产物中不存在（体积合计会少算）：${unresolvedScripts.join(', ')}`);
+}
 rows.sort((a, b) => b.gzip - a.gzip);
 
 console.log(
-  `入口同步脚本: ${syncScripts.length} 个（预算 ≤${L.syncScripts}，治理前基线 ${budget.baseline.syncScripts}）`,
+  `入口同步脚本: ${syncScripts.length} 个（预算 ≤${L.syncScripts}${headroomNote(L.syncScripts)}，治理前基线 ${budget.baseline.syncScripts}）`,
 );
 console.log(
   `入口 JS 体积: raw ${(initialRaw / 1024 / 1024).toFixed(2)}MB / gzip ${kb(initialGzip)}KB（预算 ≤${
     L.firstScreenGzipKB
-  }KB）`,
+  }KB${headroomNote(L.firstScreenGzipKB)}）`,
 );
 for (const r of rows)
   console.log(`  ${String(kb(r.gzip)).padStart(5)}KB gzip  ${String(kb(r.raw)).padStart(6)}KB raw  ${r.src}`);
-if (syncScripts.length > L.syncScripts) failures.push(`入口同步脚本 ${syncScripts.length} > ${L.syncScripts}`);
-if (kb(initialGzip) > L.firstScreenGzipKB)
-  failures.push(`入口 JS gzip ${kb(initialGzip)}KB > ${L.firstScreenGzipKB}KB`);
+if (overCeiling(syncScripts.length, L.syncScripts))
+  failures.push(
+    `入口同步脚本 ${syncScripts.length} > ${ceiling(L.syncScripts)}（预算 ${L.syncScripts} 的 95% 余量线）`,
+  );
+if (overCeiling(kb(initialGzip), L.firstScreenGzipKB))
+  failures.push(
+    `入口 JS gzip ${kb(initialGzip)}KB > ${Math.round(ceiling(L.firstScreenGzipKB))}KB（预算 ${
+      L.firstScreenGzipKB
+    }KB 的 95% 余量线）`,
+  );
 
 // ---- 2. 路由真实首屏：入口 + 布局 + 路由自身及其全部异步依赖 ----
 if (!existsSync(chunkGraphPath)) {
@@ -99,11 +136,15 @@ if (!existsSync(chunkGraphPath)) {
     console.log(
       `\n路由首屏 ${route}: ${files.length} 个 JS / raw ${(total.raw / 1024 / 1024).toFixed(2)}MB / gzip ${kb(
         total.gzip,
-      )}KB（预算 ≤${rule.maxGzipKB}KB）`,
+      )}KB（预算 ≤${rule.maxGzipKB}KB${headroomNote(rule.maxGzipKB)}）`,
     );
     console.log(`  ${files.join(' ')}`);
-    if (kb(total.gzip) > rule.maxGzipKB)
-      failures.push(`路由 ${route} 首屏 gzip ${kb(total.gzip)}KB > ${rule.maxGzipKB}KB`);
+    if (overCeiling(kb(total.gzip), rule.maxGzipKB))
+      failures.push(
+        `路由 ${route} 首屏 gzip ${kb(total.gzip)}KB > ${Math.round(ceiling(rule.maxGzipKB))}KB（预算 ${
+          rule.maxGzipKB
+        }KB 的 95% 余量线）`,
+      );
   }
 }
 
@@ -122,10 +163,12 @@ const dirSizeMB = (dir) => {
 };
 const distMB = dirSizeMB(distDir);
 const publicMB = dirSizeMB(join(root, 'public'));
-console.log(`\ndist 总体积: ${distMB.toFixed(1)}MB（预算 ≤${L.distMB}MB）`);
-console.log(`public 总体积: ${publicMB.toFixed(1)}MB（预算 ≤${L.publicMB}MB）`);
-if (distMB > L.distMB) failures.push(`dist ${distMB.toFixed(1)}MB > ${L.distMB}MB`);
-if (publicMB > L.publicMB) failures.push(`public ${publicMB.toFixed(1)}MB > ${L.publicMB}MB`);
+console.log(`\ndist 总体积: ${distMB.toFixed(1)}MB（预算 ≤${L.distMB}MB${headroomNote(L.distMB)}）`);
+console.log(`public 总体积: ${publicMB.toFixed(1)}MB（预算 ≤${L.publicMB}MB${headroomNote(L.publicMB)}）`);
+if (overCeiling(distMB, L.distMB))
+  failures.push(`dist ${distMB.toFixed(1)}MB > ${ceiling(L.distMB)}MB（预算 ${L.distMB}MB 的 95% 余量线）`);
+if (overCeiling(publicMB, L.publicMB))
+  failures.push(`public ${publicMB.toFixed(1)}MB > ${ceiling(L.publicMB)}MB（预算 ${L.publicMB}MB 的 95% 余量线）`);
 
 // ---- 4. 样式管线覆盖检查（审计 extra-3-9）----
 // 源码中使用的 tailwind 工具类必须在构建产物的样式表中存在，

@@ -43,6 +43,13 @@ jobs:
       - name: Quality gates（typecheck + 严格 lint + vitest，含演示数据合理性与 CSP 一致性）
         run: pnpm check
 
+      - name: Coverage gate（vitest --coverage，阈值见 vitest.config.ts）
+        # Q1：`pnpm check` 只跑 `vitest run`，vitest.config.ts 里的 thresholds 从不被执行 = 形同虚设。
+        # 这里用带 --coverage 的命令再跑一次，阈值（statements 60 / branches 50 / functions 60 / lines 60）
+        # 才真正拦得住回归。注意 include 是**选定域**（utils / services / demo + 安全相关页面逻辑），
+        # 日志里的百分比不是全项目覆盖率（全项目口径见 vitest.config.ts 注释）。
+        run: pnpm test:coverage
+
       - name: Dependency audit（全量公告、真实源码补丁和攻击回归；不忽略公告）
         run: pnpm audit:security
 
