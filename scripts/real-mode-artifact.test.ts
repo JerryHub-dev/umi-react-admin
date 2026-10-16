@@ -95,7 +95,8 @@ const entryChunksContaining = (marker: string) =>
  * 有产物时按产物自身的模式断言，两种方向都是实断言，不存在「跳过即通过」。
  */
 (artifactExists ? describe : describe.skip)('产物模式断言（Q3：真实模式不打包演示代码）', () => {
-  const demoMode = readArtifactMode();
+  // describe.skip 仍会执行这个回调来收集用例：无产物时不能读 version.json（CI 的 check 作业就是这种情况）
+  const demoMode = artifactExists ? readArtifactMode() : undefined;
 
   it('入口同步脚本可解析，且产物模式可判定', () => {
     expect(entryChunks().length).toBeGreaterThan(0);
