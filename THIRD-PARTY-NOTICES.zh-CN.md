@@ -25,6 +25,7 @@
 | --- | --- | --- |
 | `public/audio/audio.wav`、`public/audio/stereo.wav` | 项目自制（正弦合成音频） | 随项目 MIT |
 | `public/data/cesium/*.json`（覆盖包络、场强测试、站点覆盖多边形）、`src/demo/`（演示数据生成器与词库） | 项目自制演示数据 | 随项目 MIT |
+| `public/_headers`、`public/_redirects`、`public/api-not-configured.json` | 项目自制的部署配置（Cloudflare Pages 响应头与 `/api` 改写） | 随项目 MIT |
 | `public/demo/users-*.xlsx`、`docs/demo/screenshots/` | 项目自制（Excel 样例由 `scripts/make-demo-samples.mjs` 确定性生成；截图为本项目 UI 走查产出） | 随项目 MIT |
 | 音频播放器页的歌词与唱片/背景 | 项目自制（自写示例 LRC；唱片与背景为纯 CSS 绘制） | 随项目 MIT |
 | 视频播放器页示例视频/海报 | xgplayer 官方演示 CDN（字节跳动文档示例资源） | 页面运行时引用，不随仓库分发 |

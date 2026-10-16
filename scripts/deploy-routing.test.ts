@@ -14,9 +14,10 @@ import { afterEach, describe, expect, it } from 'vitest';
  * 绝不能把 SPA 的 index.html 当成接口响应（原 vercel.json 的 "/(.*)" -> "/index.html"
  * 会把 /api/v1/* 变成 200 HTML，前端会把 HTML 解析成接口数据）。
  *
- * 这里把三个面放在一起比对：
+ * 这里把四个面放在一起比对：
  * - vercel.json 的 rewrites（显式 /api 规则 + 不可能匹配 /api 的 SPA 回退）+ api/ 下的函数
- * - nginx/default.conf 的 `location ^~ /api/`
+ * - public/_redirects（Cloudflare Pages：平台只支持 3xx/200，/api 改写到 success:false 的静态 JSON）
+ * - nginx/default.conf 的 `location ~ ^/api(/|$)`
  * - scripts/serve-dist.mjs（GitHub Pages 等价本地服务器）的实际 HTTP 行为
  *
  * Vercel 的 rewrites 无法表达状态码，所以真正的 404/503 由 api/ 下的函数给出（见 api/[...path].js）。
@@ -278,6 +279,60 @@ describe('Vercel 函数入口 api/index.js：裸 /api 与 /api/ 也闭合失败�
       const v1 = await invoke({ url: '/api/v1/users' }, apiIndexHandler);
       expect(expectFailClosed(v1, [503])).toMatchObject({ error: 'backend_not_configured' });
     });
+  });
+});
+
+describe('Cloudflare Pages：/api 改写为 JSON，不回落 SPA（F6）', () => {
+  /** public/_redirects 的有效规则（去掉注释与空行）：[source, destination, status] */
+  const rules = read('public/_redirects')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => line.split(/\s+/) as [string, string, string?]);
+  const target = '/api-not-configured.json';
+
+  /**
+   * Pages 的匹配语义最小复刻：source 精确匹配，或含一个贪婪的 `*`（splat，可匹配空串）；
+   * 多条规则命中同一路径时取最靠上的一条（Pages 文档：top-most redirect is applied）。
+   */
+  const firstMatch = (pathname: string) =>
+    rules.find(([source]) =>
+      source.includes('*')
+        ? pathname.startsWith(source.slice(0, source.indexOf('*'))) &&
+          pathname.endsWith(source.slice(source.indexOf('*') + 1))
+        : pathname === source,
+    );
+
+  it('/api、/api/ 与 /api/v1/* 都被改写到静态 JSON（200 改写，不是跳转）', () => {
+    for (const pathname of ['/api', '/api/', '/api/v1/users', '/api/v1/users/U1001']) {
+      const rule = firstMatch(pathname);
+      // 3xx 会让浏览器跟着跳到别处、最后落到 SPA HTML；只有 200 改写能就地给出 JSON
+      expect({ pathname, destination: rule?.[1], status: rule?.[2] }).toEqual({
+        pathname,
+        destination: target,
+        status: '200',
+      });
+    }
+  });
+
+  it('不误伤 SPA 路径与静态资源，改写目标本身不会再被改写（无循环）', () => {
+    for (const pathname of ['/apiary', '/dashboard', '/system/users', target, '/index.html']) {
+      expect({ pathname, rule: firstMatch(pathname) }).toEqual({ pathname, rule: undefined });
+    }
+  });
+
+  it('改写目标是信封形状的 JSON：success:false + errorCode 404，绝不含 HTML', () => {
+    const raw = read(`public${target}`);
+    expect(raw).not.toContain('<');
+    const body = JSON.parse(raw) as Record<string, unknown>;
+    // 平台限制下状态码只能是 200：前端请求层（src/utils/requestConfig.ts 的 errorThrower）
+    // 把 success:false 转成 BizError，所以应用侧同样闭合失败
+    expect(body).toMatchObject({ success: false, data: null, errorCode: 404, error: 'not_found' });
+  });
+
+  it('仓库不带顶层 404.html：Pages 保持 SPA 回退，_redirects 在回落之前生效', () => {
+    // 有 public/404.html 时 Pages 会关闭 SPA 模式，深链改为 404 页；GitHub Pages 的 404.html 只在 deploy.yml 里临时生成
+    expect(() => read('public/404.html')).toThrow();
   });
 });
 
