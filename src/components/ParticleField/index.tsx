@@ -6,11 +6,15 @@ import {
   createGroups,
   createMotion,
   DOT_LEVELS,
+  follow,
+  frameGap,
   groupByBucket,
   idleFocus,
+  introScale,
   layoutParticles,
   LEVELS,
   levelStyle,
+  QUIET_DIM,
   ringRadius,
   spacingFor,
   stepMotion,
@@ -22,6 +26,8 @@ import {
 export interface ParticleFieldProps {
   /** 暗色底：同档粒子更亮 */
   dark?: boolean;
+  /** 安静模式（如用户正在输入）：浪平息、整体压暗，不和前景抢注意力 */
+  quiet?: boolean;
   className?: string;
 }
 
@@ -31,12 +37,15 @@ const PALETTE = buildPalette();
  * 跟随指针的粒子光环背景（Canvas 2D，无第三方依赖）。算法与参数见 ./field.ts。
  *
  * - 纯装饰：aria-hidden，且应由调用方加 pointer-events-none，指针事件在 window 上监听，不挡表单；
- * - prefers-reduced-motion 时只画一帧静态画面，不跑动画循环、不跟随指针；
- * - 后台标签页 requestAnimationFrame 自动暂停；卸载时取消循环并解除全部监听。
+ * - prefers-reduced-motion 或强制颜色（Windows 高对比度）时只画一帧静态画面，不跑动画循环、不跟随指针；
+ *   强制颜色下调用方还应把画布隐藏（forced-colors:hidden）；
+ * - 后台标签页 requestAnimationFrame 自动暂停；窗口失焦、长时间无操作时降帧（见 frameGap）；
+ * - 卸载时取消循环并解除全部监听。
  */
-const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }) => {
+const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, quiet = false, className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const darkRef = useRef(dark);
+  const quietRef = useRef(quiet);
   const redrawRef = useRef<() => void>(undefined);
 
   useEffect(() => {
@@ -46,11 +55,16 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
   }, [dark]);
 
   useEffect(() => {
+    quietRef.current = quiet;
+  }, [quiet]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return undefined;
 
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const media = (query: string) => window.matchMedia?.(query).matches ?? false;
+    const still = media('(prefers-reduced-motion: reduce)') || media('(forced-colors: active)');
     let width = 0;
     let height = 0;
     let radius = 0;
@@ -65,15 +79,19 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
     let raf = 0;
     let last = 0;
     let time = 0;
+    let quietLevel = 0;
+    let blurred = false;
+    let lastInput = performance.now();
 
     // dt <= 0：静态画面，粒子直接落到目标状态
     const draw = (dt = 0) => {
       ctx.clearRect(0, 0, width, height);
-      computeFrame(layout, frame, motion, radius, time, dt);
+      computeFrame(layout, frame, motion, still ? radius : radius * introScale(time), time, dt);
       groupByBucket(frame, layout.count, groups);
       const { counts, starts, order } = groups;
       const { seg } = frame;
       const isDark = darkRef.current;
+      const dim = 1 - QUIET_DIM * quietLevel;
       ctx.lineCap = 'round';
       for (let b = 0; b < counts.length; b++) {
         const n = counts[b];
@@ -82,7 +100,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
         const style = levelStyle(level, isDark);
         const color = PALETTE[(b - level) / LEVELS];
         const end = starts[b] + n;
-        ctx.globalAlpha = style.alpha;
+        ctx.globalAlpha = style.alpha * dim;
         ctx.beginPath();
         if (level < DOT_LEVELS) {
           // 远处的淡点：取线段中点画小方块，一次 fill
@@ -124,21 +142,28 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
       radius = ringRadius(width, height);
       if (!started) {
         [motion.x, motion.y] = idleFocus(time, width, height);
+        // 入场带一点初始扰动：第一圈浪更活泼，随后自然平息
+        if (!still) motion.energy = 0.5;
         started = true;
       }
-      if (reduced) draw();
+      if (still) draw();
     };
 
     const tick = (now: number) => {
-      // 切回标签页时 dt 会很大：封顶，避免光环瞬移
-      const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+      raf = requestAnimationFrame(tick);
+      if (last && now - last < frameGap(blurred, now - lastInput) - 1) return;
+      // 切回标签页时 dt 会很大：封顶，避免光环瞬移。首帧也按一帧推进而不是直接落定，
+      // 亮度从零升起、粒子被弹簧推开，和入场半径一起构成那圈涟漪
+      const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
       last = now;
       time += dt;
       if (!pointerActive) [targetX, targetY] = idleFocus(time, width, height);
       // 跟指针时跟手一些，回到游走时慢慢滑过去；中心移动的快慢决定这一刻的浪有多大
       stepMotion(motion, targetX, targetY, dt, pointerActive ? 5 : 1.4);
+      quietLevel = follow(quietLevel, quietRef.current ? 1 : 0, dt, 3);
+      // 安静模式：扰动能量较快衰减，浪回到最平缓的状态
+      if (quietLevel > 0) motion.energy *= 1 - Math.min(1, quietLevel * dt * 3);
       draw(dt);
-      raf = requestAnimationFrame(tick);
     };
 
     const onMove = (event: PointerEvent) => {
@@ -146,6 +171,17 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
       targetX = event.clientX - rect.left;
       targetY = event.clientY - rect.top;
       pointerActive = true;
+      lastInput = performance.now();
+    };
+    const onKey = () => {
+      lastInput = performance.now();
+    };
+    const onBlur = () => {
+      blurred = true;
+    };
+    const onFocus = () => {
+      blurred = false;
+      lastInput = performance.now();
     };
     // 鼠标移出窗口（relatedTarget 为空）或触摸结束：交还给游走路径
     const onOut = (event: PointerEvent) => {
@@ -158,13 +194,16 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     resize();
-    redrawRef.current = reduced ? () => draw() : undefined;
+    redrawRef.current = still ? () => draw() : undefined;
 
-    if (!reduced) {
+    if (!still) {
       window.addEventListener('pointermove', onMove, { passive: true });
       document.addEventListener('pointerout', onOut);
       window.addEventListener('pointerup', onTouchEnd);
       window.addEventListener('pointercancel', onTouchEnd);
+      window.addEventListener('keydown', onKey);
+      window.addEventListener('blur', onBlur);
+      window.addEventListener('focus', onFocus);
       raf = requestAnimationFrame(tick);
     }
 
@@ -176,6 +215,9 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
       document.removeEventListener('pointerout', onOut);
       window.removeEventListener('pointerup', onTouchEnd);
       window.removeEventListener('pointercancel', onTouchEnd);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
     };
   }, []);
 

@@ -8,9 +8,13 @@ import {
   edgeRadius,
   envelope,
   follow,
+  frameGap,
   groupByBucket,
   HUES,
+  IDLE_MS,
   idleFocus,
+  INTRO_SECONDS,
+  introScale,
   layoutParticles,
   LEVELS,
   levelStyle,
@@ -230,5 +234,15 @@ describe('粒子光环计算', () => {
     palette.forEach((c) => expect(c).toMatch(/^rgb\(\d{1,3},\d{1,3},\d{1,3}\)$/));
     expect(levelStyle(LEVELS - 1, false).alpha).toBeCloseTo(1);
     expect(levelStyle(0, true).alpha).toBeGreaterThan(levelStyle(0, false).alpha);
+  });
+
+  it('入场半径从小到大缓出，降帧规则按失焦与空闲时长', () => {
+    expect(introScale(0)).toBeCloseTo(0.3);
+    expect(introScale(INTRO_SECONDS / 2)).toBeGreaterThan(0.3 + 0.7 * 0.5);
+    expect(introScale(INTRO_SECONDS)).toBe(1);
+    expect(introScale(INTRO_SECONDS * 3)).toBe(1);
+    expect(frameGap(false, 0)).toBe(0);
+    expect(frameGap(false, IDLE_MS + 1)).toBe(33);
+    expect(frameGap(true, 0)).toBe(50);
   });
 });

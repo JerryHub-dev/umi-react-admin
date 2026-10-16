@@ -46,6 +46,12 @@ const GLOW_RISE = 9;
 const GLOW_FALL = 2.2;
 /** 光环中心速度达到它时扰动能量饱和（px/s） */
 const ENERGY_SPEED = 900;
+/** 入场：光环从小半径像一圈涟漪扩散到正常大小所用的秒数 */
+export const INTRO_SECONDS = 1.6;
+/** 指针与键盘静止这么久（ms）后降到 30 帧 */
+export const IDLE_MS = 8000;
+/** 安静模式（用户正在输入）下整体压暗的比例 */
+export const QUIET_DIM = 0.4;
 
 /** 品牌蓝起步的循环色环（首尾相接，插值时回到起点） */
 const STOPS: [number, number, number][] = [
@@ -220,6 +226,18 @@ export const idleFocus = (t: number, width: number, height: number): [number, nu
     height * (narrow ? 0.16 + 0.05 * Math.sin(t * 0.29 + 1) : 0.48 + 0.14 * Math.sin(t * 0.29 + 1)),
   ];
 };
+
+/** 入场半径系数：从 0.3 以缓出曲线涨到 1，配合亮度从零升起，看起来像一圈涟漪从中心荡开 */
+export const introScale = (t: number) => {
+  const p = Math.min(1, Math.max(0, t / INTRO_SECONDS));
+  return 0.3 + 0.7 * (1 - (1 - p) ** 3);
+};
+
+/**
+ * 两帧之间的最小间隔（ms）：窗口失焦（用户在看别的窗口）降到 20 帧，长时间无操作降到 30 帧，其余满帧。
+ * 慢速游走在 30 帧下看不出差别，笔记本停在登录页时风扇与电量都更省。
+ */
+export const frameGap = (blurred: boolean, idleMs: number) => (blurred ? 50 : idleMs > IDLE_MS ? 33 : 0);
 
 /** 某一强度档的线宽与不透明度；暗色底上同档更亮一些 */
 export const levelStyle = (level: number, dark: boolean) => {
