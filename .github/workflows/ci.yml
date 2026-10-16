@@ -53,8 +53,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 两条产线都冒烟：主产线（Vercel/Docker）与 GitHub Pages 子路径产线
-        script: ['build:demo', 'build:github:demo']
+        # 三条产线都冒烟：主产线（Vercel/Docker）、GitHub Pages 子路径产线，以及 real 模式产线。
+        # real 模式单独一项是必需的：Q3 的断言只能在 real 模式产物上跑（见下面那一步），
+        # 而 check job 的 vitest 在任何构建之前执行，没有产物可断言。
+        script: ['build:demo', 'build:github:demo', 'build:real']
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -79,6 +81,17 @@ jobs:
       - name: 体积预算与样式覆盖门禁
         if: matrix.script == 'build:demo'
         run: node scripts/check-bundle-size.mjs
+
+      - name: real 模式不得把浏览器演示后端带进入口（Q3）
+        # 独立复审 2026-10-14 发现：这个断言此前在 CI 里永远不会执行——check job 的 vitest 跑在
+        # 任何构建之前（没有产物可断言），build/e2e job 又从不运行 vitest。所以把 real 模式
+        # 单独列为一条产线，构建完立刻在真实产物上断言「没有 demo-only 标记 + 有 stub 哨兵」。
+        # REAL_MODE_ARTIFACT_REQUIRED=1：这条产线必须拿到 real 产物，拿不到就失败而不是静默跳过
+        # （否则「构建成 demo 产物」的错配会让断言反向通过）。
+        if: matrix.script == 'build:real'
+        env:
+          REAL_MODE_ARTIFACT_REQUIRED: '1'
+        run: pnpm exec vitest run scripts/real-mode-artifact.test.ts
 
       - name: 产物 JWT 泄露扫描
         # 补审计 security-6 的盲区：曾发生 token 经 define 注入构建产物并部署到 gh-pages。
