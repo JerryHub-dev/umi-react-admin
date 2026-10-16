@@ -4,8 +4,8 @@ import {
   computeFrame,
   createFrame,
   createGroups,
+  createMotion,
   DOT_LEVELS,
-  follow,
   groupByBucket,
   idleFocus,
   layoutParticles,
@@ -13,6 +13,7 @@ import {
   levelStyle,
   ringRadius,
   spacingFor,
+  stepMotion,
   type Frame,
   type Groups,
   type Layout,
@@ -56,8 +57,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
     let layout: Layout = layoutParticles(0, 0, 1);
     let frame: Frame = createFrame(0);
     let groups: Groups = createGroups(0);
-    let focusX = 0;
-    let focusY = 0;
+    const motion = createMotion(0, 0);
     let targetX = 0;
     let targetY = 0;
     let pointerActive = false;
@@ -66,9 +66,10 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
     let last = 0;
     let time = 0;
 
-    const draw = () => {
+    // dt <= 0：静态画面，粒子直接落到目标状态
+    const draw = (dt = 0) => {
       ctx.clearRect(0, 0, width, height);
-      computeFrame(layout, frame, focusX, focusY, radius, time);
+      computeFrame(layout, frame, motion, radius, time, dt);
       groupByBucket(frame, layout.count, groups);
       const { counts, starts, order } = groups;
       const { seg } = frame;
@@ -122,7 +123,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
       groups = createGroups(layout.count);
       radius = ringRadius(width, height);
       if (!started) {
-        [focusX, focusY] = idleFocus(time, width, height);
+        [motion.x, motion.y] = idleFocus(time, width, height);
         started = true;
       }
       if (reduced) draw();
@@ -134,11 +135,9 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
       last = now;
       time += dt;
       if (!pointerActive) [targetX, targetY] = idleFocus(time, width, height);
-      // 跟指针时跟手一些，回到游走时慢慢滑过去
-      const rate = pointerActive ? 5 : 1.4;
-      focusX = follow(focusX, targetX, dt, rate);
-      focusY = follow(focusY, targetY, dt, rate);
-      draw();
+      // 跟指针时跟手一些，回到游走时慢慢滑过去；中心移动的快慢决定这一刻的浪有多大
+      stepMotion(motion, targetX, targetY, dt, pointerActive ? 5 : 1.4);
+      draw(dt);
       raf = requestAnimationFrame(tick);
     };
 
@@ -159,7 +158,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, className }
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     resize();
-    redrawRef.current = reduced ? draw : undefined;
+    redrawRef.current = reduced ? () => draw() : undefined;
 
     if (!reduced) {
       window.addEventListener('pointermove', onMove, { passive: true });
