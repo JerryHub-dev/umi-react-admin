@@ -1,6 +1,6 @@
 import DemoPage from '@/components/DemoPage';
 import { useChartTheme } from '@/hooks/useChartTheme';
-import { PauseCircleOutlined, PlayCircleOutlined, SwapOutlined } from '@ant-design/icons';
+import { PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import { Button, Card, Segmented, Space, Typography } from 'antd';
 import { useEffect, useRef, useState } from 'react';
@@ -70,7 +70,6 @@ export default function AudioWaveform() {
           options={CLIPS.map((_, index) => ({
             value: index,
             label: t('audio.clip', { index: index + 1 }),
-            icon: <SwapOutlined />,
           }))}
         />
       }

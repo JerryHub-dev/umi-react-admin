@@ -10,9 +10,9 @@ import { safeSignature } from '@/utils/signature';
 import {
   CheckOutlined,
   ClearOutlined,
+  DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
-  FormatPainterOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
@@ -304,13 +304,14 @@ export default function Signature() {
                       onChange={(value) => setTool(value as 'pen' | 'eraser')}
                       options={[
                         { value: 'pen', icon: <EditOutlined />, label: t('signature.pen') },
-                        { value: 'eraser', icon: <FormatPainterOutlined />, label: t('signature.eraser') },
+                        // antd 没有橡皮图标：用「清除」笔刷表示擦除（FormatPainter 是格式刷，含义不符），整板清空改用删除图标
+                        { value: 'eraser', icon: <ClearOutlined />, label: t('signature.eraser') },
                       ]}
                     />
                     <Button icon={<UndoOutlined />} onClick={undo}>
                       {t('signature.undo')}
                     </Button>
-                    <Button icon={<ClearOutlined />} onClick={clear}>
+                    <Button icon={<DeleteOutlined />} onClick={clear}>
                       {t('signature.clear')}
                     </Button>
                   </Space>

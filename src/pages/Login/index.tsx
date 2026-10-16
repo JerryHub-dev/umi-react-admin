@@ -8,10 +8,10 @@ import { BizError } from '@/utils/BizError';
 import {
   CheckCircleFilled,
   EyeOutlined,
-  GlobalOutlined,
   MoonOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
+  TranslationOutlined,
 } from '@ant-design/icons';
 import { getLocale, history, setLocale, useIntl, useLocation, useModel } from '@umijs/max';
 import { App, Button, Card, Divider, Dropdown, Form, Input, Typography } from 'antd';
@@ -99,7 +99,7 @@ const Login: React.FC = () => {
               onClick: ({ key }) => setLocale(key),
             }}
           >
-            <Button type="text" aria-label={t('header.language')} icon={<GlobalOutlined />} />
+            <Button type="text" aria-label={t('header.language')} icon={<TranslationOutlined />} />
           </Dropdown>
         </div>
 

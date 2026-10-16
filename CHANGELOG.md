@@ -6,6 +6,13 @@ Maintained in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) forma
 
 ## [Unreleased]
 
+### Logo & icon redesign (2026-10-16)
+
+- **Project logo**: the signal-ripple mark (read as an RSS feed icon) is replaced by a monitoring-radar mark — scope rings, crosshair, a sweep sector and a cyan target blip inside it, i.e. the demo's station → alarm story. `public/logo.svg` serves the in-app logo (ProLayout, sign-in page) and the README heading; `public/favicon.svg` is a separately drawn small-size variant (no inner ring, heavier strokes) so the browser tab stays legible at 16px
+- **Site icons**: a full favicon set replaces the single `shortcut icon` — `favicon.ico` (16/32/48, for browsers without SVG icons and direct `/favicon.ico` requests, which previously fell through to the SPA HTML on nginx), `favicon.svg`, and a 180×180 full-bleed `apple-touch-icon.png`. The `<link>` tags come from one helper (`config/favicons.ts`) used by both build pipelines; the bitmaps are regenerated deterministically from the SVGs with `node scripts/make-icons.mjs`
+- **Menu icons** now match what each page does and no longer repeat: device ops → wrench (was an org-chart cluster), operation logs → audit, map group → compass, Cesium 3D → globe (was a network-node glyph), OpenLayers → layers (its compass clashed with the feature-tour entry), signature → signature, screenshot → camera (was scissors), audio waveform → sound (was a microphone; the page does not record), 500 → server (bug stays with the repo Issues link)
+- **In-page icons**: the language switcher (header and sign-in page) uses the translation icon instead of the globe that the map menu used; the feature tour uses the help icon; the signature eraser uses the clear brush instead of the format painter, and "clear" uses delete; Excel "export all users" uses export instead of a second download icon; the meaningless swap icon on every audio clip option is removed
+
 ### Open-source polish & structure audit fixes (2026-10-13)
 
 - **README**: corrected the antd version to 6; updated the sign-in description to the five one-click roles and the current "permission points as the single authorization source" semantics; added a table of contents, a CHANGELOG link and 4 demo screenshots. README.md is now the **full English primary document**, with the complete Chinese version moved to [README.zh-CN.md](README.zh-CN.md) (cross-linked at the top of both)

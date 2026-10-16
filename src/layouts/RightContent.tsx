@@ -7,14 +7,14 @@ import { getDemoClock, resetDemoData, switchDemoScenario } from '@/services/syst
 import { avatarColor, avatarText } from '@/utils/avatar';
 import { formatDateTime } from '@/utils/format';
 import {
-  CompassOutlined,
   FieldTimeOutlined,
   GithubOutlined,
-  GlobalOutlined,
   LogoutOutlined,
   MoonOutlined,
   PlayCircleOutlined,
+  QuestionCircleOutlined,
   SunOutlined,
+  TranslationOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
 import { getLocale, history, setLocale, useAccess, useIntl, useModel } from '@umijs/max';
@@ -116,7 +116,8 @@ const RightContent = () => {
             { key: 'reset', icon: <UndoOutlined />, label: t('header.resetDemo') },
           ]
         : []),
-      { key: 'tour', icon: <CompassOutlined />, label: t('tour.menu') },
+      // 导览是帮助入口；指南针留给「地图」菜单，避免同一图标两种含义
+      { key: 'tour', icon: <QuestionCircleOutlined />, label: t('tour.menu') },
       { type: 'divider' as const },
       { key: 'logout', icon: <LogoutOutlined />, label: t('header.logout') },
     ],
@@ -161,7 +162,7 @@ const RightContent = () => {
         />
       </Tooltip>
       <Dropdown menu={localeMenu} placement="bottomRight" trigger={['hover', 'click']}>
-        <Button aria-label={t('header.language')} type="text" icon={<GlobalOutlined />} />
+        <Button aria-label={t('header.language')} type="text" icon={<TranslationOutlined />} />
       </Dropdown>
       <Tooltip title={t('header.github')}>
         <Button
