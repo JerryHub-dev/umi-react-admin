@@ -65,9 +65,19 @@ export interface User {
   lastLoginIp?: string;
 }
 
-export type UserInput = Pick<User, 'name' | 'username' | 'email' | 'department' | 'role'> & {
+/**
+ * 资料编辑可写的字段（审查 F1）：**不含 role**。
+ * 角色是一等授权状态，不能随资料编辑一起被写；它有自己的权限点与载荷类型。
+ */
+export type UserInput = Pick<User, 'name' | 'username' | 'email' | 'department'> & {
   status?: UserStatus;
 };
+
+/** 新建用户载荷：可携带初始角色，服务端要求 system.user.role.assign 且角色在可分配范围内 */
+export type UserCreateInput = UserInput & { role?: RoleKey };
+
+/** 角色分配载荷：唯一的角色写入通道 */
+export type UserRoleAssignment = { role: RoleKey };
 
 export interface UserQuery extends PageQuery {
   keyword?: string;
@@ -92,16 +102,25 @@ export type LogAction =
   | 'userCreate'
   | 'userUpdate'
   | 'userDisable'
+  | 'userDelete'
   | 'userImport'
+  | 'userRoleAssign'
   | 'alarmHandle'
   | 'ticketAssign'
+  | 'ticketStart'
+  | 'ticketReturn'
   | 'ticketClose'
   | 'ticketAccept'
   | 'ticketRework'
   | 'reportExport'
   | 'roleUpdate'
+  | 'roleReset'
+  | 'scheduleCreate'
+  | 'scheduleUpdate'
+  | 'scheduleDelete'
   | 'demoScenario'
-  | 'demoReset';
+  | 'demoReset'
+  | 'demoClock';
 
 export interface OperationLog {
   id: string;
@@ -136,6 +155,12 @@ export interface Device {
   city: string;
   lng: number;
   lat: number;
+  /**
+   * 坐标精度（审查 F12）：'exact' 仅当调用者持有 ops.device.coordinate.view 时出现；
+   * 其余身份拿到的是已在服务端粗化（约 10 公里格网）的 lng/lat，绝不返回精确值。
+   * 字段本身仍指向同一坐标系，地图与表格无需分支渲染。
+   */
+  coordinatePrecision: 'exact' | 'coarse';
   model: string;
   /** 监测频段 [起, 止]，单位 MHz */
   band: [number, number];
@@ -249,10 +274,18 @@ export interface TicketQuery extends PageQuery {
 
 /** 批量导入用户的一行输入（Excel 导入提交给服务端复核） */
 export interface UserImportRow {
+  /** Excel 原始行号：客户端带上用于对账展示，服务端只校验形状（非负整数） */
+  row?: number;
   name?: string;
   username?: string;
   email?: string;
+  /** 部门 key（DepartmentKey）；界面标签由客户端映射成 key 后再提交 */
   department?: string;
+  /**
+   * 角色 key（RoleKey）。缺省、空串或纯空白 = 未指定，按默认角色 viewer 创建，不构成角色分配；
+   * 非空即一次角色分配：需要 system.user.role.assign（任一行指定即整批判权限），且须在可分配范围内。
+   * 界面标签（中英文角色名）不在契约内，由客户端映射成 key。
+   */
   role?: string;
 }
 

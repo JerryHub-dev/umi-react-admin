@@ -1,3 +1,4 @@
+import { DEFAULT_ROLE_PERMISSIONS } from '@/constants/permissions';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { StorageLike } from '../store';
 import { STORE_KEY } from '../store';
@@ -37,6 +38,9 @@ const loginAs = (name: string) => {
   const res = call('POST', '/api/v1/login', { body: { name, password: 'x' } });
   return (res.body.data as { token: string }).token;
 };
+
+/** 角色记录（按 id 取当前生效值） */
+const role = (id: string) => server.store.dataset.roles.find((r) => r.id === id);
 
 describe('鉴权', () => {
   it('admin 体验账号签发管理员 token，显示名取自种子用户', () => {
@@ -150,7 +154,18 @@ describe('角色', () => {
     const roles = call('GET', '/api/v1/roles', { token }).body.data as { id: string; memberCount: number }[];
     expect(roles.reduce((s, r) => s + r.memberCount, 0)).toBe(86);
     expect(call('PUT', '/api/v1/roles/admin', { token, body: { permissions: [] } }).body.success).toBe(false);
-    const updated = call('PUT', '/api/v1/roles/viewer', { token, body: { permissions: ['dashboard.view', 'bogus'] } });
+    /**
+     * 审查 F8 改变了这条契约：未知 key 不再被静默过滤掉，而是整批拒绝（400），
+     * 原样保留 role 记录——静默过滤会让调用方以为保存成功、实际权限与预期不一致。
+     * 合法子集仍然可以保存，下面的断言保证这次收紧没有把正常更新一起挡掉。
+     */
+    const rejected = call('PUT', '/api/v1/roles/viewer', { token, body: { permissions: ['dashboard.view', 'bogus'] } });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.success).toBe(false);
+    expect(role('viewer')!.permissions).toEqual(DEFAULT_ROLE_PERMISSIONS.viewer);
+
+    const updated = call('PUT', '/api/v1/roles/viewer', { token, body: { permissions: ['dashboard.view'] } });
+    expect(updated.status).toBe(200);
     expect((updated.body.data as { permissions: string[] }).permissions).toEqual(['dashboard.view']);
   });
 });

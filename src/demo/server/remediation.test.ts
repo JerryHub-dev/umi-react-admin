@@ -317,7 +317,8 @@ describe('F06 已验收工单返工：旧验收归档、再完成后再验收', 
     const sign = call('POST', `/api/v1/tickets/${SCENARIO_IDS.reworkTicket}/acceptance`, {
       token,
       body: {
-        signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42Y=',
+        signature:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       },
     });
     expect(sign.body.success).toBe(true);
@@ -334,7 +335,8 @@ describe('F06 已验收工单返工：旧验收归档、再完成后再验收', 
     const res = call('POST', `/api/v1/tickets/${SCENARIO_IDS.reworkTicket}/acceptance`, {
       token,
       body: {
-        signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42Y=',
+        signature:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       },
     });
     expect(res.body.success).toBe(false); // 已有生效验收
@@ -360,7 +362,8 @@ describe('F06 已验收工单返工：旧验收归档、再完成后再验收', 
     call('POST', `/api/v1/tickets/${SCENARIO_IDS.accept1}/acceptance`, {
       token,
       body: {
-        signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42Y=',
+        signature:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       },
     });
     const afterAccept = data().logs.find((l) => l.action === 'ticketAccept' && l.target === SCENARIO_IDS.accept1);
@@ -437,7 +440,8 @@ describe('F07/F08 主线闭环：转单 → 处理 → 恢复 → 验收 → 指
     const accepted = call('POST', `/api/v1/tickets/${ticketId}/acceptance`, {
       token: lead,
       body: {
-        signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42Y=',
+        signature:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       },
     });
     expect(accepted.body.success).toBe(true);

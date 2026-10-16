@@ -15,12 +15,26 @@ test('旧版路径重定向到新地址', async ({ page }) => {
   await expect(page).toHaveURL(/\/map\/cesium\/heatmap$/);
 });
 
-test('访客访问系统管理得到 403，权限演示页显示脱敏数据', async ({ page }) => {
+test('访客访问系统管理得到 403，权限演示页显示服务端粗化后的坐标', async ({ page }) => {
   await signIn(page, { user: 'guest' });
   await navigate(page, '/system/users');
   await expect(page.locator('.ant-result-403')).toBeVisible();
   await navigate(page, '/system/access');
-  await expect(page.getByText(/\*\*\*/).first()).toBeVisible();
+  /**
+   * F12 改变了契约：脱敏不再由 UI 打星号，而是服务端在序列化时把坐标粗化到 0.1° 格网
+   * （coordinatePrecision='coarse'），页面只标注精度。所以这里断言「拿到的是粗化值、
+   * 且不是四位小数的精确值」——比原来的 `***` 更贴近真实边界。
+   */
+  const coordCell = page.locator('.ant-table-row').first().locator('td').nth(1);
+  await expect(coordCell).toContainText('~');
+  await expect(coordCell).toContainText('~10 km');
+  const text = await coordCell.innerText();
+  const numbers = text.match(/\d+\.\d+/g) ?? [];
+  expect(numbers.length).toBeGreaterThan(0);
+  for (const value of numbers) {
+    // 粗化值最多一位小数；出现两位以上小数就说明精确坐标泄漏到了无权限会话
+    expect(value.split('.')[1]!.length).toBeLessThanOrEqual(1);
+  }
 });
 
 test('工作台 KPI 与明细口径一致：在线设备数等于设备台账筛选结果', async ({ page }) => {

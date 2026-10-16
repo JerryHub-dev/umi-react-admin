@@ -6,10 +6,10 @@ import { listRoles, resetRolePermissions, updateRolePermissions } from '@/servic
 import type { Role, RoleKey } from '@/services/types';
 import { fromNow } from '@/utils/format';
 import { LockOutlined, TeamOutlined } from '@ant-design/icons';
-import { useIntl } from '@umijs/max';
+import { useAccess, useIntl, useModel } from '@umijs/max';
 import { Alert, App, Button, Card, Col, Listy, Row, Skeleton, Space, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export default function Roles() {
   const intl = useIntl();
@@ -21,7 +21,19 @@ export default function Roles() {
   const [checked, setChecked] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const active = roles?.find((role) => role.id === activeId);
-  const locked = activeId === 'admin';
+  const access = useAccess();
+  const { initialState } = useModel('@@initialState');
+  /**
+   * 与服务端同一口径（routes.ts guardRolePermissionWrite）：admin 锁定为全量；
+   * 自己所在的角色不能改也不能 reset；只能授予自己持有的权限点（原本就有的可以保留或收回）。
+   */
+  const ownRole = !!initialState?.roleKey && initialState.roleKey === activeId;
+  const locked = activeId === 'admin' || ownRole;
+  const grantable = useCallback(
+    (key: string) => access.permission(key) || !!active?.permissions.includes(key),
+    [access, active],
+  );
+  const grantLimited = !locked && PERMISSION_KEYS.some((key) => !grantable(key));
 
   useEffect(() => {
     if (active) setChecked(active.permissions);
@@ -32,11 +44,13 @@ export default function Roles() {
       key: node.key,
       title: t(`permission.${node.key}`),
       disabled: locked,
+      // 叶子权限点：调用者自己没有、目标角色也没有的不能勾选（服务端会以 403 拒绝这次授予）
+      disableCheckbox: !node.children && !grantable(node.key),
       children: node.children?.map(toNode),
     });
     return PERMISSION_TREE.map(toNode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intl, locked]);
+  }, [intl, locked, grantable]);
 
   const dirty = active && [...checked].sort().join() !== [...active.permissions].sort().join();
 
@@ -134,7 +148,15 @@ export default function Roles() {
                   ]
             }
           >
-            {locked && <Alert type="info" showIcon className="mb-4" title={t('roles.adminLocked')} />}
+            {locked && (
+              <Alert
+                type="info"
+                showIcon
+                className="mb-4"
+                title={t(activeId === 'admin' ? 'roles.adminLocked' : 'roles.selfLocked')}
+              />
+            )}
+            {grantLimited && <Typography.Paragraph type="secondary">{t('roles.grantLimitHint')}</Typography.Paragraph>}
             <Skeleton active loading={!active}>
               <Typography.Paragraph type="secondary">
                 {t('roles.selectedCount', {

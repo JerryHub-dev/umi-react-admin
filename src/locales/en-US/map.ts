@@ -11,6 +11,8 @@ export default {
   'map.device.model': 'Model',
   'map.device.uptime': 'Uptime',
   'map.device.heartbeat': 'Heartbeat',
+  'map.coarseCoordinates':
+    'This account lacks ops.device.coordinate.view: the server coarsened station positions to a ~10 km grid. The map shows an approximate distribution and must not be used for pinpointing.',
   'cesium.geohash.precision': 'Precision',
   'cesium.geohash.aggregate': 'Aggregate stations by GeoHash',
   'cesium.geohash.center': 'GeoHash at view center',

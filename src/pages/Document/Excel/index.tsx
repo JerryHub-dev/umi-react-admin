@@ -1,12 +1,20 @@
 import DemoPage from '@/components/DemoPage';
-import type { User, UserImportRow } from '@/services/types';
+import type { User } from '@/services/types';
 import { importUsers, listUsers } from '@/services/users';
+import { BizError } from '@/utils/BizError';
 import { CloseOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, RedoOutlined } from '@ant-design/icons';
 import { Link, useAccess, useIntl } from '@umijs/max';
 import { Alert, App, Button, Card, Dropdown, Space, Spin, Table, Tag, Typography, Upload } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { importUsersFile } from './importFile';
-import { FIELDS, buildUsersWorkbook, downloadWorkbook, type ParsedRow } from './userSheet';
+import {
+  FIELDS,
+  buildUsersWorkbook,
+  downloadWorkbook,
+  restrictRoleColumn,
+  toImportRows,
+  type ParsedRow,
+} from './userSheet';
 import { WorkbookInputError, checkWorkbookFileSize } from './xlsxBoundary';
 
 /** exceljs 体积较大，只在点击导入 / 导出时加载 */
@@ -40,10 +48,15 @@ const SAMPLE_FILES = [
 
 export default function Excel() {
   const intl = useIntl();
-  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  // useCallback 包一层：sampleMenu 的 useMemo 依赖它，行内函数每次渲染都是新引用会让 memo 失效
+  const t = useCallback(
+    (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values),
+    [intl],
+  );
   const { message } = App.useApp();
   const access = useAccess();
   const canImport = access.permission('system.user.create');
+  const canAssignRole = access.permission('system.user.role.assign');
   const [busy, setBusy] = useState<'export' | 'template' | 'import' | 'save'>();
   const [rows, setRows] = useState<ParsedRow[]>();
   const busyRef = useRef<typeof busy>(undefined);
@@ -115,7 +128,7 @@ export default function Excel() {
         t,
         controller.signal,
       );
-      if (!controller.signal.aborted && mounted.current) setRows(imported);
+      if (!controller.signal.aborted && mounted.current) setRows(restrictRoleColumn(imported, { canAssignRole }, t));
     } catch (error) {
       if (!controller.signal.aborted && mounted.current) {
         const code = error instanceof WorkbookInputError ? error.code : 'parseFailed';
@@ -130,14 +143,16 @@ export default function Excel() {
   const valid = rows?.filter((row) => row.input) ?? [];
 
   /**
-   * 提交导入（F04）：整份原始行交给服务端逐行复核——准确计数（创建/重复/无效），
-   * 重复与无效不写入；重复导入时服务端把重复行报回来，预览就地标注，不丢可重试信息。
+   * 提交导入（F04）：本地校验通过的行按 key 提交（部门/角色的界面标签不进接口），服务端逐行复核——
+   * 准确计数（创建/重复/无效），重复与无效不写入；服务端按 Excel 行号报回问题行，预览就地标注。
+   * 本地无效的行不提交（服务端也只会再判一次无效），汇总时并入无效计数。
    */
   const handleSave = async () => {
     if (busyRef.current || !rows) return;
     start('save');
     try {
-      const payload: (UserImportRow & { row: number })[] = rows.map((row) => ({ row: row.row, ...row.values }));
+      const payload = toImportRows(rows);
+      const localInvalid = rows.length - payload.length;
       const result = await importUsers(payload);
       if (!mounted.current) return;
       const serverIssues = new Map(result.issues.map((issue) => [issue.row, issue]));
@@ -148,7 +163,8 @@ export default function Excel() {
           const issue = serverIssues.get(row.row);
           return issue ? { ...row, input: undefined, errors: [issue.message] } : row;
         });
-      if (result.created && !result.duplicated && !result.invalid) {
+      const invalid = result.invalid + localInvalid;
+      if (result.created && !result.duplicated && !invalid) {
         message.success(t('excel.imported', { count: result.created }));
         setRows(undefined);
       } else if (result.created) {
@@ -156,16 +172,20 @@ export default function Excel() {
           t('excel.import.partial', {
             created: result.created,
             duplicated: result.duplicated,
-            invalid: result.invalid,
+            invalid,
           }),
         );
         setRows(remaining.length ? remaining : undefined);
       } else {
-        message.warning(t('excel.import.none', { duplicated: result.duplicated, invalid: result.invalid }));
+        message.warning(t('excel.import.none', { duplicated: result.duplicated, invalid }));
         setRows(remaining.length ? remaining : rows);
       }
-    } catch {
-      if (mounted.current) message.error(t('excel.saveFailed', { count: 0 }));
+    } catch (error) {
+      // 业务失败与 HTTP 错误（400 结构非法 / 413 超预算 / 403）已由请求层展示服务端 message，
+      // 这里不再叠一条「已导入 0 行」的泛化提示；只有请求层没接手的异常才兜底
+      const surfaced =
+        error instanceof BizError || (typeof error === 'object' && error !== null && 'response' in error);
+      if (mounted.current && !surfaced) message.error(t('excel.saveFailed', { count: 0 }));
     } finally {
       finish();
     }

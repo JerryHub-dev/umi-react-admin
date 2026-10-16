@@ -21,7 +21,13 @@ import OSM from 'ol/source/OSM';
 import VectorSource from 'ol/source/Vector';
 import { Circle, Fill, Stroke, Style } from 'ol/style';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StationCard, StatusFilterBar, StatusLegend, type StatusFilter } from '../components/StationUi';
+import {
+  CoordinatePrecisionNotice,
+  StationCard,
+  StatusFilterBar,
+  StatusLegend,
+  type StatusFilter,
+} from '../components/StationUi';
 import './openlayers.css';
 
 /** 每种状态一个共享样式对象（OpenLayers 推荐复用 Style，避免每个要素各建一份） */
@@ -136,6 +142,8 @@ export default function OpenLayersPage() {
         </>
       }
     >
+      {/* F12：没有精确坐标权限时明确降级说明，避免粗化后的位置被当成真实定位 */}
+      <CoordinatePrecisionNotice devices={devices} />
       <Card styles={{ body: { padding: 0 } }}>
         <div
           className={`relative h-[calc(100vh-280px)] min-h-[480px] overflow-hidden rounded-lg${dark ? ' ol-dark' : ''}`}

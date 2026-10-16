@@ -1,15 +1,15 @@
 import DemoPage from '@/components/DemoPage';
 import UserAvatar from '@/components/UserAvatar';
 import { DEPARTMENT_KEYS, USER_STATUS_KEYS } from '@/constants/enums';
-import { ROLE_KEYS } from '@/constants/permissions';
+import { canManageAccount, ROLE_KEYS } from '@/constants/permissions';
 import { useEnums } from '@/hooks/useEnums';
 import { useResponsiveTable } from '@/hooks/useResponsiveTable';
-import type { User, UserBatchAction, UserInput } from '@/services/types';
-import { batchUsers, createUser, deleteUser, listUsers, updateUser } from '@/services/users';
+import type { User, UserBatchAction, UserCreateInput } from '@/services/types';
+import { assignUserRole, batchUsers, createUser, deleteUser, listUsers, updateUser } from '@/services/users';
 import { formatDateTime, fromNow } from '@/utils/format';
-import { DownOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
+import { DownOutlined, LockOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
-import { history, useIntl } from '@umijs/max';
+import { history, useIntl, useModel } from '@umijs/max';
 import { App, Button, Dropdown, Grid, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
 import { useRef, useState } from 'react';
 import UserDrawer from './UserDrawer';
@@ -22,6 +22,12 @@ export default function Users() {
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const enums = useEnums();
   const { message, modal } = App.useApp();
+  const { initialState } = useModel('@@initialState');
+  /**
+   * admin / lead 账号只由管理员角色维护（canManageAccount，与演示后端同一个函数）：
+   * 委派角色看到这些行时编辑 / 停用 / 启用 / 删除置灰、不能勾选进批量，避免走完确认框才被 403。
+   */
+  const manageable = (user: User) => canManageAccount(initialState, user);
   const actionRef = useRef<ActionType>(undefined);
   const [editing, setEditing] = useState<User | null | undefined>(undefined);
   const [viewing, setViewing] = useState<User>();
@@ -78,7 +84,14 @@ export default function Users() {
       width: 120,
       responsive: ['md'],
       render: (_, user) => (
-        <Tag color={user.role === 'admin' ? 'blue' : undefined}>{enums.label('role', user.role)}</Tag>
+        <Space size={4}>
+          <Tag color={user.role === 'admin' ? 'blue' : undefined}>{enums.label('role', user.role)}</Tag>
+          {!manageable(user) && (
+            <Tooltip title={t('users.accountScopeHint')}>
+              <LockOutlined aria-label={t('users.accountScopeHint')} className="opacity-60" />
+            </Tooltip>
+          )}
+        </Space>
       ),
     },
     { title: t('users.column.phone'), dataIndex: 'phone', search: false, width: 130, responsive: ['xxl'] },
@@ -121,17 +134,19 @@ export default function Users() {
       width: md ? 210 : 56,
       fixed: table.fixedRight,
       render: (_, user) => {
-        const locked = PROTECTED.has(user.username);
+        // scopeLocked：调用者无权维护这一行（admin / lead 账号且自己不是管理员角色），连编辑与启用一起置灰
+        const scopeLocked = !manageable(user);
+        const locked = scopeLocked || PROTECTED.has(user.username);
         if (!md) {
           return [
             <Dropdown
               key="more"
               menu={{
                 items: [
-                  { key: 'edit', label: t('common.edit') },
+                  { key: 'edit', label: t('common.edit'), disabled: scopeLocked },
                   user.status === 'active'
                     ? { key: 'toggle', label: t('common.disable'), disabled: locked }
-                    : { key: 'toggle', label: t('common.enable') },
+                    : { key: 'toggle', label: t('common.enable'), disabled: scopeLocked },
                   { key: 'delete', label: t('common.delete'), danger: true, disabled: locked },
                 ],
                 // 手机菜单里没有 Popconfirm 的落点，停用 / 删除改用 modal.confirm（与批量操作一致）
@@ -164,7 +179,7 @@ export default function Users() {
           ];
         }
         return [
-          <Button key="edit" type="link" size="small" onClick={() => setEditing(user)}>
+          <Button key="edit" type="link" size="small" disabled={scopeLocked} onClick={() => setEditing(user)}>
             {t('common.edit')}
           </Button>,
           user.status === 'active' ? (
@@ -179,7 +194,7 @@ export default function Users() {
               </Button>
             </Popconfirm>
           ) : (
-            <Button key="toggle" type="link" size="small" onClick={() => toggleStatus(user)}>
+            <Button key="toggle" type="link" size="small" disabled={scopeLocked} onClick={() => toggleStatus(user)}>
               {t('common.enable')}
             </Button>
           ),
@@ -202,9 +217,16 @@ export default function Users() {
     },
   ];
 
-  const handleSubmit = async (values: UserInput) => {
+  /**
+   * 提交分两步（审查 F1）：资料走 updateUser（载荷里没有 role），
+   * 角色只在真的变化时走 assignUserRole——那是需要 system.user.role.assign 的独立入口。
+   * 新建时角色随创建载荷提交（服务端同样要求该权限）。
+   */
+  const handleSubmit = async (values: UserCreateInput) => {
+    const { role, ...profile } = values;
     if (editing) {
-      await updateUser(editing.id, values);
+      await updateUser(editing.id, profile);
+      if (role && role !== editing.role) await assignUserRole(editing.id, role);
     } else {
       await createUser(values);
     }
@@ -222,7 +244,10 @@ export default function Users() {
         scroll={table.scroll}
         search={{ labelWidth: 'auto' }}
         pagination={{ defaultPageSize: 10, showSizeChanger: true }}
-        rowSelection={{}}
+        rowSelection={{
+          // 批量接口对混入的 admin / lead 账号整批 403：无权维护的行不进入勾选
+          getCheckboxProps: (user) => ({ disabled: !manageable(user) }),
+        }}
         tableAlertOptionRender={({ selectedRowKeys, onCleanSelected }) => {
           const ids = selectedRowKeys as string[];
           return (

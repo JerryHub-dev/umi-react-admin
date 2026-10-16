@@ -259,6 +259,8 @@ const generateDevices = (locale: DemoLocale, now: Date): Device[] => {
         city: locale === 'en-US' ? city.en : city.zh,
         lng: Math.round((city.lng + rng.normal(0, 0.12, -0.35, 0.35)) * 10000) / 10000,
         lat: Math.round((city.lat + rng.normal(0, 0.1, -0.3, 0.3)) * 10000) / 10000,
+        // 数据集内部始终保存精确值；脱敏只发生在 API 序列化边界（见 src/utils/deviceCoordinate.ts）
+        coordinatePrecision: 'exact' as const,
         model: spec.model,
         band: spec.band,
         status,

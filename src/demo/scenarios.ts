@@ -214,6 +214,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     city,
     lng,
     lat,
+    coordinatePrecision: 'exact' as const,
     model: spec.model,
     band: spec.band,
     status,

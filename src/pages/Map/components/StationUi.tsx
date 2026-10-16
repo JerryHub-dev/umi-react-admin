@@ -4,7 +4,7 @@ import { useEnums } from '@/hooks/useEnums';
 import type { Device, DeviceStatus } from '@/services/types';
 import { fromNow } from '@/utils/format';
 import { useIntl } from '@umijs/max';
-import { Badge, Card, Segmented, Space } from 'antd';
+import { Alert, Badge, Card, Segmented, Space } from 'antd';
 
 export type StatusFilter = 'all' | DeviceStatus;
 
@@ -75,5 +75,25 @@ export const StationCard = ({ device }: { device: Device }) => {
         {t('map.device.heartbeat')}: {fromNow(device.lastHeartbeatAt, intl.locale)}
       </div>
     </div>
+  );
+};
+
+/**
+ * 坐标精度提示（审查 F12）：服务端按 ops.device.coordinate.view 决定返回精确值还是粗化值。
+ * 没有该权限时地图仍然可用，但必须让使用者清楚「这是约 10 公里的格网位置」——
+ * 否则粗化会被误读成设备真的在那里，地图页就成了误导性的定位工具。
+ */
+export const CoordinatePrecisionNotice = ({ devices }: { devices?: Device[] }) => {
+  const intl = useIntl();
+  if (!devices?.length) return null;
+  if (devices.every((device) => device.coordinatePrecision === 'exact')) return null;
+  return (
+    <Alert
+      type="info"
+      showIcon
+      className="mb-4"
+      data-testid="coarse-coordinate-notice"
+      title={intl.formatMessage({ id: 'map.coarseCoordinates' })}
+    />
   );
 };

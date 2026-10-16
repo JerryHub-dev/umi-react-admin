@@ -14,14 +14,23 @@ const ACTION_COLOR: Partial<Record<LogAction, string>> = {
   userCreate: 'blue',
   userUpdate: 'blue',
   userDisable: 'orange',
+  userDelete: 'red',
+  userRoleAssign: 'gold',
   roleUpdate: 'blue',
+  roleReset: 'gold',
   alarmHandle: 'purple',
   ticketAssign: 'purple',
+  ticketStart: 'purple',
+  ticketReturn: 'orange',
   ticketClose: 'green',
   ticketAccept: 'green',
   ticketRework: 'orange',
   userImport: 'blue',
   reportExport: 'cyan',
+  scheduleCreate: 'geekblue',
+  scheduleUpdate: 'geekblue',
+  scheduleDelete: 'orange',
+  demoClock: 'magenta',
 };
 
 export default function Logs() {

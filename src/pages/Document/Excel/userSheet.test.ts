@@ -2,7 +2,7 @@ import en from '@/locales/en-US';
 import zh from '@/locales/zh-CN';
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import { buildUsersWorkbook, parseUsersWorkbook } from './userSheet';
+import { buildUsersWorkbook, parseUsersWorkbook, restrictRoleColumn, toImportRows } from './userSheet';
 
 const translator = (messages: Record<string, string>) => (id: string, values?: Record<string, string | number>) =>
   (messages[id] ?? id).replace(/\{(\w+)\}/g, (_, key: string) => String(values?.[key] ?? ''));
@@ -56,5 +56,62 @@ describe('用户表导入导出', () => {
     const text = new ExcelJS.Workbook();
     text.addWorksheet('s').getCell('A1').value = 'A'.repeat(4097);
     expect(() => parseUsersWorkbook(text, new Set(), tZh)).toThrow('textLimit');
+  });
+});
+
+describe('角色列语义与导入载荷（客户端只提交 key，不提交界面标签）', () => {
+  const sheetOf = (rows: string[][]) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('s');
+    sheet.addRow(['姓名', '登录名', '邮箱', '部门', '角色']);
+    rows.forEach((row) => sheet.addRow(row));
+    return parseUsersWorkbook(workbook, new Set(), tZh);
+  };
+
+  it('角色列可以留空：不报必填，input 不带 role（服务端按默认角色创建）', () => {
+    const [row] = sheetOf([['A', 'role.empty', 'a@example.com', 'ops1', '']]);
+    expect(row.errors).toEqual([]);
+    expect(row.input).toEqual({ name: 'A', username: 'role.empty', email: 'a@example.com', department: 'ops1' });
+  });
+
+  it('中文标签、英文标签与 key 都映射成同一个角色 key', () => {
+    const rows = sheetOf([
+      ['A', 'role.zh', 'a@example.com', '运维一部', '运维工程师'],
+      ['B', 'role.en', 'b@example.com', 'ops1', 'Operator'],
+      ['C', 'role.key', 'c@example.com', 'ops1', 'operator'],
+    ]);
+    expect(rows.map((row) => row.input?.role)).toEqual(['operator', 'operator', 'operator']);
+    expect(rows[0].input?.department).toBe('ops1');
+  });
+
+  it('toImportRows 只提交本地校验通过的行：部门/角色是 key，空角色不带 role 键，保留 Excel 行号', () => {
+    const rows = sheetOf([
+      ['A', 'ok.one', 'a@example.com', '运维一部', '数据分析员'],
+      ['B', 'ok.two', 'b@example.com', 'ops2', ''],
+      ['', 'bad.row', 'not-an-email', 'ops1', 'viewer'],
+    ]);
+    const payload = toImportRows(rows);
+    expect(payload).toEqual([
+      { row: 2, name: 'A', username: 'ok.one', email: 'a@example.com', department: 'ops1', role: 'analyst' },
+      { row: 3, name: 'B', username: 'ok.two', email: 'b@example.com', department: 'ops2' },
+    ]);
+    expect(payload.every((row) => !('role' in row) || row.role !== '')).toBe(true);
+  });
+
+  it('没有 role.assign 时：填了角色的行判无效并提示清空，未填角色的行不受影响', () => {
+    const rows = sheetOf([
+      ['A', 'with.role', 'a@example.com', 'ops1', 'viewer'],
+      ['B', 'no.role', 'b@example.com', 'ops1', ''],
+    ]);
+    const restricted = restrictRoleColumn(rows, { canAssignRole: false }, tZh);
+    expect(restricted[0].input).toBeUndefined();
+    expect(restricted[0].errors).toEqual([tZh('excel.error.roleForbidden')]);
+    expect(restricted[1]).toBe(rows[1]);
+    // 提交载荷因此不会带 role，导入不会被整批 403
+    expect(toImportRows(restricted)).toEqual([
+      { row: 3, name: 'B', username: 'no.role', email: 'b@example.com', department: 'ops1' },
+    ]);
+    // 有权限时原样返回
+    expect(restrictRoleColumn(rows, { canAssignRole: true }, tZh)).toBe(rows);
   });
 });

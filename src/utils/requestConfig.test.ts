@@ -153,6 +153,17 @@ describe('errorHandler：HTTP 状态码分流（axios 形状）', () => {
     expect(errorMock).toHaveBeenCalledTimes(1);
   });
 
+  it('413 等其它状态也优先展示后端 message，且不跳页（导入超预算时用户要看到具体原因）', () => {
+    errorHandler(httpError(413, { success: false, message: '导入数据超出服务端上限' }));
+    expect(errorMock).toHaveBeenCalledWith('导入数据超出服务端上限');
+    expect(pushMock).not.toHaveBeenCalled();
+    errorMock.mockClear();
+    // 没有 message 时仍是带状态码的兜底文案
+    errorHandler(httpError(413));
+    expect(errorMock).toHaveBeenCalledTimes(1);
+    expect(errorMock.mock.calls[0]![0]).not.toBe('导入数据超出服务端上限');
+  });
+
   it('优先展示后端返回体中的 message', () => {
     errorHandler(httpError(400, { error: { message: '后端参数错误' } }));
     expect(errorMock).toHaveBeenCalledWith('后端参数错误');
