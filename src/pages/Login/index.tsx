@@ -1,3 +1,4 @@
+import ParticleField from '@/components/ParticleField';
 import { DEMO_MODE } from '@/demo/mode';
 import { useThemeMode } from '@/hooks/useThemeMode';
 import { login, type LoginParams } from '@/services/auth';
@@ -6,18 +7,25 @@ import { safeRedirect } from '@/utils/Auth/safeRedirect';
 import { UserInfo } from '@/utils/Auth/userInfo';
 import { BizError } from '@/utils/BizError';
 import {
-  CheckCircleFilled,
   EyeOutlined,
   GlobalOutlined,
+  LockOutlined,
   MoonOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { getLocale, history, setLocale, useIntl, useLocation, useModel } from '@umijs/max';
-import { App, Button, Card, Divider, Dropdown, Form, Input, Typography } from 'antd';
+import { App, Button, Divider, Dropdown, Form, Input, theme, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 
-const HIGHLIGHTS = ['dashboard', 'system', 'maps', 'i18n'];
+// 亮点前的小圆点取自粒子色环，与背景呼应
+const HIGHLIGHTS = [
+  { key: 'dashboard', color: '#1677ff' },
+  { key: 'system', color: '#722ed1' },
+  { key: 'maps', color: '#eb2f96' },
+  { key: 'i18n', color: '#fa8c16' },
+];
 
 const Login: React.FC = () => {
   // App 上下文中的 message：跳转离开登录页后提示仍然可见
@@ -27,6 +35,9 @@ const Login: React.FC = () => {
   const location = useLocation();
   const { initialState, setInitialState } = useModel('@@initialState');
   const { dark, toggle } = useThemeMode();
+  const { token } = theme.useToken();
+  // 浅色用纯白底让彩色粒子最干净；暗色用更深的 layout 底，粒子像在发光
+  const pageBg = dark ? token.colorBgLayout : token.colorBgContainer;
   const [pending, setPending] = useState<string>();
 
   // 登录态真正写入全局状态之后再跳转。此前在 setInitialState 之后立即 push：状态尚未提交时
@@ -53,70 +64,78 @@ const Login: React.FC = () => {
   };
 
   return (
-    // 背景与文字色用 antd token 类（登录页在 umi 包裹的 antd <App> 容器内），暗色模式随算法切换
-    <div className="flex min-h-screen bg-bg-layout">
-      <aside
-        className="hidden w-5/12 max-w-[640px] flex-col justify-between p-12 text-white lg:flex"
-        style={{ background: 'linear-gradient(150deg, #0b1a33 0%, #12345c 55%, #1d4f8f 100%)' }}
-      >
-        <div className="flex items-center gap-3 text-lg font-semibold">
-          <img src={`${PUBLIC_PATH}logo.svg`} alt="" className="h-8 w-8" />
-          React Admin
-        </div>
-        <div>
-          <h1 className="m-0 text-3xl leading-snug font-semibold">{t('login.headline')}</h1>
-          <p className="mt-4 text-base leading-relaxed opacity-80">{t('login.subhead')}</p>
-          <ul className="mt-8 list-none space-y-3 p-0">
-            {HIGHLIGHTS.map((key) => (
-              <li key={key} className="flex items-start gap-3 opacity-90">
-                <CheckCircleFilled className="mt-1" style={{ color: '#69b1ff' }} />
-                {t(`login.highlight.${key}`)}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="text-xs opacity-60">Umi Max · React 19 · Ant Design 6 · AntV · Cesium · OpenLayers</div>
-      </aside>
+    // 底色与文字色用 antd token（登录页在 umi 包裹的 antd <App> 容器内），暗色模式随算法切换
+    <div className="relative min-h-screen overflow-hidden" style={{ background: pageBg }}>
+      <ParticleField dark={dark} className="pointer-events-none absolute inset-0 h-full w-full" />
 
-      <main className="relative flex flex-1 items-center justify-center px-4 py-16">
-        <div className="absolute top-4 right-4 flex gap-1">
-          <Button
-            type="text"
-            aria-label={t('header.theme')}
-            icon={dark ? <SunOutlined /> : <MoonOutlined />}
-            onClick={toggle}
-          />
-          <Dropdown
-            menu={{
-              items: [
-                // 语言名按惯例用该语言自身书写
-                // eslint-disable-next-line local/no-cjk-literal
-                { key: 'zh-CN', label: '简体中文' },
-                { key: 'en-US', label: 'English' },
-              ],
-              selectable: true,
-              selectedKeys: [getLocale()],
-              onClick: ({ key }) => setLocale(key),
+      <div className="relative flex min-h-screen flex-col">
+        <header className="flex items-center justify-between px-5 py-4 sm:px-10 sm:py-6">
+          <div className="flex items-center gap-3 text-base font-semibold text-text">
+            <img src={`${PUBLIC_PATH}logo.svg`} alt="" className="h-8 w-8" />
+            React Admin
+          </div>
+          <div className="flex gap-1">
+            <Button
+              type="text"
+              aria-label={t('header.theme')}
+              icon={dark ? <SunOutlined /> : <MoonOutlined />}
+              onClick={toggle}
+            />
+            <Dropdown
+              menu={{
+                items: [
+                  // 语言名按惯例用该语言自身书写
+                  // eslint-disable-next-line local/no-cjk-literal
+                  { key: 'zh-CN', label: '简体中文' },
+                  { key: 'en-US', label: 'English' },
+                ],
+                selectable: true,
+                selectedKeys: [getLocale()],
+                onClick: ({ key }) => setLocale(key),
+              }}
+            >
+              <Button type="text" aria-label={t('header.language')} icon={<GlobalOutlined />} />
+            </Dropdown>
+          </div>
+        </header>
+
+        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-10 px-4 pt-4 pb-12 lg:flex-row lg:justify-between lg:gap-16 lg:px-10">
+          <section
+            className="max-w-xl text-center lg:text-left"
+            // 与底色同色的文字光晕：粒子从字形下穿过时被局部压淡，正文始终清楚，又不必给文案加底板
+            style={{ textShadow: `0 0 2px ${pageBg}, 0 0 6px ${pageBg}, 0 0 12px ${pageBg}` }}
+          >
+            <h1 className="m-0 text-3xl leading-tight font-semibold tracking-tight text-text sm:text-4xl lg:text-5xl">
+              {t('login.headline')}
+            </h1>
+            {/* 窄屏只保留标题，副标题与亮点从平板宽度起出现，不把登录框挤到首屏之外 */}
+            <Typography.Paragraph type="secondary" className="mt-5 mb-0 hidden text-base leading-relaxed sm:block">
+              {t('login.subhead')}
+            </Typography.Paragraph>
+            <ul className="mt-8 mb-0 hidden list-none flex-col gap-3 p-0 lg:flex">
+              {HIGHLIGHTS.map(({ key, color }) => (
+                <li key={key} className="flex items-center gap-3 text-sm text-text">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
+                  {t(`login.highlight.${key}`)}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <div
+            className="w-full max-w-sm shrink-0 rounded-2xl border p-6 sm:p-8"
+            style={{
+              // 近乎不透明的面板：粒子只隐约透出一点。不用 backdrop-filter 毛玻璃——背后是每帧重绘的画布，
+              // 无 GPU 合成（虚拟机、远程桌面、部分旧机器）时模糊要每帧重算，实测把帧率从 60 拖到 30
+              background: `color-mix(in srgb, ${token.colorBgContainer} ${dark ? 86 : 90}%, transparent)`,
+              borderColor: token.colorBorderSecondary,
+              boxShadow: dark ? '0 24px 64px -24px rgba(0, 0, 0, 0.8)' : '0 24px 64px -28px rgba(15, 23, 42, 0.28)',
             }}
           >
-            <Button type="text" aria-label={t('header.language')} icon={<GlobalOutlined />} />
-          </Dropdown>
-        </div>
-
-        <div className="w-full max-w-sm">
-          {/* 窄屏隐藏了左侧产品介绍：卡片上方保留标识与一句话定位，不至于只剩一个孤零零的登录框 */}
-          <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <img src={`${PUBLIC_PATH}logo.svg`} alt="" className="h-10 w-10" />
-            <div className="min-w-0">
-              <Typography.Text strong className="block text-lg">
-                React Admin
-              </Typography.Text>
-              <Typography.Text type="secondary" className="text-xs">
-                {t('login.headline')}
-              </Typography.Text>
-            </div>
-          </div>
-          <Card className="shadow-sm" title={t('login.title')}>
+            <h2 className="m-0 text-2xl font-semibold text-text">{t('login.title')}</h2>
+            <Typography.Paragraph type="secondary" className="mt-1 mb-6">
+              {t('login.subtitle')}
+            </Typography.Paragraph>
             {DEMO_MODE && (
               <div className="flex flex-col gap-3">
                 <Button
@@ -162,6 +181,8 @@ const Login: React.FC = () => {
             <Form<LoginParams>
               initialValues={DEMO_MODE ? { name: 'admin', password: 'demo' } : undefined}
               layout="vertical"
+              requiredMark={false}
+              size="large"
               onFinish={signIn}
             >
               <Form.Item
@@ -169,16 +190,20 @@ const Login: React.FC = () => {
                 name="name"
                 rules={[{ required: true, message: t('login.usernameRequired') }]}
               >
-                <Input autoComplete="username" />
+                <Input autoComplete="username" prefix={<UserOutlined className="text-text-tertiary" />} />
               </Form.Item>
               <Form.Item
                 label={t('login.password')}
                 name="password"
                 rules={[{ required: true, message: t('login.passwordRequired') }]}
               >
-                <Input.Password autoComplete="current-password" />
+                <Input.Password
+                  autoComplete="current-password"
+                  prefix={<LockOutlined className="text-text-tertiary" />}
+                />
               </Form.Item>
-              <Button block htmlType="submit" loading={!!pending}>
+              {/* 演示模式的主操作是上方的一键体验，这里退为次要按钮；真实登录时它就是唯一的主操作 */}
+              <Button block type={DEMO_MODE ? 'default' : 'primary'} htmlType="submit" loading={!!pending}>
                 {t('login.submit')}
               </Button>
             </Form>
@@ -187,9 +212,13 @@ const Login: React.FC = () => {
                 {t('login.demoHint')}
               </Typography.Paragraph>
             )}
-          </Card>
-        </div>
-      </main>
+          </div>
+        </main>
+
+        <footer className="px-5 pb-5 text-center text-xs text-text-tertiary sm:px-10 lg:text-left">
+          Umi Max · React 19 · Ant Design 6 · AntV · Cesium · OpenLayers
+        </footer>
+      </div>
     </div>
   );
 };

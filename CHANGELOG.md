@@ -6,6 +6,11 @@ Maintained in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) forma
 
 ## [Unreleased]
 
+### Sign-in page redesign (2026-10-16)
+
+- **Login page**: replaced the split dark-gradient layout with a full-bleed page — brand bar, large headline + highlights, and a near-opaque sign-in panel (larger inputs with icons, new `login.subtitle` copy); in real (non-demo) mode the submit button is now the primary action
+- **ParticleField** (`src/components/ParticleField`): a dependency-free Canvas 2D background in which a ring of radial capsule particles eases after the pointer (visual reference: the antigravity.google hero; independently implemented, no code reused). Particles are bucketed by hue × intensity, so a frame is a few dozen draw calls; the count is capped on large screens; `prefers-reduced-motion` gets a single static frame; on phones the idle ring wanders around the headline. The panel deliberately skips `backdrop-filter`: blurring an animated canvas halved the frame rate without GPU compositing
+
 ### Open-source polish & structure audit fixes (2026-10-13)
 
 - **README**: corrected the antd version to 6; updated the sign-in description to the five one-click roles and the current "permission points as the single authorization source" semantics; added a table of contents, a CHANGELOG link and 4 demo screenshots. README.md is now the **full English primary document**, with the complete Chinese version moved to [README.zh-CN.md](README.zh-CN.md) (cross-linked at the top of both)

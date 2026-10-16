@@ -40,6 +40,7 @@ export default {
   'header.resetDemoConfirm': '清除你在演示站做过的所有改动（新建、编辑、删除、签名等），恢复初始数据？',
   'header.resetDemoDone': '演示数据已重置',
   'login.title': '登录',
+  'login.subtitle': '欢迎回来，登录后继续',
   'login.headline': '一个讲得通的后台模板',
   'login.subhead': '虚构的物联网监测运营平台：设备、告警、工单、人员与日程互相关联，数字经得起推敲。',
   'login.highlight.dashboard': '工作台指标由明细实时聚合，每分钟刷新',

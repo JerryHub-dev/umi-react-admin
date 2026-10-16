@@ -41,6 +41,7 @@ export default {
     'Discard every change you made on this demo (created, edited and deleted records, signatures…) and restore the initial data?',
   'header.resetDemoDone': 'Demo data has been reset',
   'login.title': 'Sign in',
+  'login.subtitle': 'Welcome back. Sign in to continue.',
   'login.headline': 'An admin template that tells a coherent story',
   'login.subhead':
     'A fictional IoT monitoring operation: devices, alarms, tickets, people and schedules that all line up.',
