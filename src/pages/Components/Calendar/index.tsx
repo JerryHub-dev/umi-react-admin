@@ -42,7 +42,7 @@ import {
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import '@fullcalendar/react/skeleton.css';
 import '@fullcalendar/react/themes/classic/palette.css';
@@ -57,6 +57,21 @@ export const EVENT_COLOR: Record<EventType, PresetColor> = {
   training: 'cyan',
   maintenance: 'orange',
   release: 'magenta',
+};
+
+/**
+ * 无障碍（Q5）：FullCalendar 事件块是「深底 + 白字」，而 antd 预设色给的是中间调
+ * （#52c41a 白字 2.26:1、#13c2c2 2.20:1、#fa8c16 2.37:1，axe color-contrast serious）。
+ * 这里取同一色系的深档作为事件背景：白字 5.43~9.85:1，明暗两套主题都成立
+ * （深色主题下事件块落在 #141414 上，非文本对比度也 ≥3:1）。图例圆点仍用 chart.color 的亮色。
+ */
+const EVENT_BACKGROUND: Record<EventType, string> = {
+  duty: '#0958d9', // 白字 6.16:1
+  inspection: '#237804', // 5.59:1
+  review: '#531dab', // 9.85:1
+  training: '#006d75', // 6.10:1
+  maintenance: '#ad4e00', // 5.43:1
+  release: '#a50044', // 7.83:1
 };
 
 type Draft = { start: string; end: string; allDay: boolean };
@@ -102,22 +117,30 @@ export default function Calendar() {
   const [upcoming, setUpcoming] = useState<CalendarEvent[]>([]);
   const [form] = Form.useForm<{ title: string; type: EventType }>();
 
-  const toInput = (event: CalendarEvent): EventInput => ({
-    id: event.id,
-    title: event.title,
-    start: event.start,
-    end: event.end,
-    allDay: event.allDay,
-    color: chart.color(EVENT_COLOR[event.type]),
-    extendedProps: { type: event.type },
-  });
-
-  /** 按视图范围向接口拉取日程（只服务日历本身） */
-  const fetchEvents = useCallback(
-    async (info: EventSourceFuncInfo) => (await listEvents(info.startStr, info.endStr)).map(toInput),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version, chart],
+  const toInput = useCallback(
+    (event: CalendarEvent): EventInput => ({
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      allDay: event.allDay,
+      // 事件块用白字，背景必须够深（见 EVENT_BACKGROUND）；此处的颜色不随主题变，故 toInput 不再依赖 chart
+      color: EVENT_BACKGROUND[event.type],
+      extendedProps: { type: event.type },
+    }),
+    [],
   );
+
+  /**
+   * 事件源函数：FullCalendar 按 events 属性的**引用**比较决定是否重新拉取，所以新建 / 改期后
+   * 递增 version 让本函数的引用变化即可刷新。version 不是被读取的输入，而是引用失效标记，
+   * 因此显式编进返回的函数对象（避免「未使用依赖」被静默掩盖）。不要改成只依赖 toInput：
+   * 那样保存后日历不会重新拉取。
+   */
+  const fetchEvents = useMemo(() => {
+    const source = async (info: EventSourceFuncInfo) => (await listEvents(info.startStr, info.endStr)).map(toInput);
+    return Object.assign(source, { version });
+  }, [toInput, version]);
 
   /** 「接下来」独立查询未来 14 天：不再跟随日历当前视图范围，否则周末视图会漏掉次日的值班交接 */
   const fetchUpcoming = useCallback(async () => {

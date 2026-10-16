@@ -8,12 +8,18 @@ import enEnums from '@/locales/en-US/enums';
 import enSystem from '@/locales/en-US/system';
 import zhEnums from '@/locales/zh-CN/enums';
 import zhSystem from '@/locales/zh-CN/system';
-import type { DepartmentKey, RoleKey, User, UserInput } from '@/services/types';
+import type { DepartmentKey, RoleKey, User, UserCreateInput, UserImportRow } from '@/services/types';
 import type { Workbook } from 'exceljs';
 import { WorkbookInputError, XLSX_LIMITS } from './xlsxBoundary';
 
 export const FIELDS = ['name', 'username', 'email', 'department', 'role'] as const;
 export type Field = (typeof FIELDS)[number];
+/**
+ * 角色列可以留空：空 = 不指定角色，服务端按默认角色（访客）创建，不构成角色分配；
+ * 填了值才是一次角色分配，需要 system.user.role.assign（见 restrictRoleColumn）。
+ * 其余列必填。
+ */
+const REQUIRED_FIELDS: readonly Field[] = ['name', 'username', 'email', 'department'];
 
 const headerKey = (field: Field) => `users.column.${field}` as const;
 const HEADER_ALIASES = new Map<string, Field>(
@@ -40,7 +46,7 @@ export type ParsedRow = {
   key: string;
   row: number;
   values: Partial<Record<Field, string>>;
-  input?: UserInput;
+  input?: UserCreateInput;
   errors: string[];
 };
 
@@ -106,7 +112,7 @@ export const parseUsersWorkbook = (workbook: Workbook, existingUsernames: Set<st
     if (!Object.values(values).some(Boolean)) return;
 
     const errors: string[] = [];
-    FIELDS.forEach((field) => {
+    REQUIRED_FIELDS.forEach((field) => {
       if (!values[field]) errors.push(t('excel.error.required', { field: t(headerKey(field)) }));
     });
     if (values.email) {
@@ -138,7 +144,13 @@ export const parseUsersWorkbook = (workbook: Workbook, existingUsernames: Set<st
       errors,
       input:
         errors.length === 0
-          ? { name: values.name!, username: username!, email: values.email!, department: department!, role: role! }
+          ? {
+              name: values.name!,
+              username: username!,
+              email: values.email!,
+              department: department!,
+              ...(role ? { role } : {}),
+            }
           : undefined,
     });
   });
@@ -159,6 +171,41 @@ export const parseUsersWorkbook = (workbook: Workbook, existingUsernames: Set<st
   });
   return rows;
 };
+
+/**
+ * 没有 system.user.role.assign 时，填了角色的行在本地判无效（提示清空角色列）：
+ * 服务端对「任意一行指定了角色」整批 403，不能让一行越权拖垮整批，也不能悄悄丢掉角色列按访客导入。
+ */
+export const restrictRoleColumn = (
+  rows: ParsedRow[],
+  { canAssignRole }: { canAssignRole: boolean },
+  t: Translate,
+): ParsedRow[] =>
+  canAssignRole
+    ? rows
+    : rows.map((row) =>
+        row.values.role ? { ...row, input: undefined, errors: [...row.errors, t('excel.error.roleForbidden')] } : row,
+      );
+
+/**
+ * 导入请求载荷：只提交本地校验通过的行，字段取解析后的 key（部门/角色的中英文标签已在解析时映射），
+ * 未指定角色的行不带 role 键。row 是 Excel 原始行号，服务端用它回报问题行。
+ */
+export const toImportRows = (rows: ParsedRow[]): (UserImportRow & { row: number })[] =>
+  rows.flatMap(({ row, input }) =>
+    input
+      ? [
+          {
+            row,
+            name: input.name,
+            username: input.username,
+            email: input.email,
+            department: input.department,
+            ...(input.role ? { role: input.role } : {}),
+          },
+        ]
+      : [],
+  );
 
 export const downloadWorkbook = async (workbook: Workbook, filename: string) => {
   const buffer = await workbook.xlsx.writeBuffer();

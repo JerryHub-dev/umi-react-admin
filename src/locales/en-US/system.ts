@@ -29,10 +29,21 @@ export default {
   'users.noActivity': 'No activity in the last 30 days',
   'users.usernameRule': 'Starts with a letter; 3–32 letters, digits, dots, underscores or hyphens',
   'users.protectedHint': 'Demo account usernames cannot be changed',
+  'users.selfUsernameHint':
+    'The signed-in account cannot change its own username (the session is keyed by it; the server refuses it too)',
+  'users.roleAssignHint': 'Assignable: viewer / operator / analyst. You cannot change your own role',
+  'users.accountScopeHint':
+    'Only an administrator can disable, delete, or edit administrator and lead accounts (the server refuses it too)',
+  'users.roleLockedHint': 'Administrator and lead roles cannot be changed here; grant them out of band',
+  'users.roleSelfHint':
+    'You cannot change your own role (the server refuses it too; disabled here to avoid a dead end)',
   'roles.members': '{count} members',
   'roles.updatedAt': 'Updated {time}',
   'roles.permissions': 'Permissions',
   'roles.adminLocked': 'The administrator role always has every permission',
+  'roles.selfLocked':
+    'You cannot change the permissions of your own role; the server refuses it too, so it is read-only here',
+  'roles.grantLimitHint': 'Greyed-out permissions are ones you do not hold yourself, so you cannot grant them',
   'roles.restoreDefault': 'Restore defaults',
   'roles.selectedCount': '{count} of {total} selected',
   'logs.column.time': 'Time',
@@ -60,8 +71,8 @@ export default {
   'access.button.hiddenHint': '(not rendered without permission)',
   'access.data.title': 'Data level',
   'access.data.desc':
-    'Same device data, but only administrators see exact coordinates. Done in the browser here — a real system must mask on the server.',
-  'access.data.coords': 'Exact coordinates',
+    'Same device data: exact coordinates require ops.device.coordinate.view. The server coarsens to a ~10 km grid while serializing, so the UI does no masking.',
+  'access.data.coords': 'Device coordinates',
   'access.note':
     'Front-end access control is only UX: real checks must happen in the API (this demo backend also returns 403 on admin endpoints).',
   'excel.export': 'Export all users',
@@ -81,11 +92,12 @@ export default {
   'excel.error.enum': 'Invalid {field}',
   'excel.error.duplicate': 'Username repeats another row in the file',
   'excel.error.exists': 'Username already exists',
+  'excel.error.roleForbidden': 'Your account cannot assign roles: clear the Role column (blank imports as Viewer)',
   'excel.previewTitle': 'Import preview',
   'excel.exportTitle': 'Users',
   'excel.dropTitle': 'Click or drag an .xlsx file here to import',
   'excel.dropHint':
-    'Columns: {fields}. Every row is validated first and invalid rows are skipped. Not sure about the format? Download the template.',
+    'Columns: {fields} (Role may be blank and imports as Viewer). Every row is validated first and invalid rows are skipped. Not sure about the format? Download the template.',
   'excel.samples': 'Sample files',
   'excel.sample.valid': 'All valid (3 rows · for the mainline import)',
   'excel.sample.partial': 'Partially valid (2 valid + 2 different errors)',

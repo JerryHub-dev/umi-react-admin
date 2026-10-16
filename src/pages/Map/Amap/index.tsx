@@ -17,7 +17,13 @@ import { Link, useIntl } from '@umijs/max';
 import { Alert, Button, Card } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { StationCard, StatusFilterBar, StatusLegend, type StatusFilter } from '../components/StationUi';
+import {
+  CoordinatePrecisionNotice,
+  StationCard,
+  StatusFilterBar,
+  StatusLegend,
+  type StatusFilter,
+} from '../components/StationUi';
 
 // AMap JS API 2.0 的安全密钥必须在脚本加载前挂到 window（官方约定；未配置时为空串，跳过）
 const amapSecurityCode = readBuildGlobal('AMAP_SECURITY_CODE');
@@ -147,6 +153,8 @@ export default function Amap() {
           }
         />
       )}
+      {/* F12：没有精确坐标权限时明确降级说明，避免粗化后的位置被当成真实定位 */}
+      <CoordinatePrecisionNotice devices={devices} />
       <Card styles={{ body: { padding: 0 } }}>
         <div className="relative h-[calc(100vh-280px)] min-h-[480px] overflow-hidden rounded-lg">
           <div ref={containerRef} className="absolute inset-0" />

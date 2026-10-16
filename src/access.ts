@@ -17,6 +17,10 @@ export default (initialState: AppInitialState | undefined) => {
     // 页面级 access key（config/routes.ts 引用）
     dashboardView: has('dashboard.view'),
     systemUserView: has('system.user.view'),
+    /** 角色分配是独立权限点（审查 F1）：有它才渲染角色选择器，服务端同样按它判定 */
+    systemUserRoleAssign: has('system.user.role.assign'),
+    /** 精确设备坐标是数据范围权限（审查 F12）：没有它接口只返回粗化坐标 */
+    opsDeviceCoordinateView: has('ops.device.coordinate.view'),
     systemRoleView: has('system.role.view'),
     systemLogView: has('system.log.view'),
     opsDeviceView: has('ops.device.view'),

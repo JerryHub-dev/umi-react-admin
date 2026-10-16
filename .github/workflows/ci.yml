@@ -43,6 +43,13 @@ jobs:
       - name: Quality gates（typecheck + 严格 lint + vitest，含演示数据合理性与 CSP 一致性）
         run: pnpm check
 
+      - name: Coverage gate（vitest --coverage，阈值见 vitest.config.ts）
+        # Q1：`pnpm check` 只跑 `vitest run`，vitest.config.ts 里的 thresholds 从不被执行 = 形同虚设。
+        # 这里用带 --coverage 的命令再跑一次，阈值（statements 60 / branches 50 / functions 60 / lines 60）
+        # 才真正拦得住回归。注意 include 是**选定域**（utils / services / demo + 安全相关页面逻辑），
+        # 日志里的百分比不是全项目覆盖率（全项目口径见 vitest.config.ts 注释）。
+        run: pnpm test:coverage
+
       - name: Dependency audit（全量公告、真实源码补丁和攻击回归；不忽略公告）
         run: pnpm audit:security
 
@@ -53,8 +60,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 两条产线都冒烟：主产线（Vercel/Docker）与 GitHub Pages 子路径产线
-        script: ['build:demo', 'build:github:demo']
+        # 三条产线都冒烟：主产线（Vercel/Docker）、GitHub Pages 子路径产线，以及 real 模式产线。
+        # real 模式单独一项是必需的：Q3 的断言只能在 real 模式产物上跑（见下面那一步），
+        # 而 check job 的 vitest 在任何构建之前执行，没有产物可断言。
+        script: ['build:demo', 'build:github:demo', 'build:real']
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,23 +89,73 @@ jobs:
         if: matrix.script == 'build:demo'
         run: node scripts/check-bundle-size.mjs
 
+      - name: real 模式不得把浏览器演示后端带进入口（Q3）
+        # 独立复审 2026-10-14 发现：这个断言此前在 CI 里永远不会执行——check job 的 vitest 跑在
+        # 任何构建之前（没有产物可断言），build/e2e job 又从不运行 vitest。所以把 real 模式
+        # 单独列为一条产线，构建完立刻在真实产物上断言「没有 demo-only 标记 + 有 stub 哨兵」。
+        # REAL_MODE_ARTIFACT_REQUIRED=1：这条产线必须拿到 real 产物，拿不到就失败而不是静默跳过
+        # （否则「构建成 demo 产物」的错配会让断言反向通过）。
+        if: matrix.script == 'build:real'
+        env:
+          REAL_MODE_ARTIFACT_REQUIRED: '1'
+        run: pnpm exec vitest run scripts/real-mode-artifact.test.ts
+
       - name: 产物 JWT 泄露扫描
         # 补审计 security-6 的盲区：曾发生 token 经 define 注入构建产物并部署到 gh-pages。
         # CI 构建不注入 secret，产物里除 Cesium 自带的公开默认 token 外出现任何 JWT 都判失败
         run: node scripts/check-dist-secrets.mjs
 
-      - name: define 注入路径的可检测性校验（闭环 Vercel 同类盲区）
-        # 运行时构造一个公开的假 JWT（仓库卫生门禁禁止任何 JWT 形态字面量入库）注入构建：
-        # 未声明时扫描必须失败（证明「注入→产物→检出」链路受门禁约束），经 EXPECTED_TOKEN 声明后必须通过
+      - name: 产物完整性清单自校验（F10：生成 → 校验往返）
+        # deploy.yml 用同一对命令把「扫描过的字节」与「发布的字节」绑定；这里保证脚本自身可用
+        # （清单写在 $RUNNER_TEMP：清单必须在产物目录之外，否则自身会被判为多余文件）
+        run: |
+          node scripts/verify-dist-integrity.mjs generate dist "$RUNNER_TEMP/integrity-manifest.json"
+          node scripts/verify-dist-integrity.mjs verify dist "$RUNNER_TEMP/integrity-manifest.json"
+
+      - name: define 注入路径的可检测性校验（F3：JWT 与不透明凭据的声明闭环）
+        # 运行时构造公开假凭据（仓库卫生门禁禁止 JWT 形态字面量入库）注入构建，覆盖三类凭据：
+        #   CESIUM_ION_TOKEN（JWT）、AMAP_KEY / AMAP_SECURITY_CODE（32 位十六进制的不透明值）
+        # 断言：未声明 / 漏声明 / 声明成另一个值都必须被拦下；逐类声明一致必须通过；
+        # 任何一次扫描的日志都不得出现明文（CI 日志公开）。
         if: matrix.script == 'build:demo'
         run: |
-          DUMMY="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"dist-secret-scan-gate"}' | base64 | tr '/+' '_-' | tr -d =).gate-check-signature"
-          CESIUM_ION_TOKEN="$DUMMY" pnpm run build:demo
-          if node scripts/check-dist-secrets.mjs; then
-            echo "::error::注入的公开演示 JWT 未被产物扫描检出（扫描门禁存在盲区）"
-            exit 1
+          DUMMY_JWT="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"dist-secret-scan-gate"}' | base64 | tr '/+' '_-' | tr -d =).gate-check-signature"
+          DUMMY_JWT_OTHER="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"wrong-declaration"}' | base64 | tr '/+' '_-' | tr -d =).wrong-declaration-signature"
+          DUMMY_AMAP_KEY="$(printf '%s' 'ci-canary-amap-key' | sha256sum | cut -c1-32)"
+          DUMMY_AMAP_SECURITY_CODE="$(printf '%s' 'ci-canary-amap-security-code' | sha256sum | cut -c1-32)"
+          BASE=(CESIUM_ION_TOKEN="$DUMMY_JWT" AMAP_KEY="$DUMMY_AMAP_KEY" AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE")
+          LOG="$(mktemp)"
+          : > "$LOG"
+
+          CESIUM_ION_TOKEN="$DUMMY_JWT" AMAP_KEY="$DUMMY_AMAP_KEY" AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE" pnpm run build:demo
+
+          if env "${BASE[@]}" node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::注入的公开演示凭据未被产物扫描检出（扫描门禁存在盲区）"; cat "$LOG"; exit 1
           fi
-          EXPECTED_TOKEN="$DUMMY" node scripts/check-dist-secrets.mjs
+
+          if ! env "${BASE[@]}" \
+              EXPECTED_CESIUM_TOKEN="$DUMMY_JWT" \
+              EXPECTED_AMAP_KEY="$DUMMY_AMAP_KEY" \
+              EXPECTED_AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE" \
+              node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::逐类正确声明的公开演示凭据仍被判失败"; cat "$LOG"; exit 1
+          fi
+
+          if env "${BASE[@]}" EXPECTED_CESIUM_TOKEN="$DUMMY_JWT_OTHER" \
+              EXPECTED_AMAP_KEY="$DUMMY_AMAP_KEY" EXPECTED_AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE" \
+              node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::声明与构建期注入值不一致时未被拦下"; cat "$LOG"; exit 1
+          fi
+
+          if env "${BASE[@]}" EXPECTED_CESIUM_TOKEN="$DUMMY_JWT" \
+              node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::漏声明高德凭据时未被拦下"; cat "$LOG"; exit 1
+          fi
+
+          if grep -qF -e "$DUMMY_JWT" -e "$DUMMY_JWT_OTHER" -e "$DUMMY_AMAP_KEY" -e "$DUMMY_AMAP_SECURITY_CODE" "$LOG"; then
+            echo "::error::扫描日志出现凭据明文（CI 日志公开）"; exit 1
+          fi
+          echo "✅ 注入 → 产物 → 检出 → 声明 闭环通过（未声明/错声明/漏声明均被拦下，日志无明文）"
 
   e2e:
     # 浏览器级冒烟：GitHub Pages 同构的静态产物（子路径 + 404 回退 + meta CSP）逐路由打开，

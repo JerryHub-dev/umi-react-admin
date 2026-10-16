@@ -79,7 +79,13 @@ const umiCoreRules = {
   'use-isnan': 'error',
 };
 
-/** umi recommended：React 与 hooks（只开 rules-of-hooks，与原预设一致） */
+/**
+ * umi recommended：React 与 hooks。原 @umijs/lint 预设只开 rules-of-hooks；
+ * 本项目额外把 exhaustive-deps 提到 error（依赖数组漏项会静默读到过期闭包，属真实缺陷类）。
+ * eslint-plugin-react-hooks 7.1.1 提供 flat 版 `recommended` / `recommended-latest` 预设，但它们同时
+ * 打开 React Compiler 系列规则（static-components、immutability、refs、purity、set-state-in-effect…），
+ * 与本仓库既有的命令式 ref / effect 写法冲突且超出本次范围；因此按本文件既有风格显式声明规则。
+ */
 const umiReactRules = {
   // button 自带 submit 属性
   'react/button-has-type': 'error',
@@ -102,6 +108,8 @@ const umiReactRules = {
   'react/no-unknown-property': 'error',
   'react/require-render-return': 'error',
   'react-hooks/rules-of-hooks': 'error',
+  // 依赖数组必须写全：漏项会让 effect/useMemo 读到过期闭包（Q2）
+  'react-hooks/exhaustive-deps': 'error',
 };
 
 /**
@@ -175,7 +183,8 @@ export default defineConfig(
     },
     // 显式版本：eslint-plugin-react 7.37 的 'detect' 走 context.getFilename()，ESLint 10 已删除该 API（会直接崩溃）
     settings: { react: { version: '19.3' } },
-    linterOptions: { reportUnusedDisableDirectives: 'off' },
+    // 多余的 eslint-disable 指令本身就是缺陷（掩盖真实报错或规则已变更）；作为 error 参与 --max-warnings=0 门禁
+    linterOptions: { reportUnusedDisableDirectives: 'error' },
     rules: {
       ...umiCoreRules,
       ...umiReactRules,

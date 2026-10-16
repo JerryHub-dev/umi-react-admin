@@ -1,4 +1,5 @@
 import { defineConfig } from '@umijs/max';
+import path from 'path';
 import { resolveAuthConfig } from './auth';
 import { BUILD_INFO, addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
@@ -33,11 +34,31 @@ if (process.env.NODE_ENV === 'production' && AUTH_CONFIG.demoMode) {
 }
 
 export default defineConfig({
+  /**
+   * 真实模式：演示 adapter / 演示 token 的静态 import 指向替身（见 src/demo/*.real.ts）。
+   *
+   * - '@/demo/adapter'：requestConfig.ts 顶层 import，adapter 又静态 import './clock' 与 './store'，
+   *   store → generate → scenarios 会把整份演示数据生成器（固定场景 ID 与补丁存储键）
+   *   拖进入口 chunk；真实模式虽不接线，但模块副作用使打包器无法删除这条链。
+   * - '@/demo/token'：services/auth.ts 顶层 import，调用点在 `if (DEMO_MODE)` 里；DEMO_MODE 经
+   *   模块命名空间读取（产物中是 `ne.G`），压缩器无法判定该分支为死代码，演示 token 模块
+   *   （含 'demo.' 前缀字面量）因此留在真实模式入口 chunk，实测确认后才加的第二个替身。
+   *
+   * 键写成完整路径：preset-umi 的 configPlugins 把用户 alias 展开在内置 '@' 之前
+   * （memo.alias = { ...memo.alias, '@': absSrcPath }），完整键精确命中，不依赖前缀匹配顺序。
+   * 演示构建（build:demo / build:github:demo）保持原路径，vitest 与 tsc 也不受影响。
+   */
+  alias: AUTH_CONFIG.demoMode
+    ? {}
+    : {
+        '@/demo/adapter': path.resolve(__dirname, '../src/demo/adapter.real.ts'),
+        '@/demo/token': path.resolve(__dirname, '../src/demo/token.real.ts'),
+      },
   chainWebpack(config) {
     if (process.env.NODE_ENV === 'production') {
       configureSplitChunks(config);
       addChunkGraph(config);
-      addVersionFile(config);
+      addVersionFile(config, { demoMode: AUTH_CONFIG.demoMode });
     }
   },
   copy: [

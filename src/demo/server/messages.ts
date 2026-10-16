@@ -30,6 +30,50 @@ const MESSAGES = {
   },
   signatureInvalid: { zh: '签名格式不正确', en: 'The signature format is invalid' },
   titleRequired: { zh: '请填写标题', en: 'Title is required' },
+  roleAssignForbidden: {
+    zh: '当前账号没有分配角色的权限',
+    en: 'Your account is not allowed to assign roles',
+  },
+  selfRoleForbidden: {
+    zh: '不能修改自己的角色',
+    en: 'You cannot change your own role',
+  },
+  roleNotAssignable: {
+    zh: '该角色不在可分配范围内',
+    en: 'That role is outside the assignable range',
+  },
+  roleTargetLocked: {
+    zh: '管理员与值班长账号的角色不能通过此通道变更',
+    en: 'Administrator and shift-lead accounts cannot have their role changed here',
+  },
+  selfRoleUpdateForbidden: {
+    zh: '不能修改或重置自己所在角色的权限',
+    en: 'You cannot change or reset the permissions of your own role',
+  },
+  permissionGrantForbidden: {
+    zh: '不能授予自己未持有的权限',
+    en: 'You cannot grant permissions you do not hold yourself',
+  },
+  privilegedAccountLocked: {
+    zh: '管理员与值班长账号只能由系统管理员停用、删除或修改资料',
+    en: 'Only an administrator can disable, delete, or edit administrator and shift-lead accounts',
+  },
+  selfRenameForbidden: {
+    zh: '不能修改当前登录账号的登录名',
+    en: 'You cannot change the username of the signed-in account',
+  },
+  permissionKeyInvalid: {
+    zh: '权限列表包含重复、未知或非叶子权限点',
+    en: 'The permission list contains duplicate, unknown, or non-leaf keys',
+  },
+  importBudgetExceeded: {
+    zh: '导入数据超出服务端上限（行数、字段数、单字段长度或文本总量）',
+    en: 'The import exceeds the server limits (rows, fields, field length, or total text)',
+  },
+  importRequestMalformed: {
+    zh: '导入请求结构不合法，未写入任何数据',
+    en: 'The import request is malformed; nothing was written',
+  },
 } as const;
 
 export type MessageKey = keyof typeof MESSAGES;

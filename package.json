@@ -28,6 +28,7 @@
     "build": "max build",
     "build:demo": "cross-env UMI_APP_DEMO_MODE=true max build",
     "build:github:demo": "cross-env UMI_ENV=github UMI_APP_DEMO_MODE=true max build",
+    "build:real": "cross-env UMI_APP_DEMO_MODE=false UMI_APP_API_BASE=/ max build",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "e2e": "playwright test",
     "e2e:build": "pnpm build:github:demo && playwright test",

@@ -11,6 +11,8 @@ export default {
   'map.device.model': '型号',
   'map.device.uptime': '在线率',
   'map.device.heartbeat': '心跳',
+  'map.coarseCoordinates':
+    '当前账号没有 ops.device.coordinate.view 权限：站点位置已由服务端粗化到约 10 公里格网，地图只用于展示大致分布，不能作为定位依据。',
   'cesium.geohash.precision': '精度',
   'cesium.geohash.aggregate': '按 GeoHash 聚合站点',
   'cesium.geohash.center': '视野中心的 GeoHash',

@@ -103,12 +103,22 @@ export default function Signature() {
     setEmpty(true);
   }, [ticketId]);
 
+  /**
+   * 画板是否处于可见分支：提交成功后画板被结果视图替换（<canvas> 随之卸载），点「下一张」再挂回来。
+   * 两种切换都必须重建 / 释放 SignaturePad，所以下面按这个布尔值驱动，而不是按 signed 对象本身。
+   */
+  const showPad = !signed?.acceptance;
+  // 创建画板时读当前主题笔色；penColor 若是依赖项，切主题会重建画板并清掉已画笔迹
+  const penColorRef = useRef(penColor);
+  penColorRef.current = penColor;
+
   // 画布按容器宽度与设备像素比重设分辨率（否则高分屏上笔迹模糊），尺寸变化时保留已有笔迹
   useEffect(() => {
+    if (!showPad) return undefined;
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     // 透明底：画板底色由 CSS 按主题给出，导出时再铺白底（exportSignature）
-    const pad = new SignaturePad(canvas, { penColor });
+    const pad = new SignaturePad(canvas, { penColor: penColorRef.current });
     padRef.current = pad;
     setEmpty(true);
     const syncEmpty = () => setEmpty(pad.isEmpty());
@@ -129,9 +139,7 @@ export default function Signature() {
       pad.removeEventListener('endStroke', syncEmpty);
       pad.off();
     };
-    // penColor 的变化由下面的 effect 重新着色已有笔迹，不重建画板
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signed]);
+  }, [showPad]);
 
   // 切换明暗主题：换笔色，并把已有笔迹重绘成新颜色
   useEffect(() => {

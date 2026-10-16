@@ -10,8 +10,12 @@ import { CheckCircleFilled, LockFilled, SwapOutlined } from '@ant-design/icons';
 import { Access, Link, useAccess, useIntl, useModel } from '@umijs/max';
 import { Alert, App, Button, Card, Col, Listy, Row, Space, Table, Tag, Typography, theme } from 'antd';
 
-/** 前端脱敏演示：坐标只保留一位小数（约 10 公里精度）。真实系统必须在服务端脱敏，这里只演示呈现效果 */
-const maskCoord = (value: number) => `${value.toFixed(1)}***`;
+/**
+ * 数据范围演示（审查 F12）：精确坐标的判定口径与服务端一致——都看 ops.device.coordinate.view。
+ * 注意这里的 isAdmin 不是授权依据：没有该权限时接口返回的本就是粗化坐标（coordinatePrecision='coarse'），
+ * 因此即使有人绕过 UI 直接读接口也拿不到精确值。
+ */
+const coordText = (value: number) => value.toFixed(4);
 
 const ADMIN_ROUTES = [
   { path: '/system/users', menu: 'menu.system.users', permission: 'system.user.view' },
@@ -34,7 +38,8 @@ export default function AccessDemo() {
   // 权限点即口径（F02）：本页展示的判断与菜单/按钮/演示接口共用同一份 key
   const canDeleteUser = access.permission('system.user.delete');
   const canExportReport = access.permission('doc.export');
-  // 数据级：设备列表对所有身份开放，但精确坐标只有管理员可见
+  // 数据级（F12）：与演示后端的 ops.device.coordinate.view 同一权限点
+  const canViewCoordinates = access.opsDeviceCoordinateView;
   const { data: sample } = useApi(() => listDevices({ pageSize: 5 }).then((page) => page.list));
 
   /** 切换身份：用另一个体验账号重新登录，整页刷新让路由、菜单、权限全部按新身份生效 */
@@ -51,9 +56,11 @@ export default function AccessDemo() {
   const rows = (sample ?? []).map((device) => ({
     key: device.id,
     name: device.name,
-    coords: isAdmin
-      ? `${device.lng.toFixed(4)}, ${device.lat.toFixed(4)}`
-      : `${maskCoord(device.lng)}, ${maskCoord(device.lat)}`,
+    // 服务端已经按权限决定精度：这里只按返回的 precision 标注，不再自行脱敏
+    coords:
+      device.coordinatePrecision === 'exact'
+        ? `${coordText(device.lng)}, ${coordText(device.lat)}`
+        : `~${device.lng.toFixed(1)}, ~${device.lat.toFixed(1)} (~10 km)`,
   }));
 
   return (
@@ -149,7 +156,7 @@ export default function AccessDemo() {
                     title: t('access.data.coords'),
                     dataIndex: 'coords',
                     render: (value: string) => (
-                      <Typography.Text code style={{ color: isAdmin ? undefined : token.colorTextTertiary }}>
+                      <Typography.Text code style={{ color: canViewCoordinates ? undefined : token.colorTextTertiary }}>
                         {value}
                       </Typography.Text>
                     ),

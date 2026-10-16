@@ -101,7 +101,8 @@ export const requestConfig: RequestConfig = {
             message.error(getErrorMessage(data, t('request.serverError')));
             break;
           default:
-            message.error(t('request.failedWithStatus', { status }));
+            // 413（导入超预算）等：服务端给了可展示的 message 就原样展示，否则退回带状态码的兜底文案
+            message.error(getErrorMessage(data, t('request.failedWithStatus', { status })));
         }
         return;
       }

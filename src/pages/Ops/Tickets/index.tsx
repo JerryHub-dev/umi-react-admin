@@ -36,7 +36,7 @@ import {
   theme,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import TicketCard from './TicketCard';
 import TicketDrawer from './TicketDrawer';
 
@@ -184,6 +184,8 @@ const TicketSearch = ({ onOpen }: { onOpen: (ticket: Ticket) => void }) => {
         <Select<TicketStatus>
           allowClear
           className="w-32"
+          /* 无可见 <label>，placeholder 不算可访问名（axe label，critical）：显式给 aria-label */
+          aria-label={t('tickets.search.status')}
           placeholder={t('tickets.search.status')}
           value={status}
           onChange={setStatus}
@@ -192,6 +194,7 @@ const TicketSearch = ({ onOpen }: { onOpen: (ticket: Ticket) => void }) => {
         <Select<TicketPriority>
           allowClear
           className="w-28"
+          aria-label={t('tickets.search.priority')}
           placeholder={t('tickets.search.priority')}
           value={priority}
           onChange={setPriority}
@@ -226,7 +229,11 @@ const TicketSearch = ({ onOpen }: { onOpen: (ticket: Ticket) => void }) => {
 
 export default function Tickets() {
   const intl = useIntl();
-  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  // useCallback 包一层：下面的深链 effect 依赖它，行内函数每次渲染都是新引用会让 effect 反复执行
+  const t = useCallback(
+    (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values),
+    [intl],
+  );
   const { message } = App.useApp();
   const location = useLocation();
   const { data, loading } = useApi(() => listTickets({ board: true }));
@@ -257,11 +264,13 @@ export default function Tickets() {
       });
   }, [data]);
 
-  // 深链接（F03）：?focus=WO-… 打开对应工单详情；不在看板窗口内（历史工单）时按 ID 独立加载
+  // 深链接（F03）：?focus=WO-… 打开对应工单详情；不在看板窗口内（历史工单）时按 ID 独立加载。
+  // focusResolved 是从 tickets 派生的布尔值：它在「看板数据到位且包含该工单」时翻转为 true，
+  // 正好替代原先把 data 整个放进依赖数组的做法（依赖列表与 effect 实际读取的值一致，无需再禁用规则）
+  const focusResolved = !focusId || tickets.some((ticket) => ticket.id === focusId);
   useEffect(() => {
     if (!focusId) return;
-    const existing = tickets.find((ticket) => ticket.id === focusId);
-    if (existing) {
+    if (focusResolved) {
       setViewingId(focusId);
       return;
     }
@@ -278,9 +287,7 @@ export default function Tickets() {
     return () => {
       cancelled = true;
     };
-    // 仅在 focus 参数变化时执行；看板数据到位后重试一次（首次加载时 tickets 还为空）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId, data]);
+  }, [focusId, focusResolved, t, message]);
 
   const viewing = tickets.find((ticket) => ticket.id === viewingId);
   const columns = useMemo(() => {

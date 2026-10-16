@@ -1,3 +1,4 @@
+import SemanticTag from '@/components/SemanticTag';
 import UserAvatar from '@/components/UserAvatar';
 import { TICKET_STATUS_KEYS } from '@/constants/enums';
 import { PRIORITY_COLOR } from '@/constants/semantic';
@@ -43,6 +44,8 @@ const AssigneeSelect = ({ ticket, onChanged }: { ticket: Ticket; onChanged?: (ti
       <Select
         className="min-w-44"
         size="small"
+        /* 可见文字只是旁边的说明，不构成 <label> 关联（axe label）：显式给 aria-label */
+        aria-label={t('tickets.field.assignee')}
         value={ticket.assigneeId}
         optionFilterProp="label"
         showSearch
@@ -125,9 +128,10 @@ const TicketDetail = ({ ticket }: { ticket: Ticket }) => {
   return (
     <>
       <Space size={4} className="mb-2" wrap>
-        <Tag color={PRIORITY_COLOR[ticket.priority]}>{ticket.priority}</Tag>
+        <SemanticTag tone={PRIORITY_COLOR[ticket.priority]}>{ticket.priority}</SemanticTag>
         <Tag>{t(`ticketKind.${ticket.kind}`)}</Tag>
-        {ticket.acceptance && <Tag color="Success">{t('tickets.acceptedTag')}</Tag>}
+        {/* 「Success」不是 antd 的状态色 key（大小写不匹配会走自定义色分支，暗色主题下渲染成近白底白字）：改用小写状态色 */}
+        {ticket.acceptance && <Tag color="success">{t('tickets.acceptedTag')}</Tag>}
       </Space>
       <Typography.Title level={5} className="mt-0!">
         {ticket.title}

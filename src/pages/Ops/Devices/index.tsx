@@ -1,4 +1,5 @@
 import DemoPage from '@/components/DemoPage';
+import SemanticTag from '@/components/SemanticTag';
 import { DEVICE_STATUS_KEYS, REGION_KEYS } from '@/constants/enums';
 import { LEVEL_COLOR } from '@/constants/semantic';
 import { useApi } from '@/hooks/useApi';
@@ -10,13 +11,30 @@ import { formatDateTime, fromNow } from '@/utils/format';
 import { AimOutlined } from '@ant-design/icons';
 import { ProTable, type ProColumns } from '@ant-design/pro-components';
 import { history, Link, useIntl } from '@umijs/max';
-import { Badge, Button, Descriptions, Drawer, Empty, Listy, Progress, Skeleton, Tag, Tooltip, Typography } from 'antd';
+import {
+  Badge,
+  Button,
+  Descriptions,
+  Drawer,
+  Empty,
+  Listy,
+  Progress,
+  Skeleton,
+  theme,
+  Tooltip,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 
 const MODELS = ['MX-200', 'MX-300', 'RX-500'];
 
-/** 在线率进度条颜色：≥99 绿、≥95 蓝、其余橙 */
-const uptimeColor = (value: number) => (value >= 99 ? '#52c41a' : value >= 95 ? '#1677ff' : '#fa8c16');
+/**
+ * 在线率进度条颜色：≥99 绿、≥95 蓝、其余橙。取当前主题的 token（浅色主题是深档、暗色主题是亮档）：
+ * 进度条右侧的百分比文字会继承这个颜色（axe color-contrast），固定写死的 #52c41a / #1677ff / #fa8c16
+ * 在白底只有 2.26~4.10:1，达不到 AA。用 token 后浅色 5.43~6.16:1、暗色 6.16~9.94:1。
+ */
+const uptimeColor = (value: number, token: { colorSuccess: string; colorLink: string; colorWarning: string }) =>
+  value >= 99 ? token.colorSuccess : value >= 95 ? token.colorLink : token.colorWarning;
 
 const DeviceDrawer = ({ id, onClose }: { id?: string; onClose: () => void }) => {
   const intl = useIntl();
@@ -76,7 +94,9 @@ const DeviceDrawer = ({ id, onClose }: { id?: string; onClose: () => void }) => 
                 itemRender={(alarm) => (
                   <div className="flex items-center justify-between gap-2">
                     <span className="min-w-0">
-                      <Tag color={LEVEL_COLOR[alarm.level]}>{enums.label('alarmLevel', alarm.level)}</Tag>
+                      <SemanticTag tone={LEVEL_COLOR[alarm.level]}>
+                        {enums.label('alarmLevel', alarm.level)}
+                      </SemanticTag>
                       <Link to={`/ops/alarms?keyword=${encodeURIComponent(alarm.id)}`}>
                         {enums.label('alarmType', alarm.type)}
                       </Link>
@@ -99,6 +119,7 @@ const DeviceDrawer = ({ id, onClose }: { id?: string; onClose: () => void }) => 
 export default function Devices() {
   const intl = useIntl();
   const t = (id: string) => intl.formatMessage({ id });
+  const { token } = theme.useToken();
   const enums = useEnums();
   const [viewing, setViewing] = useState<string>();
   const table = useResponsiveTable();
@@ -169,8 +190,10 @@ export default function Devices() {
         <Progress
           percent={device.uptime30d}
           size="small"
-          strokeColor={uptimeColor(device.uptime30d)}
+          strokeColor={uptimeColor(device.uptime30d, token)}
           format={(value) => `${value}%`}
+          /* role="progressbar" 没有可见名称（axe aria-progressbar-name）：带上设备名 + 列名 */
+          aria-label={`${device.name} ${t('devices.column.uptime')}`}
         />
       ),
     },

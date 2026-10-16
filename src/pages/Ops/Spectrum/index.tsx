@@ -3,13 +3,17 @@ import { useApi } from '@/hooks/useApi';
 import { listAllDevices } from '@/services/ops';
 import { useIntl } from '@umijs/max';
 import { Card, Grid, Progress, Skeleton, Table, Tag, Typography } from 'antd';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { KEY_BANDS, coverageByModel, devicesCovering } from './bands';
 import CoverageChart, { formatMHz } from './CoverageChart';
 
 export default function Spectrum() {
   const intl = useIntl();
-  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  // useCallback 包一层：rows 的 useMemo 依赖它，行内函数每次渲染都是新引用会让 memo 失效
+  const t = useCallback(
+    (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values),
+    [intl],
+  );
   const { data: devices, loading } = useApi(listAllDevices);
   const { md } = Grid.useBreakpoint();
 
@@ -27,8 +31,7 @@ export default function Spectrum() {
           models: [...new Set(covering.map((d) => d.model))].sort(),
         };
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [devices, intl],
+    [devices, t],
   );
 
   // 窄屏摘要（审计 U03）：图 minimum 720px 宽、只能横滚，先把整体频段范围说清楚

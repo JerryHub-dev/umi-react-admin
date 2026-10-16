@@ -1,27 +1,38 @@
 import DemoPage from '@/components/DemoPage';
+import SemanticTag from '@/components/SemanticTag';
 import UserAvatar from '@/components/UserAvatar';
 import { LOG_ACTION_KEYS } from '@/constants/enums';
+import type { PresetColor } from '@/constants/semantic';
 import { useEnums } from '@/hooks/useEnums';
 import { listLogs } from '@/services/system';
 import type { LogAction, OperationLog } from '@/services/types';
 import { formatDateTime, fromNow } from '@/utils/format';
 import { ProTable, type ProColumns } from '@ant-design/pro-components';
 import { useIntl } from '@umijs/max';
-import { Tag, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 
-/** 操作类别着色：登录类中性、管理类蓝、处置类紫、导出绿 */
-const ACTION_COLOR: Partial<Record<LogAction, string>> = {
+/** 操作类别着色：登录类中性、管理类蓝、处置类紫、导出绿（SemanticTag 负责浅色主题下的文字对比度） */
+const ACTION_COLOR: Partial<Record<LogAction, PresetColor>> = {
   userCreate: 'blue',
   userUpdate: 'blue',
   userDisable: 'orange',
+  userDelete: 'red',
+  userRoleAssign: 'gold',
   roleUpdate: 'blue',
+  roleReset: 'gold',
   alarmHandle: 'purple',
   ticketAssign: 'purple',
+  ticketStart: 'purple',
+  ticketReturn: 'orange',
   ticketClose: 'green',
   ticketAccept: 'green',
   ticketRework: 'orange',
   userImport: 'blue',
   reportExport: 'cyan',
+  scheduleCreate: 'geekblue',
+  scheduleUpdate: 'geekblue',
+  scheduleDelete: 'orange',
+  demoClock: 'magenta',
 };
 
 export default function Logs() {
@@ -60,7 +71,9 @@ export default function Logs() {
       dataIndex: 'action',
       width: 140,
       valueEnum: enums.valueEnum('logAction', LOG_ACTION_KEYS),
-      render: (_, log) => <Tag color={ACTION_COLOR[log.action]}>{enums.label('logAction', log.action)}</Tag>,
+      render: (_, log) => (
+        <SemanticTag tone={ACTION_COLOR[log.action]}>{enums.label('logAction', log.action)}</SemanticTag>
+      ),
     },
     {
       title: t('logs.column.target'),

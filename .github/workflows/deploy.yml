@@ -17,6 +17,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # 清单指纹（sha256）随 job 输出传给 deploy job：即使 artifact 里的清单被替换，校验也会失败
+    outputs:
+      manifest-sha256: ${{ steps.manifest.outputs.sha256 }}
 
     steps:
       - name: Checkout
@@ -49,29 +52,52 @@ jobs:
         run: pnpm audit:security
 
       - name: Build
+        # 注入本产线会用到的全部凭据；扫描步骤必须看到同一组环境变量（否则「构建期配置了凭据」
+        # 这一事实对扫描不可见，F3 的未声明检测就失效）
         env:
           CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AMAP_KEY: ${{ secrets.AMAP_KEY }}
+          AMAP_SECURITY_CODE: ${{ secrets.AMAP_SECURITY_CODE }}
         run: pnpm run build:github:demo
 
       - name: SPA fallback（子路由直链/刷新不 404）
         # GitHub Pages 对不存在的路径返回站点根的 404.html；复制入口页即可让前端路由接管
         run: cp dist/index.html dist/404.html
 
-      - name: Dist secrets scan（部署产物秘钥扫描，成功才允许部署）
-        # 审计 2026-09-22 H-1：此前扫描只在 ci.yml（不注入 secret 的构建）上跑，扫的产物与
-        # 真正部署的产物不是同一份，门禁永真通过。这里对带 secret 构建的产物扫描：
-        # EXPECTED_TOKEN 即本步骤注入的 ion token（客户端地图应用的凭据设计上必然公开），
-        # 脚本只以 sha256 指纹比对（不可逆、不落日志）；除它与 Cesium 默认 token 外的
-        # JWT / AWS/GitHub/PEM 等密钥特征一律判失败。
+      - name: Dist secrets scan（部署产物凭据扫描，成功才允许部署）
+        # 审计 2026-09-22 H-1 + F3：扫描必须跑在注入凭据的同一份构建上，且每类凭据都要显式声明。
+        # 此前扫描只在 ci.yml（不注入 secret 的构建）上跑，扫的产物与真正部署的产物不是同一份，
+        # 门禁永真通过。EXPECTED_* 即本步骤注入的同名 secret：客户端地图应用的凭据设计上必然公开，
+        # 脚本只以 sha256 指纹比对（不可逆、不落日志）。未声明、形态不合法、与构建期 define 不一致、
+        # 声明了却在产物里找不到，都会判失败；除 Cesium 默认 token 与已声明凭据外的 JWT /
+        # AWS/GitHub/PEM 等密钥特征一律判失败。
         env:
-          EXPECTED_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          CESIUM_ION_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          AMAP_KEY: ${{ secrets.AMAP_KEY }}
+          AMAP_SECURITY_CODE: ${{ secrets.AMAP_SECURITY_CODE }}
+          EXPECTED_CESIUM_TOKEN: ${{ secrets.CESIUM_ION_TOKEN }}
+          EXPECTED_AMAP_KEY: ${{ secrets.AMAP_KEY }}
+          EXPECTED_AMAP_SECURITY_CODE: ${{ secrets.AMAP_SECURITY_CODE }}
         run: node scripts/check-dist-secrets.mjs
+
+      - name: Generate integrity manifest（F10：把已扫描的字节钉成清单）
+        # 逐文件 sha256 + 大小 + 目录结构写入 dist 之外的清单，并随 artifact 一起上传；
+        # deploy job 下载后用它校验「发布的字节 == 扫描过的字节」。
+        id: manifest
+        run: |
+          node scripts/verify-dist-integrity.mjs generate dist integrity-manifest.json
+          echo "sha256=$(sha256sum integrity-manifest.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload checked static files
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: checked-pages
-          path: dist
+          # 清单与产物同属一个 artifact（清单必须在 dist 之外，见 verify-dist-integrity.mjs）
+          path: |
+            dist
+            integrity-manifest.json
+          # 不静默丢 dotfile：artifact 必须与清单覆盖的文件集完全一致，否则 deploy 端会判「缺文件」
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
 
@@ -91,7 +117,20 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: checked-pages
-          path: dist
+          path: .
+
+      - name: Verify integrity before publish（F10：发布的字节必须等于扫描过的字节）
+        # 先核对清单指纹与 build job 输出一致（防 artifact 中的清单被替换），再用清单逐文件校验 dist。
+        # 缺文件、多文件、内容/大小变化、符号链接、目录结构或总大小变化都会在此失败，不会走到发布步骤。
+        env:
+          EXPECTED_MANIFEST_SHA256: ${{ needs.build.outputs.manifest-sha256 }}
+        run: |
+          actual="$(sha256sum integrity-manifest.json | cut -d' ' -f1)"
+          if [ "$actual" != "$EXPECTED_MANIFEST_SHA256" ]; then
+            echo "::error::下载到的清单指纹与 build job 生成的不一致（artifact 可能被替换或损坏）"
+            exit 1
+          fi
+          node scripts/verify-dist-integrity.mjs verify dist integrity-manifest.json
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0

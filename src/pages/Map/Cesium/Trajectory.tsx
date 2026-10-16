@@ -7,7 +7,7 @@ import { BlockOutlined, CheckOutlined, ClearOutlined, GatewayOutlined, NodeIndex
 import { useIntl } from '@umijs/max';
 import { Alert, App, Button, Card } from 'antd';
 import * as Cesium from 'cesium';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const SAMPLE_METERS = 1000;
 const MAX_SAMPLES = 2000;
@@ -58,13 +58,13 @@ export default function Trajectory() {
     },
   });
 
-  const clear = () => {
+  const clear = useCallback(() => {
     layerRef.current?.entities.removeAll();
     if (viewer && samplesRef.current) viewer.scene.primitives.remove(samplesRef.current);
     samplesRef.current = null;
     waypointsRef.current = [];
     setResult(undefined);
-  };
+  }, [viewer]);
 
   const startDrawing = () => {
     clear();
@@ -114,7 +114,7 @@ export default function Trajectory() {
   };
 
   /** 三种能力包络的并集（turf union） */
-  const mergeEnvelopes = async () => {
+  const mergeEnvelopes = useCallback(async () => {
     if (!viewer) return;
     clear();
     const data =
@@ -138,7 +138,7 @@ export default function Trajectory() {
       }),
     );
     if (!viewer.isDestroyed()) void viewer.flyTo(layerRef.current!, { duration: 1.2 });
-  };
+  }, [clear, viewer]);
 
   // 进入页面即展示三种包络的合并结果（数据约 20 KB）；画路线、覆盖合并按需点按钮
   const autoDrawn = useRef(false);
@@ -146,8 +146,7 @@ export default function Trajectory() {
     if (!viewer || autoDrawn.current) return;
     autoDrawn.current = true;
     void mergeEnvelopes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewer]);
+  }, [mergeEnvelopes, viewer]);
 
   /** 200+ 个覆盖多边形（东北一次路测的分片覆盖）：先取凸包再合并成一个多边形，或逐个显示对比 */
   const drawCoverage = async (merge: boolean) => {
