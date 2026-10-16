@@ -79,6 +79,8 @@ export default {
   'pdf.error.pageLimit': 'PDF 必须包含 1 至 1000 页',
   'pdf.error.canvasLimit': '该页面的尺寸或图片超过预览上限，请选择较小的文档',
   'pdf.error.parseFailed': 'PDF 文件无效，请选择本地文件重试',
+  'pdf.error.preflight': 'PDF 内嵌资源解码后超出预览上限，请选择较小的文档',
+  'pdf.error.encrypted': '不支持预览加密的 PDF，请先解除加密后再打开',
   'pdf.error.timeout': 'PDF 加载或渲染超过 10 秒，请选择较小的文件重试',
   'excel.import.error.fileLimit': 'Excel 文件不得超过 5 MiB',
   'excel.import.error.archiveLimit': 'Excel 解压后的内容超过上限（单项 8 MiB、合计 16 MiB、最多 256 项）',

@@ -10,7 +10,18 @@ export const PDF_LIMITS = {
 } as const;
 
 export class PdfInputError extends Error {
-  constructor(public readonly code: 'fileLimit' | 'pageLimit' | 'canvasLimit' | 'parseFailed' | 'timeout') {
+  constructor(
+    public readonly code:
+      | 'fileLimit'
+      | 'pageLimit'
+      | 'canvasLimit'
+      | 'parseFailed'
+      | 'timeout'
+      /** 容器级预检判定解码资源超预算（见 pdfPreflight.ts） */
+      | 'preflight'
+      /** 加密 PDF：预检无法对密文流记账，不预览 */
+      | 'encrypted',
+  ) {
     super(code);
     this.name = 'PdfInputError';
   }

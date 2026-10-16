@@ -6,10 +6,11 @@ import { useIntl } from '@umijs/max';
 import { Alert, Button, Card, Space, Spin, Upload } from 'antd';
 import html2canvas from 'html2canvas';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { PdfPreflightAborted, preflightFailure, preflightPdf } from './pdfPreflight';
 import { buildImagePdf, dataUrlToBytes } from './pdfWriter';
 import {
   PDF_LIMITS,
@@ -45,9 +46,60 @@ type RenderWindow = {
   rendered: number[];
 };
 
+/**
+ * 读取 Blob 字节。优先 `arrayBuffer()`（微任务，浏览器与 jsdom 都可用），
+ * 仅在缺失时退回 FileReader，保证预检前的读取不依赖 timer。
+ */
+const readBlobBytes = (blob: Blob): Promise<Uint8Array> =>
+  typeof blob.arrayBuffer === 'function'
+    ? blob.arrayBuffer().then((buffer) => new Uint8Array(buffer))
+    : new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error ?? new Error('pdf read failed'));
+        reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+        reader.readAsArrayBuffer(blob);
+      });
+
+/**
+ * pdf.js 的 PDFDocumentProxy 在**运行时**有 destroy()（build/pdf.mjs:16529，由 destroyCapability
+ * 保护、可重复调用），但安装的 pdfjs-dist 类型只在 PDFDocumentLoadingTask 上声明了 destroy()。
+ * 这里用一个最小结构扩展描述运行时事实，而不是把整个代理断言成 any（其余成员仍受类型约束）。
+ */
+type DestroyableDocument = PDFDocumentProxy & { destroy?: () => Promise<void> };
+
+/**
+ * 释放 PDF 文档资源。卸载 `<Document>` 时 react-pdf 自身的 cleanup 会 dispose 其 loading task；
+ * 这里再显式 destroy 一次作为兜底，并延后到下一个宏任务，保证顺序是「先卸载、后销毁」。
+ * pdf.js 侧的 destroy 是幂等的（PDFDocumentLoadingTask.destroy 置 destroyed；
+ * PDFDocumentProxy.destroy 由 destroyCapability 短路），重复调用安全。
+ */
+const releaseDocument = (pdf?: DestroyableDocument) => {
+  // 先把方法取到局部变量：可选属性的收窄不会跨越闭包边界
+  const destroy = pdf?.destroy;
+  if (typeof destroy !== 'function') return;
+  setTimeout(() => {
+    try {
+      // Promise.resolve 兜住「返回非 Promise」的 mock/旧实现
+      void Promise.resolve(destroy.call(pdf)).catch(() => undefined);
+    } catch {
+      // 已经销毁或正在销毁：无需处理
+    }
+  }, 0);
+};
+
 export default function Pdf() {
   const intl = useIntl();
-  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  // t/loadFailure/open 必须跨渲染保持同一身份：三个 effect 依赖它们，一旦每次渲染都变化，
+  // 校验 effect 就会不断重启并反复置状态（无限渲染）。intl 的**身份**不保证稳定，
+  // 因此用 latest-ref 读取它，而不是把 intl 放进 useCallback 依赖。
+  const intlRef = useRef(intl);
+  useEffect(() => {
+    intlRef.current = intl;
+  }, [intl]);
+  const t = useCallback(
+    (id: string, values?: Record<string, string | number>) => intlRef.current.formatMessage({ id }, values),
+    [],
+  );
   const { data: overview } = useApi(getDashboardOverview);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [report, setReport] = useState<Blob>();
@@ -60,44 +112,87 @@ export default function Pdf() {
   const selectionVersion = useRef(0);
   const renderGeneration = useRef(0);
   const mounted = useRef(true);
+  /** 当前选择的取消信号：换文件 / 失败 / 卸载都会 abort，让预检与解析立即停止 */
+  const abortRef = useRef<AbortController | undefined>(undefined);
+  /** 当前持有的 PDF 文档，用于显式 destroy */
+  const pdfRef = useRef<DestroyableDocument | undefined>(undefined);
+  /** 已生成的对象 URL，卸载时统一 revoke */
+  const urlRef = useRef(new Set<string>());
   const file = selection?.file;
   const displayWidth = Math.max(160, Math.min(794, window.innerWidth - 96));
 
   useEffect(() => {
+    // 在 effect 内固定引用：Set 实例本身从不被替换，cleanup 里必须用它而不是 urlRef.current
+    const trackedUrls = urlRef.current;
     mounted.current = true;
     return () => {
       mounted.current = false;
       selectionVersion.current += 1;
       renderGeneration.current += 1;
+      abortRef.current?.abort();
+      releaseDocument(pdfRef.current);
+      pdfRef.current = undefined;
+      for (const url of trackedUrls) URL.revokeObjectURL(url);
+      trackedUrls.clear();
     };
   }, []);
 
-  const loadFailure = (version: number, error: unknown) => {
-    if (!mounted.current || selectionVersion.current !== version) return;
-    selectionVersion.current += 1;
-    renderGeneration.current += 1;
-    setSelection(undefined); // Unmounting Document destroys its loading/render tasks.
-    setLoaded(undefined);
-    setRenderWindow(undefined);
-    setNumPages(undefined);
-    setLoadError(t(error instanceof PdfInputError ? `pdf.error.${error.code}` : 'pdf.loadFailed'));
-  };
+  const loadFailure = useCallback(
+    (version: number, error: unknown) => {
+      // 过期回调（旧文件 / 旧窗口）不得影响当前状态
+      if (!mounted.current || selectionVersion.current !== version) return;
+      selectionVersion.current += 1;
+      renderGeneration.current += 1;
+      abortRef.current?.abort();
+      releaseDocument(pdfRef.current);
+      pdfRef.current = undefined;
+      setSelection(undefined); // Unmounting Document destroys its loading/render tasks.
+      setLoaded(undefined);
+      setRenderWindow(undefined);
+      setNumPages(undefined);
+      setLoadError(t(error instanceof PdfInputError ? `pdf.error.${error.code}` : 'pdf.loadFailed'));
+    },
+    [t],
+  );
 
-  const open = (next: Blob | File) => {
-    const version = ++selectionVersion.current;
-    renderGeneration.current += 1;
-    setPageIndex(0);
-    setNumPages(undefined);
-    setLoaded(undefined);
-    setRenderWindow(undefined);
-    try {
-      checkPdfFileSize(next.size);
+  const open = useCallback(
+    (next: Blob | File) => {
+      const version = ++selectionVersion.current;
+      renderGeneration.current += 1;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setPageIndex(0);
+      setNumPages(undefined);
+      setLoaded(undefined);
+      setRenderWindow(undefined);
+      try {
+        checkPdfFileSize(next.size);
+      } catch (error) {
+        loadFailure(version, error);
+        return;
+      }
       setLoadError(undefined);
-      setSelection({ version, file: next });
-    } catch (error) {
-      loadFailure(version, error);
-    }
-  };
+      // F13：容器级预检必须在文件交给 react-pdf 之前完成。
+      // 这里只读取字节并做结构化预算判定，不解码页面、不创建画布。
+      void (async () => {
+        try {
+          const bytes = await readBlobBytes(next);
+          if (controller.signal.aborted || selectionVersion.current !== version) return;
+          const report = preflightPdf(bytes, { signal: controller.signal });
+          if (controller.signal.aborted || selectionVersion.current !== version) return;
+          if (!report.ok) throw new PdfInputError(preflightFailure(report));
+          setSelection({ version, file: next });
+        } catch (error) {
+          // 已取消或已被更新的选择取代：丢弃这个过期结果
+          if (controller.signal.aborted || selectionVersion.current !== version) return;
+          if (error instanceof PdfPreflightAborted) return;
+          loadFailure(version, error);
+        }
+      })();
+    },
+    [loadFailure],
+  );
 
   // 报告页渲染完成后逐页截图（2 倍分辨率）并封装为 PDF
   useEffect(() => {
@@ -139,7 +234,7 @@ export default function Pdf() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [overview, report]);
+  }, [overview, report, open, loadFailure]);
 
   // Validate only the requested pages before React-PDF can allocate their canvases.
   useEffect(() => {
@@ -172,7 +267,7 @@ export default function Pdf() {
     return () => {
       cancelled = true;
     };
-  }, [loaded, pageIndex, displayWidth]);
+  }, [loaded, pageIndex, displayWidth, loadFailure]);
 
   const renderComplete =
     renderWindow?.selection === selection?.version &&
@@ -186,7 +281,7 @@ export default function Pdf() {
     // The deadline covers document loading, page geometry and actual rendering of every visible page.
     const timer = setTimeout(() => loadFailure(selection.version, new PdfInputError('timeout')), PDF_LIMITS.timeoutMs);
     return () => clearTimeout(timer);
-  }, [selection, pageIndex, renderComplete]);
+  }, [selection, pageIndex, renderComplete, loadFailure]);
 
   const renderFailure = (frame: RenderWindow, error: Error) => {
     if (frame.generation === renderGeneration.current) loadFailure(frame.selection, error);
@@ -214,11 +309,15 @@ export default function Pdf() {
   const download = () => {
     if (!report) return;
     const url = URL.createObjectURL(report);
+    urlRef.current.add(url);
     const link = document.createElement('a');
     link.href = url;
     link.download = 'monthly-report.pdf';
     link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      urlRef.current.delete(url);
+    }, 0);
   };
 
   return (
@@ -261,17 +360,26 @@ export default function Pdf() {
               options={PDF_OPTIONS}
               onLoadSuccess={(pdf) => {
                 const version = selection?.version;
-                if (version === undefined || version !== selectionVersion.current) return;
+                if (version === undefined || version !== selectionVersion.current) return; // 过期回调
                 try {
                   checkPdfPageCount(pdf.numPages);
+                  pdfRef.current = pdf;
                   setNumPages(pdf.numPages);
                   setLoaded({ version, pdf });
                 } catch (error) {
                   loadFailure(version, error);
                 }
               }}
-              onLoadError={(error: Error) => selection && loadFailure(selection.version, error)}
-              onSourceError={(error: Error) => selection && loadFailure(selection.version, error)}
+              onLoadError={(error: Error) => {
+                const version = selection?.version;
+                if (version === undefined || version !== selectionVersion.current) return; // 过期回调
+                loadFailure(version, error);
+              }}
+              onSourceError={(error: Error) => {
+                const version = selection?.version;
+                if (version === undefined || version !== selectionVersion.current) return; // 过期回调
+                loadFailure(version, error);
+              }}
               className="flex flex-col items-center gap-4"
             >
               {renderWindow &&
@@ -281,6 +389,11 @@ export default function Pdf() {
                     pageNumber={number}
                     width={renderWindow.width}
                     devicePixelRatio={Math.min(window.devicePixelRatio || 1, PDF_LIMITS.devicePixelRatio)}
+                    // F13：关闭注释层与文本层。二者是 <Page> 的独立解码边界：
+                    // renderAnnotationLayer=false 时 react-pdf 不再调用 getAnnotations()，
+                    // renderTextLayer=false 时不再调用 getTextContent()（表单默认关闭且依赖注释层）。
+                    renderAnnotationLayer={false}
+                    renderTextLayer={false}
                     onLoadError={(error: Error) => renderFailure(renderWindow, error)}
                     onRenderError={(error: Error) => renderFailure(renderWindow, error)}
                     onRenderSuccess={() => rendered(renderWindow, number)}

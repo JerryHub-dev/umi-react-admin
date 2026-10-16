@@ -81,6 +81,8 @@ export default {
   'pdf.error.pageLimit': 'PDF files must contain 1 to 1000 pages',
   'pdf.error.canvasLimit': 'This page or its images exceed the preview limits. Choose a smaller document.',
   'pdf.error.parseFailed': 'Invalid PDF file. Try opening another local file.',
+  'pdf.error.preflight': 'This PDF decodes more resources than the preview allows. Choose a smaller document.',
+  'pdf.error.encrypted': 'Encrypted PDFs cannot be previewed. Remove the encryption and try again.',
   'pdf.error.timeout': 'PDF loading or rendering exceeded 10 seconds. Choose a smaller file and try again.',
   'excel.import.error.fileLimit': 'Excel files must not exceed 5 MiB',
   'excel.import.error.archiveLimit':
