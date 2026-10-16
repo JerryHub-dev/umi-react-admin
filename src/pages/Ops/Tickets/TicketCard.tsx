@@ -1,3 +1,4 @@
+import SemanticTag from '@/components/SemanticTag';
 import UserAvatar from '@/components/UserAvatar';
 import { PRIORITY_COLOR } from '@/constants/semantic';
 import type { Ticket } from '@/services/types';
@@ -6,7 +7,7 @@ import { formatDateTime, fromNow } from '@/utils/format';
 import { nowMs } from '@/utils/now';
 import { CalendarOutlined, CheckCircleOutlined, ToolOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Card, Tag, Tooltip, Typography, theme } from 'antd';
+import { Card, Tooltip, Typography, theme } from 'antd';
 
 const HOUR = 3_600_000;
 
@@ -51,9 +52,9 @@ export default function TicketCard({ ticket, dragging }: { ticket: Ticket; dragg
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1">
-          <Tag color={PRIORITY_COLOR[ticket.priority]} className="m-0!">
+          <SemanticTag tone={PRIORITY_COLOR[ticket.priority]} className="m-0!">
             {ticket.priority}
-          </Tag>
+          </SemanticTag>
           <Typography.Text type="secondary" className="text-xs">
             {ticket.id}
           </Typography.Text>

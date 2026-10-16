@@ -59,6 +59,21 @@ export const EVENT_COLOR: Record<EventType, PresetColor> = {
   release: 'magenta',
 };
 
+/**
+ * 无障碍（Q5）：FullCalendar 事件块是「深底 + 白字」，而 antd 预设色给的是中间调
+ * （#52c41a 白字 2.26:1、#13c2c2 2.20:1、#fa8c16 2.37:1，axe color-contrast serious）。
+ * 这里取同一色系的深档作为事件背景：白字 5.43~9.85:1，明暗两套主题都成立
+ * （深色主题下事件块落在 #141414 上，非文本对比度也 ≥3:1）。图例圆点仍用 chart.color 的亮色。
+ */
+const EVENT_BACKGROUND: Record<EventType, string> = {
+  duty: '#0958d9', // 白字 6.16:1
+  inspection: '#237804', // 5.59:1
+  review: '#531dab', // 9.85:1
+  training: '#006d75', // 6.10:1
+  maintenance: '#ad4e00', // 5.43:1
+  release: '#a50044', // 7.83:1
+};
+
 type Draft = { start: string; end: string; allDay: boolean };
 
 /** 「接下来」独立向前查询的天数 */
@@ -108,7 +123,8 @@ export default function Calendar() {
     start: event.start,
     end: event.end,
     allDay: event.allDay,
-    color: chart.color(EVENT_COLOR[event.type]),
+    // 事件块用白字，背景必须够深（见 EVENT_BACKGROUND）
+    color: EVENT_BACKGROUND[event.type],
     extendedProps: { type: event.type },
   });
 

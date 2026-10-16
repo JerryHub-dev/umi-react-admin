@@ -1,4 +1,5 @@
 import DemoPage from '@/components/DemoPage';
+import SemanticTag from '@/components/SemanticTag';
 import { ALARM_LEVEL_KEYS, ALARM_STATUS_KEYS, ALARM_TYPE_KEYS, REGION_KEYS } from '@/constants/enums';
 import { LEVEL_COLOR } from '@/constants/semantic';
 import { useEnums } from '@/hooks/useEnums';
@@ -75,7 +76,9 @@ export default function Alarms() {
       dataIndex: 'level',
       width: 90,
       valueEnum: enums.valueEnum('alarmLevel', ALARM_LEVEL_KEYS),
-      render: (_, alarm) => <Tag color={LEVEL_COLOR[alarm.level]}>{enums.label('alarmLevel', alarm.level)}</Tag>,
+      render: (_, alarm) => (
+        <SemanticTag tone={LEVEL_COLOR[alarm.level]}>{enums.label('alarmLevel', alarm.level)}</SemanticTag>
+      ),
     },
     {
       title: t('alarms.column.type'),
@@ -143,8 +146,9 @@ export default function Alarms() {
         alarm.ticketId ? (
           <div>
             {/* 已随工单恢复的转单告警按恢复语义展示，未恢复的仍算「未恢复」池的一部分（F08） */}
+            {/* 「Success」不是 antd 的状态色 key（大小写不匹配会走自定义色分支，暗色主题下渲染成近白底白字）：改用小写状态色 */}
             {alarmRecovered(alarm) && alarm.status === 'ticketed' ? (
-              <Tag color="Success">{enums.label('alarmStatus', 'recovered')}</Tag>
+              <Tag color="success">{enums.label('alarmStatus', 'recovered')}</Tag>
             ) : (
               dom
             )}
@@ -198,10 +202,12 @@ export default function Alarms() {
         params={{ activeOnly }}
         pagination={{ defaultPageSize: 20, showSizeChanger: true }}
         toolBarRender={() => [
-          <span key="active" className="flex items-center gap-2">
+          <label key="active" className="flex items-center gap-2">
+            {/* 开关外侧的文字不会成为按钮的可访问名（axe button-name，critical）：button 属于 label 元素，
+                用 <label> 包裹即可建立隐式关联（antd 6 的 SwitchProps 不接受 aria-label，这也顺带让点文字可切换） */}
             <Switch size="small" checked={activeOnly} onChange={setActiveOnly} />
             {t('alarms.activeOnly')}
-          </span>,
+          </label>,
         ]}
         request={async ({ activeOnly: onlyActive, ...params }) => {
           // 只看未恢复 = 按业务恢复语义筛选（活动 + 已转工单但未恢复），不是只看 active（F08）

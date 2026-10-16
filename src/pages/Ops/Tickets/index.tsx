@@ -184,6 +184,8 @@ const TicketSearch = ({ onOpen }: { onOpen: (ticket: Ticket) => void }) => {
         <Select<TicketStatus>
           allowClear
           className="w-32"
+          /* 无可见 <label>，placeholder 不算可访问名（axe label，critical）：显式给 aria-label */
+          aria-label={t('tickets.search.status')}
           placeholder={t('tickets.search.status')}
           value={status}
           onChange={setStatus}
@@ -192,6 +194,7 @@ const TicketSearch = ({ onOpen }: { onOpen: (ticket: Ticket) => void }) => {
         <Select<TicketPriority>
           allowClear
           className="w-28"
+          aria-label={t('tickets.search.priority')}
           placeholder={t('tickets.search.priority')}
           value={priority}
           onChange={setPriority}

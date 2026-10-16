@@ -19,8 +19,9 @@
 @source not inline('{visible,table,italic,outline,resize}');
 
 /*
- * antd5 CSS 变量桥接（app.tsx 已开 cssVar）：变量不在 :root 上，而是挂在 antd 组件根的
- * .css-var-* 作用域内（umi 用 antd <App> 包裹整个应用，其容器也带该类，弹层根节点各自带）。
+ * antd CSS 变量桥接（antd 6 默认就会把 token 注入成 CSS 变量；本项目没有、也不需要显式配置
+ * cssVar）：变量不在 :root 上，而是挂在 antd 组件根的 .css-var-* 作用域内（umi 用 antd <App>
+ * 包裹整个应用，其容器也带该类，弹层根节点各自带）。
  * 必须用 inline：否则工具类引用的是在 :root 上求值的 --color-*，那里 --ant-* 尚未定义。
  * 这些 token 类只在 antd 组件树内生效；切换暗色时 antd 重算变量，token 类自动跟随。
  */
@@ -59,4 +60,21 @@
     color: inherit;
     border-top-width: 1px;
   }
+}
+
+/*
+ * 无障碍（Q5）：两处第三方组件把「主色」当文字色用。主色必须同时满足「白字压其上」（要求够深）
+ * 与「深色主题下当文字」（要求够浅），两个方向无法用同一个 token 满足，所以只在这两个具体位置
+ * 改接到链接色 / 说明文字色（它们同样是主题感知的 --ant-* 变量，浅色深档、深色亮档）。
+ * 选择器带元素名（0,1,1）以压过组件自身的单类规则（0,1,0），避免依赖 CSS-in-JS 的注入顺序。
+ */
+a.ant-pro-query-filter-collapse-button {
+  /* pro-components 查询表单的「展开 / 收起」：color: token.colorPrimary，暗色主题下 #1668dc 在
+     #141414 上只有 3.55:1（axe color-contrast serious） */
+  color: var(--ant-color-link);
+}
+
+div.ant-spin-description {
+  /* antd 6 Spin 的 section 用 colorPrimary 当文字色，说明文字在暗色卡片上只有 3.06:1 */
+  color: var(--ant-color-text-description, var(--ant-color-text));
 }

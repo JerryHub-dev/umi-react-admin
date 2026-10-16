@@ -11,11 +11,25 @@ import { DownOutlined, LockOutlined, MoreOutlined, PlusOutlined } from '@ant-des
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { history, useIntl, useModel } from '@umijs/max';
 import { App, Button, Dropdown, Grid, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
-import { useRef, useState } from 'react';
+import TableMeasureRowContext from 'antd/es/table/TableMeasureRowContext';
+import { cloneElement, isValidElement, useContext, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import UserDrawer from './UserDrawer';
 import UserForm from './UserForm';
 
 const PROTECTED = new Set(['admin', 'guest']);
+
+/**
+ * 无障碍（Q5）：rc-table 的「测量行」会把每列的 title 克隆一份量宽，而 rowSelection 的选择列 title 是
+ * antd 的「全选」复选框，于是 `<tr aria-hidden="true" class="ant-table-measure-row">` 里出现可 Tab 聚焦的
+ * `<input type="checkbox">`（axe aria-hidden-focus，serious）。antd 6 在测量行里提供
+ * TableMeasureRowContext（外部为 false），据此只在测量行内把复选框置为 disabled：disabled 元素不参与
+ * Tab 序列，盒子尺寸不变（列宽测量与对齐不受影响），表头里的全选复选框仍是可交互的原件。
+ */
+const MeasureRowSafeTitle = ({ children }: { children: ReactNode }) => {
+  const inMeasureRow = useContext(TableMeasureRowContext);
+  if (!inMeasureRow || !isValidElement(children)) return <>{children}</>;
+  return <>{cloneElement(children as ReactElement<{ disabled?: boolean }>, { disabled: true })}</>;
+};
 
 export default function Users() {
   const intl = useIntl();
@@ -245,6 +259,7 @@ export default function Users() {
         search={{ labelWidth: 'auto' }}
         pagination={{ defaultPageSize: 10, showSizeChanger: true }}
         rowSelection={{
+          columnTitle: (checkbox) => <MeasureRowSafeTitle>{checkbox}</MeasureRowSafeTitle>,
           // 批量接口对混入的 admin / lead 账号整批 403：无权维护的行不进入勾选
           getCheckboxProps: (user) => ({ disabled: !manageable(user) }),
         }}

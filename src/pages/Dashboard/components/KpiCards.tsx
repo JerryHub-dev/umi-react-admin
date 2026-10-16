@@ -60,7 +60,8 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
   const bigNumber = (text: string, suffix?: string) => (
     <span className="text-3xl font-semibold tabular-nums">
       {text}
-      {suffix && <span className="ml-1 text-base font-normal opacity-60">{suffix}</span>}
+      {/* opacity-60 把这行压到 4.41:1（白底 16px）：改用说明文字 token（浅色 6.39:1 / 暗色 7.57:1） */}
+      {suffix && <span className="ml-1 text-base font-normal text-text-tertiary">{suffix}</span>}
     </span>
   );
 
@@ -81,6 +82,8 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
             showInfo={false}
             strokeColor={chart.color('green')}
             size="small"
+            /* role="progressbar" 没有可见名称（axe aria-progressbar-name）：用卡片标题作为名称 */
+            aria-label={t('dashboard.kpi.onlineRate', { rate: formatPercent(onlineRate, locale) })}
           />
           <span style={{ color: chart.textSecondary }}>
             {t('dashboard.kpi.onlineRate', { rate: formatPercent(onlineRate, locale) })}

@@ -22,7 +22,11 @@
   --fc-classic-background: var(--ant-color-bg-container);
   --fc-classic-foreground: var(--ant-color-text);
   --fc-classic-muted-foreground: var(--ant-color-text-secondary);
-  --fc-classic-faint-foreground: var(--ant-color-text-quaternary);
+
+  /* 无障碍（Q5）：相邻月份的日期数字用 faint 档；antd 的 colorTextQuaternary 白底只有 1.83:1、
+     深色底 2.24:1（axe color-contrast serious）。faint 是「可见但次要」的文字而不是禁用态，
+     这里接到 tertiary（浅色 #5f5f5f 白底 6.39:1 / 深色 #a6a6a6 深底 7.57:1） */
+  --fc-classic-faint-foreground: var(--ant-color-text-tertiary);
   --fc-classic-border: var(--ant-color-border-secondary);
   --fc-classic-strong-border: var(--ant-color-border);
 }
