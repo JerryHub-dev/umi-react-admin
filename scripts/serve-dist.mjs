@@ -58,6 +58,15 @@ const serve = async (req, res) => {
     res.end();
     return;
   }
+  // 静态宿主不实现 API：/api* 必须明确失败（404 + JSON），绝不能把 SPA HTML 当成接口响应（F6）。
+  // 与 nginx 的 `location ^~ /api/ { return 404; }`、vercel.json 的 /api 规则是同一契约，
+  // 三条产线的比对回归见 scripts/deploy-routing.test.ts。
+  const sitePath = url.startsWith(base) ? url.slice(base.length) : url.replace(/^\//, '');
+  if (sitePath === 'api' || sitePath.startsWith('api/')) {
+    res.writeHead(404, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify({ error: 'not_found', message: 'static host has no API backend' }));
+    return;
+  }
   if (!url.startsWith(base)) {
     res.writeHead(404);
     res.end();

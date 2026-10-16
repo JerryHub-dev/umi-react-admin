@@ -1,9 +1,12 @@
 {
-  "buildCommand": "pnpm run build",
+  "buildCommand": "pnpm run build && node scripts/check-dist-secrets.mjs dist",
   "outputDirectory": "dist",
   "framework": "umijs",
   "installCommand": "pnpm install --frozen-lockfile",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/not-configured" },
+    { "source": "/((?!api(?:/|$)).*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -18,7 +21,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' 'unsafe-eval' https://*.amap.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.amap.com https://*.autonavi.com https://tile.openstreetmap.org https://ion.cesium.com https://api.cesium.com https://assets.ion.cesium.com https://*.virtualearth.net; connect-src 'self' blob: https://*.amap.com https://*.autonavi.com https://tile.openstreetmap.org https://ion.cesium.com https://api.cesium.com https://assets.ion.cesium.com https://*.virtualearth.net; font-src 'self' data:; media-src 'self' blob: https://sf1-cdn-tos.huoshanstatic.com; worker-src 'self' blob:; frame-src 'self'"
+          "value": "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' 'unsafe-eval' https://webapi.amap.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.amap.com https://*.autonavi.com https://tile.openstreetmap.org https://ion.cesium.com https://api.cesium.com https://assets.ion.cesium.com https://*.virtualearth.net; connect-src 'self' blob: https://*.amap.com https://*.autonavi.com https://tile.openstreetmap.org https://ion.cesium.com https://api.cesium.com https://assets.ion.cesium.com https://*.virtualearth.net; font-src 'self' data:; media-src 'self' blob: https://sf1-cdn-tos.huoshanstatic.com; worker-src 'self' blob:; frame-src 'self'"
         }
       ]
     }

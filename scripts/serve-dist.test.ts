@@ -161,6 +161,19 @@ describe.each(['/', '/umi-react-admin/'])('静态预览挂载 %s', (base) => {
     await healthy(server, base);
   });
 
+  it('/api* 闭合失败：404 + JSON，绝不回 SPA HTML（F6）', async () => {
+    const server = await start(base);
+    for (const path of ['api', 'api/', 'api/v1/devices', 'api/v1/devices/all?page=1']) {
+      const response = await get(server, `${base}${path}`);
+      expect(response.status).toBe(404);
+      expect(response.type).toBe('application/json; charset=utf-8');
+      expect(JSON.parse(response.body)).toMatchObject({ error: 'not_found' });
+      expect(response.body).not.toContain('entry');
+      expect(response.body).not.toContain('fallback');
+    }
+    await healthy(server, base);
+  });
+
   it('保留 404.html → index.html → 空 404 回退顺序', async () => {
     const server = await start(base);
     expect(await get(server, `${base}missing`)).toEqual({ status: 404, type: 'text/html', body: 'fallback' });
@@ -187,10 +200,11 @@ describe.each(['/', '/umi-react-admin/'])('静态预览挂载 %s', (base) => {
   });
 });
 
-it('子路径外请求不使用 SPA 回退，畸形请求仍返回 400', async () => {
+it('子路径外请求不使用 SPA 回退，/api 仍为 JSON 404，畸形请求仍返回 400', async () => {
   const server = await start('/umi-react-admin/');
   expect(await get(server, '/umi-react-admin-other/app.js')).toMatchObject({ status: 404, body: '' });
   expect(await get(server, '/umi-react-admin')).toMatchObject({ status: 404, body: '' });
+  expect(await get(server, '/api/v1/users')).toMatchObject({ status: 404, type: 'application/json; charset=utf-8' });
   expect(await get(server, '/%')).toMatchObject({ status: 400, body: '' });
   await healthy(server, '/umi-react-admin/');
 });

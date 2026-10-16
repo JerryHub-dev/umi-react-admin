@@ -5,8 +5,14 @@
  *
  * 来源说明：
  * - script 'unsafe-eval'：Cesium Knockout 模板编译用 new Function（实测在用），pdfjs 已关 isEvalSupported
+ * - script https://webapi.amap.com：唯一被注入的脚本主机，由已安装的加载器源码推导
+ *   （@pansy/amap-api-loader 0.4.10 的 es/utils.js AMap JSONP、es/index.js 的 AMapUI / Loca）。
+ *   不再放行 https://*.amap.com：通配符会把 amap.com 整个子域树变成可执行脚本来源，而依赖只请求这一个主机。
+ *   升级加载器必须重新推导主机，scripts/csp-amap-pinning.test.ts 把包版本、注入地址与来源清单绑在一起。
+ *   页面只有配置 AMAP_KEY 才调用 load()，加载器内置的共享 key（es/config.js）不会被使用。
  * - style 'unsafe-inline'：antd cssinjs 运行时注入 + tailwind 任意值
- * - 高德 / autonavi：AMap JS API 2.0；openstreetmap：瓦片（OpenLayers 走 <img>，Cesium 无 token 回落走 XHR，故 img/connect 均列出）；cesium.com：ion 影像
+ * - img/connect 保留 *.amap.com / *.autonavi.com：高德瓦片与数据服务走图片/XHR，不是脚本来源
+ *   openstreetmap：瓦片（OpenLayers 走 <img>，Cesium 无 token 回落走 XHR，故 img/connect 均列出）；cesium.com：ion 影像
  * - virtualearth.net：显式配置 ion token 的 Cesium 影像可能引用 Bing；无 token 时仅使用 HTTPS OSM
  * - media blob:：wavesurfer 7 把音频解码后以 blob URL 交给 <audio> 播放（缺了它音频可视页无法播放）
  * - huoshanstatic：xgplayer 演示视频
@@ -17,7 +23,7 @@ export const CSP_DIRECTIVES: [string, string[]][] = [
   ['form-action', ["'self'"]],
   ['object-src', ["'none'"]],
   ['frame-ancestors', ["'self'"]],
-  ['script-src', ["'self'", "'unsafe-eval'", 'https://*.amap.com']],
+  ['script-src', ["'self'", "'unsafe-eval'", 'https://webapi.amap.com']],
   ['style-src', ["'self'", "'unsafe-inline'"]],
   [
     'img-src',

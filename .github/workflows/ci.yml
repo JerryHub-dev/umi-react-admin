@@ -85,18 +85,57 @@ jobs:
         # CI 构建不注入 secret，产物里除 Cesium 自带的公开默认 token 外出现任何 JWT 都判失败
         run: node scripts/check-dist-secrets.mjs
 
-      - name: define 注入路径的可检测性校验（闭环 Vercel 同类盲区）
-        # 运行时构造一个公开的假 JWT（仓库卫生门禁禁止任何 JWT 形态字面量入库）注入构建：
-        # 未声明时扫描必须失败（证明「注入→产物→检出」链路受门禁约束），经 EXPECTED_TOKEN 声明后必须通过
+      - name: 产物完整性清单自校验（F10：生成 → 校验往返）
+        # deploy.yml 用同一对命令把「扫描过的字节」与「发布的字节」绑定；这里保证脚本自身可用
+        # （清单写在 $RUNNER_TEMP：清单必须在产物目录之外，否则自身会被判为多余文件）
+        run: |
+          node scripts/verify-dist-integrity.mjs generate dist "$RUNNER_TEMP/integrity-manifest.json"
+          node scripts/verify-dist-integrity.mjs verify dist "$RUNNER_TEMP/integrity-manifest.json"
+
+      - name: define 注入路径的可检测性校验（F3：JWT 与不透明凭据的声明闭环）
+        # 运行时构造公开假凭据（仓库卫生门禁禁止 JWT 形态字面量入库）注入构建，覆盖三类凭据：
+        #   CESIUM_ION_TOKEN（JWT）、AMAP_KEY / AMAP_SECURITY_CODE（32 位十六进制的不透明值）
+        # 断言：未声明 / 漏声明 / 声明成另一个值都必须被拦下；逐类声明一致必须通过；
+        # 任何一次扫描的日志都不得出现明文（CI 日志公开）。
         if: matrix.script == 'build:demo'
         run: |
-          DUMMY="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"dist-secret-scan-gate"}' | base64 | tr '/+' '_-' | tr -d =).gate-check-signature"
-          CESIUM_ION_TOKEN="$DUMMY" pnpm run build:demo
-          if node scripts/check-dist-secrets.mjs; then
-            echo "::error::注入的公开演示 JWT 未被产物扫描检出（扫描门禁存在盲区）"
-            exit 1
+          DUMMY_JWT="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"dist-secret-scan-gate"}' | base64 | tr '/+' '_-' | tr -d =).gate-check-signature"
+          DUMMY_JWT_OTHER="$(printf '%s' '{"alg":"HS256"}' | base64 | tr '/+' '_-' | tr -d =).$(printf '%s' '{"purpose":"wrong-declaration"}' | base64 | tr '/+' '_-' | tr -d =).wrong-declaration-signature"
+          DUMMY_AMAP_KEY="$(printf '%s' 'ci-canary-amap-key' | sha256sum | cut -c1-32)"
+          DUMMY_AMAP_SECURITY_CODE="$(printf '%s' 'ci-canary-amap-security-code' | sha256sum | cut -c1-32)"
+          BASE=(CESIUM_ION_TOKEN="$DUMMY_JWT" AMAP_KEY="$DUMMY_AMAP_KEY" AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE")
+          LOG="$(mktemp)"
+          : > "$LOG"
+
+          CESIUM_ION_TOKEN="$DUMMY_JWT" AMAP_KEY="$DUMMY_AMAP_KEY" AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE" pnpm run build:demo
+
+          if env "${BASE[@]}" node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::注入的公开演示凭据未被产物扫描检出（扫描门禁存在盲区）"; cat "$LOG"; exit 1
           fi
-          EXPECTED_TOKEN="$DUMMY" node scripts/check-dist-secrets.mjs
+
+          if ! env "${BASE[@]}" \
+              EXPECTED_CESIUM_TOKEN="$DUMMY_JWT" \
+              EXPECTED_AMAP_KEY="$DUMMY_AMAP_KEY" \
+              EXPECTED_AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE" \
+              node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::逐类正确声明的公开演示凭据仍被判失败"; cat "$LOG"; exit 1
+          fi
+
+          if env "${BASE[@]}" EXPECTED_CESIUM_TOKEN="$DUMMY_JWT_OTHER" \
+              EXPECTED_AMAP_KEY="$DUMMY_AMAP_KEY" EXPECTED_AMAP_SECURITY_CODE="$DUMMY_AMAP_SECURITY_CODE" \
+              node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::声明与构建期注入值不一致时未被拦下"; cat "$LOG"; exit 1
+          fi
+
+          if env "${BASE[@]}" EXPECTED_CESIUM_TOKEN="$DUMMY_JWT" \
+              node scripts/check-dist-secrets.mjs >>"$LOG" 2>&1; then
+            echo "::error::漏声明高德凭据时未被拦下"; cat "$LOG"; exit 1
+          fi
+
+          if grep -qF -e "$DUMMY_JWT" -e "$DUMMY_JWT_OTHER" -e "$DUMMY_AMAP_KEY" -e "$DUMMY_AMAP_SECURITY_CODE" "$LOG"; then
+            echo "::error::扫描日志出现凭据明文（CI 日志公开）"; exit 1
+          fi
+          echo "✅ 注入 → 产物 → 检出 → 声明 闭环通过（未声明/错声明/漏声明均被拦下，日志无明文）"
 
   e2e:
     # 浏览器级冒烟：GitHub Pages 同构的静态产物（子路径 + 404 回退 + meta CSP）逐路由打开，
