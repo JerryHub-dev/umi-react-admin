@@ -99,16 +99,21 @@ export const useCesiumViewer = ({
   const [attempt, setAttempt] = useState(0);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  // home / viewerOptions 只在创建时读一次。调用方常在渲染里写内联对象字面量，若列进依赖会每次渲染
+  // 重建 Viewer（连瓦片一起重拉）；放进 ref 后 effect 只需依赖 attempt，读到的仍是本次渲染的最新值。
+  const createOptionsRef = useRef({ home, viewerOptions });
+  createOptionsRef.current = { home, viewerOptions };
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
     setBasemapFailed(false);
-    const instance = createDemoViewer(containerRef.current, viewerOptions);
+    const { home: target, viewerOptions: options } = createOptionsRef.current;
+    const instance = createDemoViewer(containerRef.current, options);
     if (!instance) {
       setError(true);
       return undefined;
     }
-    instance.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(...home) });
+    instance.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(...target) });
     // 底图失败检测（F01），三条互补路径：
     // 1) fetch 层计数：对瓦片主机的失败请求计数（离线/被拦截时最直接，不依赖 Cesium 内部事件的触发时机）；
     // 2) 影像层瓦片错误事件（部分版本在重试耗尽后触发）；
@@ -159,8 +164,7 @@ export const useCesiumViewer = ({
       cleanup?.();
       if (!instance.isDestroyed()) instance.destroy();
     };
-    // 只在挂载与显式重试时创建（attempt 由 retry 递增）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // 只在挂载与显式重试时创建（attempt 由 retry 递增）；home / viewerOptions 经 createOptionsRef 读取
   }, [attempt]);
 
   return { containerRef, viewer, error, basemapFailed, retry: () => setAttempt((n) => n + 1) };

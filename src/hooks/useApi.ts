@@ -24,7 +24,10 @@ export const useApi = <T>(fetcher: () => Promise<T>, deps: unknown[] = []) => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // deps 是调用方传入的参数依赖（如 UserDrawer 的 [user?.id]）。它必须展开进依赖数组，
+    // 规则无法静态校验展开项；也不能改成固定依赖或去掉——那样调用方参数变化时 effect 不重跑，
+    // 界面会一直显示上一个参数的数据。这是动态依赖 API 的固有边界，故在此定点禁用。
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 依赖数组由调用方提供，规则无法静态校验展开项
   }, [nonce, ...deps]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);

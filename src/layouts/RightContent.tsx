@@ -26,7 +26,7 @@ const localeOptions = [
   // 语言名按惯例用该语言自身书写，不随界面语言翻译
   // eslint-disable-next-line local/no-cjk-literal
   { label: '简体中文', value: 'zh-CN' },
-  // eslint-disable-next-line local/no-cjk-literal
+  // 'English' 不含 CJK 字符，本行不需要禁用指令（原指令是空操作，reportUnusedDisableDirectives 已开）
   { label: 'English', value: 'en-US' },
 ];
 

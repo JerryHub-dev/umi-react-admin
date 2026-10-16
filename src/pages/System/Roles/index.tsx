@@ -13,7 +13,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export default function Roles() {
   const intl = useIntl();
-  const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+  // useCallback 包一层：treeData 的 useMemo 依赖它，行内函数每次渲染都是新引用会让 memo 失效
+  const t = useCallback(
+    (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values),
+    [intl],
+  );
   const enums = useEnums();
   const { message } = App.useApp();
   const { data: roles, loading, reload } = useApi(listRoles);
@@ -49,8 +53,7 @@ export default function Roles() {
       children: node.children?.map(toNode),
     });
     return PERMISSION_TREE.map(toNode);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intl, locked, grantable]);
+  }, [t, locked, grantable]);
 
   const dirty = active && [...checked].sort().join() !== [...active.permissions].sort().join();
 

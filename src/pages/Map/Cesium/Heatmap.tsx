@@ -4,7 +4,7 @@ import { ClearOutlined, DotChartOutlined, HeatMapOutlined } from '@ant-design/ic
 import { useIntl } from '@umijs/max';
 import { Alert, Button, Card, Spin } from 'antd';
 import * as Cesium from 'cesium';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Sample = { longitude: number; latitude: number; fieldStrength: number };
 type FieldStrengthData = {
@@ -74,52 +74,61 @@ export default function Heatmap() {
     },
   });
 
-  const withData = async (draw: (data: FieldStrengthData) => void) => {
-    setLoading(true);
-    try {
-      const data = await loadData();
-      if (viewer && !viewer.isDestroyed()) draw(data);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const withData = useCallback(
+    async (draw: (data: FieldStrengthData) => void) => {
+      setLoading(true);
+      try {
+        const data = await loadData();
+        if (viewer && !viewer.isDestroyed()) draw(data);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [viewer],
+  );
 
   /** 热力图纹理：base64 PNG 直接作为矩形材质铺在测试区域上 */
-  const drawTexture = () =>
-    withData((data) => {
-      if (textureRef.current) viewer!.entities.remove(textureRef.current);
-      const rectangle = bounds(data.coverageData.arrayResult.flat());
-      textureRef.current = viewer!.entities.add({
-        rectangle: {
-          coordinates: rectangle,
-          material: new Cesium.ImageMaterialProperty({
-            image: `data:image/png;base64,${data.diagramPngStream}`,
-            transparent: true,
-          }),
-        },
-      });
-      viewer!.camera.flyTo({ destination: rectangle, duration: 1.2 });
-    });
+  const drawTexture = useCallback(
+    () =>
+      withData((data) => {
+        if (textureRef.current) viewer!.entities.remove(textureRef.current);
+        const rectangle = bounds(data.coverageData.arrayResult.flat());
+        textureRef.current = viewer!.entities.add({
+          rectangle: {
+            coordinates: rectangle,
+            material: new Cesium.ImageMaterialProperty({
+              image: `data:image/png;base64,${data.diagramPngStream}`,
+              transparent: true,
+            }),
+          },
+        });
+        viewer!.camera.flyTo({ destination: rectangle, duration: 1.2 });
+      }),
+    [withData, viewer],
+  );
 
   /** 点云：PointPrimitiveCollection 批量渲染 5 千多个采样点（Entity 方式会卡住主线程） */
-  const drawPoints = () =>
-    withData((data) => {
-      if (pointsRef.current) viewer!.scene.primitives.remove(pointsRef.current);
-      const samples = data.coverageData.arrayResult.flat();
-      const points = viewer!.scene.primitives.add(
-        new Cesium.PointPrimitiveCollection(),
-      ) as Cesium.PointPrimitiveCollection;
-      samples.forEach((sample) =>
-        points.add({
-          id: sample,
-          position: Cesium.Cartesian3.fromDegrees(sample.longitude, sample.latitude),
-          pixelSize: 6,
-          color: Cesium.Color.fromCssColorString(strengthColor(sample.fieldStrength)).withAlpha(0.75),
-        }),
-      );
-      pointsRef.current = points;
-      viewer!.camera.flyTo({ destination: bounds(samples), duration: 1.2 });
-    });
+  const drawPoints = useCallback(
+    () =>
+      withData((data) => {
+        if (pointsRef.current) viewer!.scene.primitives.remove(pointsRef.current);
+        const samples = data.coverageData.arrayResult.flat();
+        const points = viewer!.scene.primitives.add(
+          new Cesium.PointPrimitiveCollection(),
+        ) as Cesium.PointPrimitiveCollection;
+        samples.forEach((sample) =>
+          points.add({
+            id: sample,
+            position: Cesium.Cartesian3.fromDegrees(sample.longitude, sample.latitude),
+            pixelSize: 6,
+            color: Cesium.Color.fromCssColorString(strengthColor(sample.fieldStrength)).withAlpha(0.75),
+          }),
+        );
+        pointsRef.current = points;
+        viewer!.camera.flyTo({ destination: bounds(samples), duration: 1.2 });
+      }),
+    [withData, viewer],
+  );
 
   // 进入页面直接铺上热力图（首次拉取约 1.6 MB，期间有加载提示），不让用户面对一张空地图去找按钮
   const autoDrawn = useRef(false);
@@ -127,16 +136,15 @@ export default function Heatmap() {
     if (!viewer || autoDrawn.current) return;
     autoDrawn.current = true;
     void drawTexture();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewer]);
+  }, [drawTexture, viewer]);
 
-  const clear = () => {
+  const clear = useCallback(() => {
     if (!viewer) return;
     if (textureRef.current) viewer.entities.remove(textureRef.current);
     if (pointsRef.current) viewer.scene.primitives.remove(pointsRef.current);
     textureRef.current = null;
     pointsRef.current = null;
-  };
+  }, [viewer]);
 
   const legend = (
     <Card size="small" className="opacity-95">
