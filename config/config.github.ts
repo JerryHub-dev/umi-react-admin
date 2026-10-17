@@ -5,6 +5,7 @@ import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
 import { faviconLinks } from './favicons';
 import { configureSplitChunks } from './splitChunks';
+import { keepUrlAssetsVerbatim } from './urlAssets';
 // import { routes } from './routes';
 const AUTH_CONFIG = resolveAuthConfig(process.env);
 if (!AUTH_CONFIG.demoMode) {
@@ -13,10 +14,11 @@ if (!AUTH_CONFIG.demoMode) {
 
 export default defineConfig({
   // 与 config.ts 同源：UMI_ENV=github 时本函数整体覆盖 config.ts 的 chainWebpack
-  // chainWebpack 是函数、merge 时整体覆盖：内容与 config.ts 保持一致（三个共享步骤
+  // chainWebpack 是函数、merge 时整体覆盖：内容与 config.ts 保持一致（四个共享步骤 keepUrlAssetsVerbatim /
   // configureSplitChunks / addChunkGraph / addVersionFile 都来自各自单源模块）——
   // 在 config.ts 新增链式步骤时需同步调整本副本（无表达式层面的共享手段）
   chainWebpack(config) {
+    keepUrlAssetsVerbatim(config);
     if (process.env.NODE_ENV === 'production') {
       configureSplitChunks(config);
       addChunkGraph(config);

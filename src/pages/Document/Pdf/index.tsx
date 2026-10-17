@@ -1,3 +1,6 @@
+// 必须先于 react-pdf（pdfjs-dist）求值：主线程补齐 pdf.js 6 用到、较旧浏览器缺失的内建方法（只补不覆盖）
+import './pdfjsPolyfills.mjs';
+
 import DemoPage from '@/components/DemoPage';
 import { useApi } from '@/hooks/useApi';
 import { getDashboardOverview } from '@/services/ops';
@@ -11,6 +14,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { PdfPreflightAborted, preflightFailure, preflightPdf } from './pdfPreflight';
+import { createPdfWorkerSrc } from './pdfWorkerSrc';
 import { buildImagePdf, dataUrlToBytes } from './pdfWriter';
 import {
   PDF_LIMITS,
@@ -22,16 +26,19 @@ import {
 } from './previewLimits';
 import ReportSheet, { SHEET } from './ReportSheet';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+// worker 入口先装 polyfill 再加载 pdf.js worker，见 pdfWorkerSrc.ts
+pdfjs.GlobalWorkerOptions.workerSrc = createPdfWorkerSrc();
 
-// 静态资源根路径经 PUBLIC_PATH 拼接：主产线 '/'、GitHub Pages '/umi-react-admin/'
+// 静态资源根路径经 PUBLIC_PATH 拼接：主产线 '/'、GitHub Pages '/umi-react-admin/'。
+// 写成绝对地址：worker 由 blob: 入口启动，worker 内的相对地址无法解析（pdf.js 改由 worker 拉取资源时用得到）
+const publicAssetUrl = (path: string) => new URL(`${PUBLIC_PATH}${path}`, window.location.href).href;
 const PDF_OPTIONS = {
-  cMapUrl: `${PUBLIC_PATH}cmaps/`,
+  cMapUrl: publicAssetUrl('cmaps/'),
   isEvalSupported: false,
   maxImageSize: PDF_LIMITS.imagePixels,
   canvasMaxAreaInBytes: PDF_LIMITS.canvasBytes,
   stopAtErrors: true,
-  standardFontDataUrl: `${PUBLIC_PATH}standard_fonts/`,
+  standardFontDataUrl: publicAssetUrl('standard_fonts/'),
 };
 /** 图表动画结束后再截图 */
 const CHART_SETTLE_MS = 1200;

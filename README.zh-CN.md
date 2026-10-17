@@ -123,7 +123,7 @@ e2e/                  # Playwright 用例
 - **多语言与主题**：中英双语（首次访问按浏览器语言选择），代码中直接写中文会被 ESLint 规则拦下，英文界面无遗漏由 e2e 断言；明暗主题下图表、地图、日历、富文本同步切换。
 - **构建信息**：页脚显示构建提交与时间，`dist/version.json` 同源，部署后可核对线上版本。
 - **无障碍**：`<html lang>` 随语言切换、页面允许缩放；顶栏与看板可键盘操作；图标按钮具可访问名称。
-- **浏览器基线**：Chrome 111+ / Firefox 128+ / Safari 16.4+（Tailwind CSS 4）；PDF 需要原生 `Promise.try`（Chrome 128+ / Firefox 134+ / Safari 18.2+）。
+- **浏览器基线**：Chrome 111+ / Firefox 128+ / Safari 16.4+（Tailwind CSS 4）；PDF 页（pdf.js 6）需要 Chrome/Edge 140+ / Firefox 134+ / Safari 18.2+，以使用原生 `Promise.try` 与 `Uint8Array` 十六进制/Base64 方法。pdf.js 还会调用更新的 ES2026 方法（`Map`/`WeakMap` 的 `getOrInsert*`、`Math.sumPrecise`），由该页在主线程与 worker 中按需补齐、只补缺失（[pdfjsPolyfills.mjs](./src/pages/Document/Pdf/pdfjsPolyfills.mjs)）。
 
 ## 部署
 
