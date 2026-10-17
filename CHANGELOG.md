@@ -6,6 +6,14 @@ Maintained in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) forma
 
 ## [Unreleased]
 
+### PDF page on browsers without ES2026 built-ins (2026-10-16)
+
+- **Fix**: on Chromium 141 the PDF page crashed into the error boundary with `getOrInsertComputed is not a function`. pdfjs-dist 6's modern build calls `Map`/`WeakMap.prototype.getOrInsert(Computed)` (native from Chrome/Edge 145, Firefox 144, Safari 26.2) and, while converting embedded fonts in the worker, `Math.sumPrecise` (Chrome/Edge 147, Firefox 137, Safari 26.2). Without `Math.sumPrecise`, embedded fonts silently fell back to system fonts. `src/pages/Document/Pdf/pdfjsPolyfills.mjs` now defines these only when missing and never replaces a native implementation. It loads on the main thread before react-pdf, and in the worker through a blob entry module (`pdfWorkerSrc.ts`) that imports it before pdf.js's own worker, so pdf.js still creates and terminates one worker per document
+- **Why not the legacy build**: pdfjs-dist's legacy build bundles core-js 3.50, which force-replaces the native `Promise.try` in every current browser and the `DOMException` constructor and Iterator helpers in some. That is the same class of global override that `polyfill.imports: ['core-js/stable']` exists to avoid
+- **Build**: modules emitted verbatim through `new URL(..., import.meta.url)` no longer go through the `src` babel rule (`config/urlAssets.ts`, called by both configs). Babel's transform-runtime had injected `@babel/runtime` imports with absolute build-machine paths into the standalone polyfill file
+- **Browser baseline**: the PDF page needs Chrome/Edge 140+ / Firefox 134+ / Safari 18.2+ (native `Promise.try` and `Uint8Array` hex/base64; pdf.js reads the document fingerprint with `toHex` on every load). The previously documented Chrome 128+ stopped being true with the pdfjs-dist 6 upgrade
+- **Tests**: unit tests check the polyfills against spec edge cases (canonical `-0` keys, receiver and callback order, weak-key validation, exact rounding, intermediate overflow, subnormals) and confirm they never replace existing methods. An e2e test deletes the built-ins on the main thread and in the worker, so CI's newer Chromium still covers the wiring, and asserts that a PDF with embedded TrueType fonts gets its fonts registered
+
 ### Open-source polish & structure audit fixes (2026-10-13)
 
 - **README**: corrected the antd version to 6; updated the sign-in description to the five one-click roles and the current "permission points as the single authorization source" semantics; added a table of contents, a CHANGELOG link and 4 demo screenshots. README.md is now the **full English primary document**, with the complete Chinese version moved to [README.zh-CN.md](README.zh-CN.md) (cross-linked at the top of both)

@@ -6,6 +6,7 @@ import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
 import { routes } from './routes';
 import { configureSplitChunks } from './splitChunks';
+import { keepUrlAssetsVerbatim } from './urlAssets';
 
 // 统计接入须同时具备用户同意、内容遮蔽和匹配的 CSP，模板没有这些集成时拒绝加载。
 const CLARITY_ID = process.env.CLARITY_ID;
@@ -55,6 +56,7 @@ export default defineConfig({
         '@/demo/token': path.resolve(__dirname, '../src/demo/token.real.ts'),
       },
   chainWebpack(config) {
+    keepUrlAssetsVerbatim(config);
     if (process.env.NODE_ENV === 'production') {
       configureSplitChunks(config);
       addChunkGraph(config);
@@ -126,6 +128,8 @@ export default defineConfig({
   // umi 锁定的 core-js 3.34 中约 95 个提案实现带 forced:true，会强制覆盖浏览器原生实现，
   // 例如 Promise.try 被替换成不透传参数的旧提案版本 → pdfjs 5 按 URL 加载 PDF 时
   // 报 "Cannot set properties of undefined (setting 'onPull')"。
+  // pdf.js 6 需要的 ES2026 方法（Map/WeakMap upsert、Math.sumPrecise）不在 core-js/stable 里，
+  // 由 PDF 页在主线程与 worker 中按需补齐：src/pages/Document/Pdf/pdfjsPolyfills.mjs
   polyfill: {
     imports: ['core-js/stable'],
   },

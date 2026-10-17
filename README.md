@@ -121,7 +121,7 @@ e2e/                  # Playwright specs
 - **i18n & theming**: bilingual UI (first visit follows the browser language); writing Chinese literals in code is blocked by an ESLint rule, and e2e asserts the English UI has no leftovers. Charts, maps, calendar and rich text all follow the light/dark theme.
 - **Build info**: the footer shows the build commit and time; `dist/version.json` is generated from the same source so you can verify the deployed version.
 - **Accessibility**: `<html lang>` follows the UI language, pinch-zoom is allowed; the top bar and the ticket board are keyboard-operable; icon buttons have accessible names.
-- **Browser baseline**: Chrome 111+ / Firefox 128+ / Safari 16.4+ (Tailwind CSS 4); the PDF page needs native `Promise.try` (Chrome 128+ / Firefox 134+ / Safari 18.2+).
+- **Browser baseline**: Chrome 111+ / Firefox 128+ / Safari 16.4+ (Tailwind CSS 4); the PDF page (pdf.js 6) needs Chrome/Edge 140+ / Firefox 134+ / Safari 18.2+ for native `Promise.try` and `Uint8Array` hex/base64. The newer ES2026 methods pdf.js also calls (`Map`/`WeakMap` `getOrInsert*`, `Math.sumPrecise`) are polyfilled for that page, on the main thread and in the worker, only where missing ([pdfjsPolyfills.mjs](./src/pages/Document/Pdf/pdfjsPolyfills.mjs)).
 
 ## Deployment
 

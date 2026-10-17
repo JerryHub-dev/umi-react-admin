@@ -109,6 +109,7 @@ config/
 - **演示后端（src/demo）**：未配 `UMI_APP_API_BASE` 时所有接口经请求层 axios adapter 交给浏览器内的演示后端，dev 与静态部署同一套实现（umi mock 已关闭、`mock/` 目录已删除）。不用 Service Worker：http 内网访问的 Docker 部署也要能用。验证纯静态行为用 `node scripts/serve-dist.mjs`，不要用 `max preview`
 - **演示数据改规则要升版本**：生成规则或数据结构变化时把 `src/demo/store.ts` 的 `STORE_VERSION` 加一，否则老访客的补丁会叠在新数据上；数据合理性由 `src/demo/generate.test.ts` 断言，改完先跑它
 - **polyfill 只引 `core-js/stable`**（config.ts `polyfill.imports`）：默认的 esnext 提案 polyfill 会强制覆盖原生实现（曾导致 pdfjs 报 onPull 错误）
+- **pdf.js 6 用到的 ES2026 方法由 PDF 页自己补**（`Pdf/pdfjsPolyfills.mjs`，只补缺失）：主线程在 react-pdf 之前 import；worker 是独立全局，经 `pdfWorkerSrc.ts` 的 blob 入口先 import 该文件的产物 URL。所以它必须是无 import 的纯 ESM，且不能经 babel（`config/urlAssets.ts`，两份 config 的 chainWebpack 都要调用）。不要换 pdfjs-dist 的 legacy 构建：它内置的 core-js 会强制替换原生 `Promise.try` 等。升级 pdfjs-dist 后用较旧的 Chromium（如沙箱的 /opt/pw-browsers）跑 PDF e2e，看是否又用上了新的内建方法
 - **public 资源路径一律经 `PUBLIC_PATH` 拼接**：GitHub Pages 部署在 `/umi-react-admin/` 子路径
 - **业务数据只由 `src/demo/generate.ts` 以固定种子生成**，不要在页面里写死示例数据，也不要引入来源不明的第三方数据
 - **pages 下不要有名为 `model.ts(x)` 的文件**：umi model 插件会把它当数据模型加载（macOS 大小写不敏感时 `Model.tsx` 同样中招，dev 编译失败）
