@@ -1,4 +1,4 @@
-# umi-react-admin
+# <img src="./public/logo.svg" width="36" height="36" alt="" /> umi-react-admin
 
 > **中文文档**：[README.zh-CN.md](./README.zh-CN.md) · 简体中文完整文档在此，欢迎翻译 PR。
 
