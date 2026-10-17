@@ -109,6 +109,8 @@ export default defineConfig({
     // 构建信息（页脚与 dist/version.json 同源，见 ./buildInfo.ts）
     BUILD_INFO,
   },
+  // index.html 的初始标题（分享卡片、首帧标签页）；进入应用后由 src/app.tsx 的 onRouteChange 按页面改写
+  title: 'React Admin',
   // 覆盖 umi 默认的 viewport（user-scalable=no / maximum-scale=1 禁止缩放，违反 WCAG 1.4.4）
   metas: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },

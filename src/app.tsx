@@ -18,10 +18,12 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { RequestConfig, RuntimeAntdConfig, RunTimeLayoutConfig } from '@umijs/max';
-import { getIntl, getLocale, Navigate, useLocation, useModel } from '@umijs/max';
+import { getIntl, getLocale, matchRoutes, Navigate, useLocation, useModel } from '@umijs/max';
 import { App as AntdApp, theme as antdTheme } from 'antd';
 import { useEffect } from 'react';
 import { getInitialState as libGetInitialState, readTheme, type AppInitialState } from './utils/Auth/initialState';
+import { loginPath } from './utils/Auth/loginUrl';
+import { APP_TITLE, menuKeyOf, pageTitle } from './utils/pageTitle';
 import { requestConfig } from './utils/requestConfig';
 
 // 更多信息见文档：https://umijs.org/docs/api/runtime-config#getinitialstate
@@ -38,6 +40,26 @@ export const request: RequestConfig = requestConfig;
 export function render(oldRender: () => void) {
   document.documentElement.lang = getLocale();
   oldRender();
+}
+
+/**
+ * 浏览器标签页标题：「页面名 - React Admin」，页面名取菜单同一套文案键（menu.<父级>.<name>）。
+ * ProLayout 不改 document.title，登录页又不在布局里，统一在路由切换时设置；
+ * 切换语言默认整页刷新，首次触发（isFirst）即按新语言重算。
+ */
+export function onRouteChange({
+  clientRoutes,
+  location,
+  basename,
+}: {
+  clientRoutes: Parameters<typeof matchRoutes>[0];
+  location: { pathname: string };
+  basename?: string;
+}) {
+  const chain = matchRoutes(clientRoutes, location.pathname, basename) ?? [];
+  const key = menuKeyOf(chain.map((match) => match.route as { name?: unknown }));
+  const intl = getIntl();
+  document.title = pageTitle(key && intl.messages[key] ? intl.formatMessage({ id: key }) : undefined);
 }
 
 /** 将 antd App 上下文中的 message 实例注册给全局错误处理（requestConfig）使用 */
@@ -69,7 +91,7 @@ const AuthGuard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   }
   if (!initialState?.name) {
     // 带上原本要访问的地址，登录后回到这里
-    return <Navigate replace to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} />;
+    return <Navigate replace to={loginPath(location.pathname + location.search)} />;
   }
   return <>{children}</>;
 };
@@ -82,7 +104,7 @@ const AccessFallback = () => {
   const { initialState } = useModel('@@initialState');
   const location = useLocation();
   if (!initialState?.name) {
-    return <Navigate replace to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} />;
+    return <Navigate replace to={loginPath(location.pathname + location.search)} />;
   }
   return <Forbidden />;
 };
@@ -126,7 +148,7 @@ export const layout: RunTimeLayoutConfig = (initialState) => {
   // 回调参数是 initialState 插件的 model 对象（{ initialState, refresh, ... }）
   const themeMode = initialState?.initialState?.theme;
   return {
-    title: 'React Admin',
+    title: APP_TITLE,
     // 经 PUBLIC_PATH 拼接：GitHub Pages 部署在 /umi-react-admin/ 子路径下
     logo: `${PUBLIC_PATH}logo.svg`,
     // ProLayout v3 移除了 rightContentRender（umi 布局模板仍按 v2 传它，v3 直接忽略），顶栏右侧改走 actionsRender

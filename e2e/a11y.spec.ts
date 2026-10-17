@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, navigate, signIn, test } from './fixtures';
 
 /**
- * Q5 无障碍回归：对 10 条路由在浅色 / 暗色两套主题下跑 axe-core，逐路由打印 critical/serious 计数。
+ * Q5 无障碍回归：对 11 条路由（含未登录可见的登录页）在浅色 / 暗色两套主题下跑 axe-core，逐路由打印 critical/serious 计数。
  *
  * 门禁标准：critical = 0 且 serious = 0（axe 全规则集，不做 impact 阈值放宽）。
  * axe-core 从本地 pnpm store 注入（page.addScriptTag），不需要网络、不新增依赖。
@@ -28,6 +28,8 @@ type AxeResults = { violations: AxeViolation[]; incomplete: AxeViolation[] };
 type Theme = 'light' | 'realDark';
 
 const ROUTES = [
+  // 公开演示站访客看到的第一个页面：未登录状态单独准备（见 prepare）
+  '/login',
   '/',
   '/system/users',
   '/system/roles',
@@ -114,7 +116,7 @@ const settle = (route: string) => (route === '/components/calendar' ? 2000 : 120
  */
 type Path = 'boot' | 'toggle';
 
-const TOGGLE_ROUTES = ['/', '/ops/devices', '/ops/alarms', '/ops/tickets'] as const;
+const TOGGLE_ROUTES = ['/login', '/', '/ops/devices', '/ops/alarms', '/ops/tickets'] as const;
 
 const CASES: { route: string; theme: Theme; path: Path }[] = [
   ...ROUTES.map((route) => ({ route, theme: 'light' as const, path: 'boot' as const })),
@@ -124,9 +126,37 @@ const CASES: { route: string; theme: Theme; path: Path }[] = [
 
 const label = (theme: Theme, path: Path) => (path === 'toggle' ? `${theme} · 切换` : theme);
 
+/** 持久化的主题意图与实际渲染用的主色 token（--ant-* 挂在 antd App 容器上） */
+const primaryToken = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => ({
+    stored: localStorage.getItem('umi_theme'),
+    primary: getComputedStyle(document.querySelector('.ant-app') as Element)
+      .getPropertyValue('--ant-color-primary')
+      .trim(),
+  }));
+
 const prepare = async (page: import('@playwright/test').Page, route: string, theme: Theme, path: Path) => {
   // 真实模式（本地基线服务器）用 cookie 会话：不清 cookie 会直接跳过登录页，signIn 拿不到表单
   await page.context().clearCookies();
+  if (route === '/login') {
+    await page.goto('login');
+    await page.evaluate(
+      (dark) => {
+        localStorage.clear();
+        sessionStorage.clear();
+        if (dark) localStorage.setItem('umi_theme', 'realDark');
+      },
+      theme === 'realDark' && path === 'boot',
+    );
+    await page.reload();
+    await expect(page.locator('input#name')).toBeVisible();
+    if (path === 'toggle') {
+      await page.getByRole('button', { name: /^(主题|Theme)$/ }).click();
+      await expect.poll(() => primaryToken(page)).toEqual({ stored: 'realDark', primary: '#1668dc' });
+    }
+    await page.waitForTimeout(settle(route));
+    return;
+  }
   await signIn(page);
   if (theme === 'realDark' && path === 'boot') {
     await page.evaluate(() => localStorage.setItem('umi_theme', 'realDark'));
@@ -140,16 +170,7 @@ const prepare = async (page: import('@playwright/test').Page, route: string, the
     // 断言切换真的落到 token 上：localStorage 只是「意图」，--ant-color-primary 才是渲染用的值。
     // 键集合不对称（缺陷版本）时这里会停在浅色的 #0958d9，测试直接失败，而不会误判成通过。
     await expect
-      .poll(
-        () =>
-          page.evaluate(() => ({
-            stored: localStorage.getItem('umi_theme'),
-            primary: getComputedStyle(document.querySelector('.ant-app') as Element)
-              .getPropertyValue('--ant-color-primary')
-              .trim(),
-          })),
-        { message: '顶栏切换后应立即应用暗色 token（不是只写 localStorage）' },
-      )
+      .poll(() => primaryToken(page), { message: '顶栏切换后应立即应用暗色 token（不是只写 localStorage）' })
       .toEqual({ stored: 'realDark', primary: '#1668dc' });
   }
   await page.waitForTimeout(settle(route));
