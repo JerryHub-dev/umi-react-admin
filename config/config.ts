@@ -4,6 +4,7 @@ import { resolveAuthConfig } from './auth';
 import { BUILD_INFO, addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
+import { faviconLinks } from './favicons';
 import { routes } from './routes';
 import { configureSplitChunks } from './splitChunks';
 
@@ -117,8 +118,8 @@ export default defineConfig({
       ? [{ 'http-equiv': 'Content-Security-Policy', content: buildCsp({ meta: true }) }]
       : []),
   ],
-  // SVG 图标（现代浏览器均支持），GitHub Pages 产线见 config.github.ts
-  favicons: ['/logo.svg'],
+  // 站点图标（ICO + SVG + apple-touch-icon），GitHub Pages 产线见 config.github.ts
+  links: faviconLinks('/'),
   headScripts: [],
   // 产物文件名带内容哈希：配合 nginx 对哈希文件的长缓存（nginx/default.conf），发版后不会命中旧脚本
   hash: true,

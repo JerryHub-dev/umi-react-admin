@@ -2,7 +2,14 @@ import DemoPage from '@/components/DemoPage';
 import type { User } from '@/services/types';
 import { importUsers, listUsers } from '@/services/users';
 import { BizError } from '@/utils/BizError';
-import { CloseOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, RedoOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+  DownloadOutlined,
+  ExportOutlined,
+  FileExcelOutlined,
+  InboxOutlined,
+  RedoOutlined,
+} from '@ant-design/icons';
 import { Link, useAccess, useIntl } from '@umijs/max';
 import { Alert, App, Button, Card, Dropdown, Space, Spin, Table, Tag, Typography, Upload } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -223,7 +230,7 @@ export default function Excel() {
             </Button>
           </Dropdown>
           <Button
-            icon={<DownloadOutlined />}
+            icon={<ExportOutlined />}
             disabled={!!busy && busy !== 'export'}
             loading={busy === 'export'}
             onClick={handleExport}

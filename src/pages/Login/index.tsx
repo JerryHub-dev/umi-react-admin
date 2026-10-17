@@ -13,11 +13,11 @@ import { menuKeyOf } from '@/utils/pageTitle';
 import {
   EyeOutlined,
   GithubOutlined,
-  GlobalOutlined,
   LockOutlined,
   MoonOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
+  TranslationOutlined,
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -173,7 +173,7 @@ const Login: React.FC = () => {
                 onClick: ({ key }) => setLocale(key),
               }}
             >
-              <Button type="text" aria-label={t('header.language')} icon={<GlobalOutlined />} />
+              <Button type="text" aria-label={t('header.language')} icon={<TranslationOutlined />} />
             </Dropdown>
           </div>
         </header>

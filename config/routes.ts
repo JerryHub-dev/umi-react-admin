@@ -1,6 +1,9 @@
 // 路由配置 https://umijs.org/docs/guides/routes
 // 信息架构：工作台 / 系统管理 / 设备运维 / 地图 / 组件 / 多媒体 / 文档 / 异常页。
 // 路径统一小写 kebab-case；旧版路径见文件末尾 LEGACY_REDIRECTS（外链与书签不失效，由 routes.test.ts 把关）。
+// 菜单图标按功能取义，菜单内不重复，也不与顶栏常驻按钮撞（语言切换用 Translation，不用 Global）：
+// 地图总入口用指南针，Cesium 本身是三维地球用 Global，OpenLayers 取「图层」用 Block；
+// 运维用扳手，操作日志取「审计」，500 指向服务端（Bug 留给仓库 Issues 入口）。
 
 type RouteItem = {
   path: string;
@@ -90,7 +93,7 @@ export const routes: RouteItem[] = [
       {
         name: 'logs',
         path: '/system/logs',
-        icon: 'FileSearchOutlined',
+        icon: 'AuditOutlined',
         component: './System/Logs',
         access: 'systemLogView',
       },
@@ -100,7 +103,7 @@ export const routes: RouteItem[] = [
   {
     name: 'ops',
     path: '/ops',
-    icon: 'ClusterOutlined',
+    icon: 'ToolOutlined',
     routes: [
       { path: '/ops', redirect: '/ops/devices' },
       {
@@ -130,16 +133,16 @@ export const routes: RouteItem[] = [
   {
     name: 'map',
     path: '/map',
-    icon: 'GlobalOutlined',
+    icon: 'CompassOutlined',
     routes: [
       // 默认入口在运行期决定：未配置高德 Key 时进入无需凭据的 OpenLayers（见 src/pages/Map/Redirect.tsx）
       { path: '/map', component: './Map/Redirect' },
       { name: 'amap', path: '/map/amap', icon: 'EnvironmentOutlined', component: './Map/Amap' },
-      { name: 'openlayers', path: '/map/openlayers', icon: 'CompassOutlined', component: './Map/OpenLayers' },
+      { name: 'openlayers', path: '/map/openlayers', icon: 'BlockOutlined', component: './Map/OpenLayers' },
       {
         name: 'cesium',
         path: '/map/cesium',
-        icon: 'DeploymentUnitOutlined',
+        icon: 'GlobalOutlined',
         routes: [
           { path: '/map/cesium', redirect: '/map/cesium/geohash' },
           { name: 'geohash', path: '/map/cesium/geohash', component: './Map/Cesium/GeoHash' },
@@ -160,11 +163,16 @@ export const routes: RouteItem[] = [
       { path: '/components', redirect: '/components/calendar' },
       { name: 'calendar', path: '/components/calendar', icon: 'CalendarOutlined', component: './Components/Calendar' },
       { name: 'richText', path: '/components/rich-text', icon: 'FileTextOutlined', component: './Components/RichText' },
-      { name: 'signature', path: '/components/signature', icon: 'EditOutlined', component: './Components/Signature' },
+      {
+        name: 'signature',
+        path: '/components/signature',
+        icon: 'SignatureOutlined',
+        component: './Components/Signature',
+      },
       {
         name: 'screenshot',
         path: '/components/screenshot',
-        icon: 'ScissorOutlined',
+        icon: 'CameraOutlined',
         component: './Components/Screenshot',
       },
     ],
@@ -185,7 +193,7 @@ export const routes: RouteItem[] = [
       {
         name: 'audioWaveform',
         path: '/media/audio-waveform',
-        icon: 'AudioOutlined',
+        icon: 'SoundOutlined',
         component: './Media/AudioWaveform',
       },
     ],
@@ -208,7 +216,7 @@ export const routes: RouteItem[] = [
       { path: '/exception', redirect: '/exception/403' },
       { name: '403', path: '/exception/403', icon: 'StopOutlined', component: './Exception/403' },
       { name: '404', path: '/exception/404', icon: 'FileUnknownOutlined', component: './Exception/404' },
-      { name: '500', path: '/exception/500', icon: 'BugOutlined', component: './Exception/500' },
+      { name: '500', path: '/exception/500', icon: 'CloudServerOutlined', component: './Exception/500' },
     ],
   },
   ...Object.entries(LEGACY_REDIRECTS).map(([path, redirect]) => ({ path, redirect })),
