@@ -3,6 +3,7 @@ import { DEMO_MODE } from '@/demo/mode';
 import type { RequestConfig, RequestOptions } from '@umijs/max';
 import { history } from '@umijs/max';
 import { resolveApiUrl } from './Auth/apiBoundary';
+import { appPathOf, loginPath } from './Auth/loginUrl';
 import { clearDemoToken, readDemoToken, removeLegacyToken } from './Auth/session';
 import { BizError } from './BizError';
 import { getMessage } from './antdMessage';
@@ -79,16 +80,22 @@ export const requestConfig: RequestConfig = {
             // 参数错误：仅提示，保留表单上下文
             message.error(getErrorMessage(data, t('request.badRequest')));
             break;
-          case 401:
-            message.error(t('request.unauthorized'));
-            if (typeof window !== 'undefined') {
-              clearDemoToken();
-              removeLegacyToken();
-              // 整页跳转而非 SPA 路由（审计 2026-09-22 L-2）：重置内存中的 initialState
-              //（残留的已登录用户与昵称），也顺带避免并发 401 重复 push；PUBLIC_PATH 兼容子路径部署
-              window.location.assign(`${PUBLIC_PATH}login`);
+          case 401: {
+            if (typeof window === 'undefined') break;
+            clearDemoToken();
+            removeLegacyToken();
+            const appPath = appPathOf(window.location, PUBLIC_PATH);
+            if (/^\/login(?:[/?#]|$)/i.test(appPath)) {
+              // 已在登录页：整页跳转只会原地刷新，提示即可
+              message.error(t('request.unauthorized'));
+              break;
             }
+            // 整页跳转而非 SPA 路由（审计 2026-09-22 L-2）：重置内存中的 initialState
+            //（残留的已登录用户与昵称），也顺带避免并发 401 重复 push；PUBLIC_PATH 兼容子路径部署。
+            // 整页跳转会冲掉 toast，所以不再弹提示，而是把回跳地址与原因带给登录页，由登录页常驻展示
+            window.location.assign(`${PUBLIC_PATH}${loginPath(appPath, 'expired').slice(1)}`);
             break;
+          }
           case 403:
             message.error(getErrorMessage(data, t('request.forbidden')));
             history.push('/exception/403');

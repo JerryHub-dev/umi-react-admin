@@ -37,7 +37,7 @@ pnpm format           # Prettier 格式化代码
 ```
 src/
 ├── pages/            # 页面（Dashboard / System / Ops / Map / Components / Media / Document / Exception）
-├── components/       # DemoPage 外壳、ChartCard、CesiumViewer（useCesiumViewer）、GuideTour、ErrorBoundary、BuildFooter、UserAvatar
+├── components/       # DemoPage 外壳、ChartCard、CesiumViewer（useCesiumViewer）、GuideTour、ErrorBoundary、BuildFooter、UserAvatar、ParticleField（登录页粒子背景）
 ├── layouts/          # 顶栏 RightContent（主题/语言/账户菜单、固定演示场景入口、演示时间标记）
 ├── demo/             # 浏览器内演示后端：generate（数据）、store（补丁持久化）、server（路由）、adapter
 ├── services/         # 接口调用；types.ts 是前后端契约

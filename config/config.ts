@@ -4,6 +4,7 @@ import { resolveAuthConfig } from './auth';
 import { BUILD_INFO, addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
+import { faviconLinks } from './favicons';
 import { routes } from './routes';
 import { configureSplitChunks } from './splitChunks';
 import { keepUrlAssetsVerbatim } from './urlAssets';
@@ -110,6 +111,8 @@ export default defineConfig({
     // 构建信息（页脚与 dist/version.json 同源，见 ./buildInfo.ts）
     BUILD_INFO,
   },
+  // index.html 的初始标题（分享卡片、首帧标签页）；进入应用后由 src/app.tsx 的 onRouteChange 按页面改写
+  title: 'React Admin',
   // 覆盖 umi 默认的 viewport（user-scalable=no / maximum-scale=1 禁止缩放，违反 WCAG 1.4.4）
   metas: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -117,8 +120,8 @@ export default defineConfig({
       ? [{ 'http-equiv': 'Content-Security-Policy', content: buildCsp({ meta: true }) }]
       : []),
   ],
-  // SVG 图标（现代浏览器均支持），GitHub Pages 产线见 config.github.ts
-  favicons: ['/logo.svg'],
+  // 站点图标（ICO + SVG + apple-touch-icon），GitHub Pages 产线见 config.github.ts
+  links: faviconLinks('/'),
   headScripts: [],
   // 产物文件名带内容哈希：配合 nginx 对哈希文件的长缓存（nginx/default.conf），发版后不会命中旧脚本
   hash: true,

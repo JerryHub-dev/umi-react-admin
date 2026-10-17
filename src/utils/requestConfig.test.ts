@@ -134,7 +134,31 @@ describe('errorHandler：HTTP 状态码分流（axios 形状）', () => {
     errorHandler(httpError(401));
     expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
     expect(sessionStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
-    expect(assignMock).toHaveBeenCalledWith('/login');
+    expect(assignMock).toHaveBeenCalledWith('/login?reason=expired');
+  });
+
+  it('401 带上当前页面作为回跳地址与过期原因（整页跳转会冲掉 toast，原因交给登录页展示）', () => {
+    const { pathname, search } = window.location;
+    Object.assign(window.location, { pathname: '/system/users', search: '?keyword=iris' });
+    try {
+      errorHandler(httpError(401));
+      expect(assignMock).toHaveBeenCalledWith('/login?redirect=%2Fsystem%2Fusers%3Fkeyword%3Diris&reason=expired');
+      expect(errorMock).not.toHaveBeenCalled();
+    } finally {
+      Object.assign(window.location, { pathname, search });
+    }
+  });
+
+  it('已在登录页时 401 只提示，不再原地整页刷新', () => {
+    const { pathname } = window.location;
+    Object.assign(window.location, { pathname: '/login' });
+    try {
+      errorHandler(httpError(401));
+      expect(assignMock).not.toHaveBeenCalled();
+      expect(errorMock).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.assign(window.location, { pathname });
+    }
   });
 
   it('403 提示并跳转 /403', () => {

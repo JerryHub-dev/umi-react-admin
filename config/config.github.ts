@@ -3,6 +3,7 @@ import { resolveAuthConfig } from './auth';
 import { addVersionFile } from './buildInfo';
 import { addChunkGraph } from './chunkGraph';
 import { buildCsp } from './csp';
+import { faviconLinks } from './favicons';
 import { configureSplitChunks } from './splitChunks';
 import { keepUrlAssetsVerbatim } from './urlAssets';
 // import { routes } from './routes';
@@ -42,7 +43,7 @@ export default defineConfig({
       content: buildCsp({ meta: true }),
     },
   ],
-  favicons: ['/umi-react-admin/logo.svg'],
+  links: faviconLinks('/umi-react-admin/'),
   base: '/umi-react-admin/',
   publicPath: '/umi-react-admin/',
 });

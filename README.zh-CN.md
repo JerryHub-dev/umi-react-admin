@@ -1,4 +1,4 @@
-# umi-react-admin（中文文档）
+# <img src="./public/logo.svg" width="36" height="36" alt="" /> umi-react-admin（中文文档）
 
 > **English documentation**: [README.md](./README.md) — the primary README is in English; this is the complete Simplified Chinese version. Translation PRs welcome.
 
