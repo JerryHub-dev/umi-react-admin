@@ -1,48 +1,45 @@
 import { CesiumStage, useCesiumViewer } from '@/components/CesiumViewer';
+import { glowMaterial, targetIcon } from '@/components/CesiumViewer/effects';
 import { pickLngLat } from '@/components/CesiumViewer/stations';
 import DemoPage from '@/components/DemoPage';
-import { handlerComputePoint, mergePolygons, mergePolygonsPath, type Point } from '@/utils/MapCompute/cesiumCompute';
-import { distanceKm } from '@/utils/MapCompute/geodesy';
-import { BlockOutlined, CheckOutlined, ClearOutlined, GatewayOutlined, NodeIndexOutlined } from '@ant-design/icons';
+import { BASE_STATIONS, buildPatrolRoute, qualityColor, SAMPLES_PER_SECOND, sampleRoute, type PatrolSample } from './patrolModel';
+import { CheckOutlined, NodeIndexOutlined, PauseCircleOutlined, PlayCircleOutlined, RedoOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Alert, App, Button, Card } from 'antd';
+import { Alert, App, Button, Card, Segmented } from 'antd';
 import * as Cesium from 'cesium';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const SAMPLE_METERS = 1000;
-const MAX_SAMPLES = 2000;
-
-type Envelope = { longitude: number; latitude: number }[];
-
-const fetchJson = async <T,>(path: string) => {
-  const response = await fetch(`${PUBLIC_PATH}${path}`);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return (await response.json()) as T;
-};
-
-const toPositions = (points: Point[]) =>
-  Cesium.Cartesian3.fromDegreesArray(points.flatMap((p) => [p.longitude, p.latitude]));
-
+/**
+ * 巡检任务页：飞机沿任务线循环飞行（SampledPositionProperty 回放），
+ * 身后拖出一条**随进度生长的覆盖走廊**（corridor 的 positions 是 CallbackProperty），
+ * 沿途按覆盖质量铺采样点（绿/黄/红）。也支持手绘自定义巡检线后同样的回放。
+ * 数据层见 patrolModel.ts（程序生成，不依赖静态 JSON）。
+ */
 export default function Trajectory() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const { message } = App.useApp();
   const [drawing, setDrawing] = useState(false);
-  const [result, setResult] = useState<string>();
-  const [polygonCount, setPolygonCount] = useState(214);
-  const waypointsRef = useRef<Point[]>([]);
+  const [playing, setPlaying] = useState(true);
+  const [speed, setSpeed] = useState(2);
+  const [hasPlayback, setHasPlayback] = useState(false);
   const drawingRef = useRef(false);
+  const waypointsRef = useRef<{ longitude: number; latitude: number }[]>([]);
   const layerRef = useRef<Cesium.CustomDataSource>(null);
-  const samplesRef = useRef<Cesium.PointPrimitiveCollection>(null);
+  const samplesRef = useRef<PatrolSample[]>([]);
+  const positionsRef = useRef<Cesium.Cartesian3[]>([]);
+  const dotsRef = useRef<Cesium.PointPrimitiveCollection>(null);
+  const dotsDoneRef = useRef(0);
+  const startRef = useRef<Cesium.JulianDate>(null);
 
   const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
-    // 初始视角对准三种能力包络（进入页面即自动合并展示）；覆盖多边形在东北，点按钮时再飞过去
-    home: [116.52, 30.39, 1_200_000],
+    home: [116.65, 30.5, 260_000],
+    entry: { pitch: Cesium.Math.toRadians(-38) },
     onReady: (instance) => {
-      const layer = new Cesium.CustomDataSource('routes');
+      const layer = new Cesium.CustomDataSource('patrol');
       instance.dataSources.add(layer);
       layerRef.current = layer;
-      // 画线模式下每次点击追加一个途经点；实时线段用 CallbackProperty 跟随数组
+      // 画线模式下点击追加航路点；实时连线用 CallbackProperty 跟随数组
       const handler = new Cesium.ScreenSpaceEventHandler(instance.scene.canvas);
       handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
         if (!drawingRef.current) return;
@@ -58,119 +55,181 @@ export default function Trajectory() {
     },
   });
 
-  const clear = useCallback(() => {
+  /** 回放推进：覆盖走廊 positions 只取当前时刻之前的采样（生长效果），沿途铺质量采样点 */
+  useEffect(() => {
+    if (!viewer || viewer.isDestroyed()) return undefined;
+    const onTick = () => {
+      const start = startRef.current;
+      if (!start || !samplesRef.current.length) return;
+      const elapsed = Cesium.JulianDate.secondsDifference(viewer.clock.currentTime, start);
+      const progress = Math.min(
+        samplesRef.current.length,
+        Math.max(2, Math.floor(elapsed * SAMPLES_PER_SECOND * speed)),
+      );
+      positionsRef.current = positionsRef.current.slice(0, progress);
+      const dots = dotsRef.current;
+      if (dots) {
+        while (dotsDoneRef.current < progress) {
+          const sample = samplesRef.current[dotsDoneRef.current];
+          if (dotsDoneRef.current % 5 === 0) {
+            dots.add({
+              position: Cesium.Cartesian3.fromDegrees(sample.lng, sample.lat),
+              pixelSize: 5,
+              color: Cesium.Color.fromCssColorString(qualityColor(sample.quality)).withAlpha(0.9),
+            });
+          }
+          dotsDoneRef.current += 1;
+        }
+      }
+    };
+    viewer.clock.onTick.addEventListener(onTick);
+    return () => {
+      if (!viewer.isDestroyed()) viewer.clock.onTick.removeEventListener(onTick);
+    };
+  }, [viewer, speed]);
+
+  useEffect(() => {
+    if (viewer) viewer.clock.shouldAnimate = playing;
+  }, [viewer, playing]);
+
+  useEffect(() => {
+    if (viewer) viewer.clock.multiplier = speed;
+  }, [viewer, speed]);
+
+  /** 搭建一段回放：时钟 + 巡检机 + 生长走廊 + 质量采样点容器 */
+  const playRoute = useCallback(
+    (samples: PatrolSample[]) => {
+      const instance = viewer!;
+      samplesRef.current = samples;
+      positionsRef.current = samples.map((p) => Cesium.Cartesian3.fromDegrees(p.lng, p.lat));
+      dotsDoneRef.current = 0;
+      if (dotsRef.current) instance.scene.primitives.remove(dotsRef.current);
+      dotsRef.current = instance.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+      const start = Cesium.JulianDate.now();
+      startRef.current = start.clone();
+      const total = samples.length / SAMPLES_PER_SECOND;
+      Object.assign(instance.clock, {
+        startTime: start.clone(),
+        stopTime: Cesium.JulianDate.addSeconds(start, total, new Cesium.JulianDate()),
+        currentTime: start.clone(),
+        clockRange: Cesium.ClockRange.LOOP_STOP,
+        shouldAnimate: playing,
+        multiplier: speed,
+      });
+      const position = new Cesium.SampledPositionProperty();
+      samples.forEach((p, i) =>
+        position.addSample(
+          Cesium.JulianDate.addSeconds(start, i / SAMPLES_PER_SECOND, new Cesium.JulianDate()),
+          Cesium.Cartesian3.fromDegrees(p.lng, p.lat, p.alt),
+        ),
+      );
+      instance.entities.add({
+        position,
+        billboard: { image: targetIcon('aircraft', '#ffd666'), width: 30, height: 30 },
+        path: { leadTime: 0, trailTime: 25, width: 3, material: glowMaterial('#fadb14', 0.9) },
+      });
+      // 覆盖走廊：positions 只取当前进度以内的采样（onTick 里截断 positionsRef）
+      instance.entities.add({
+        corridor: {
+          positions: new Cesium.CallbackProperty(() => positionsRef.current, false),
+          width: 2600,
+          cornerType: Cesium.CornerType.ROUNDED,
+          material: glowMaterial('#36cfc9', 0.55),
+        },
+      });
+      setHasPlayback(true);
+      instance.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(samples[0].lng, samples[0].lat - 0.28, 120_000),
+        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-38), roll: 0 },
+        duration: 1.8,
+      });
+    },
+    [viewer, playing, speed],
+  );
+
+  // 进页自动回放内置巡检任务（程序生成，确定性）
+  const autoPlayed = useRef(false);
+  useEffect(() => {
+    if (!viewer || autoPlayed.current) return;
+    autoPlayed.current = true;
+    playRoute(buildPatrolRoute());
+  }, [playRoute, viewer]);
+
+  const clearPlayback = useCallback(() => {
+    if (viewer && !viewer.isDestroyed()) {
+      viewer.entities.removeAll();
+      if (dotsRef.current) viewer.scene.primitives.remove(dotsRef.current);
+    }
+    dotsRef.current = null;
     layerRef.current?.entities.removeAll();
-    if (viewer && samplesRef.current) viewer.scene.primitives.remove(samplesRef.current);
-    samplesRef.current = null;
-    waypointsRef.current = [];
-    setResult(undefined);
+    samplesRef.current = [];
+    positionsRef.current = [];
+    startRef.current = null;
+    setHasPlayback(false);
   }, [viewer]);
 
   const startDrawing = () => {
-    clear();
+    clearPlayback();
     drawingRef.current = true;
     setDrawing(true);
     (viewer!.container as HTMLElement).style.cursor = 'crosshair';
     layerRef.current!.entities.add({
       polyline: {
-        positions: new Cesium.CallbackProperty(() => toPositions(waypointsRef.current), false),
+        positions: new Cesium.CallbackProperty(
+          () => Cesium.Cartesian3.fromDegreesArray(waypointsRef.current.flatMap((p) => [p.longitude, p.latitude])),
+          false,
+        ),
         width: 3,
-        material: Cesium.Color.YELLOW,
+        material: glowMaterial('#fadb14', 0.9),
         clampToGround: true,
       },
     });
   };
 
-  /** 完成：按每公里插值生成采样点（巡检时每个点对应一次测量） */
   const finishDrawing = () => {
     drawingRef.current = false;
     setDrawing(false);
     (viewer!.container as HTMLElement).style.cursor = '';
     const waypoints = waypointsRef.current;
-    if (waypoints.length < 2) return;
-    const samples = handlerComputePoint(waypoints, SAMPLE_METERS);
-    if (samples.length > MAX_SAMPLES) {
-      message.warning(t('cesium.route.tooLong', { max: MAX_SAMPLES }));
+    if (waypoints.length < 2) {
+      message.warning(t('cesium.route.tooShort'));
       return;
     }
-    const points = viewer!.scene.primitives.add(
-      new Cesium.PointPrimitiveCollection(),
-    ) as Cesium.PointPrimitiveCollection;
-    samples.forEach((p) =>
-      points.add({
-        position: Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude),
-        pixelSize: 4,
-        color: Cesium.Color.CYAN,
-      }),
-    );
-    samplesRef.current = points;
-    const length = waypoints
-      .slice(1)
-      .reduce(
-        (sum, p, i) => sum + distanceKm([waypoints[i].longitude, waypoints[i].latitude], [p.longitude, p.latitude]),
-        0,
-      );
-    setResult(t('cesium.route.result', { length: length.toFixed(1), count: samples.length }));
+    layerRef.current?.entities.removeAll();
+    playRoute(sampleRoute(waypoints));
   };
 
-  /** 三种能力包络的并集（turf union） */
-  const mergeEnvelopes = useCallback(async () => {
-    if (!viewer) return;
-    clear();
-    const data =
-      await fetchJson<Record<'intercept' | 'location' | 'demodulation', Envelope>>('data/cesium/envelopes.json');
-    const polygons = [data.intercept, data.location, data.demodulation].map((ring) =>
-      ring.map((p) => ({ longitude: p.longitude, latitude: p.latitude })),
-    );
-    polygons.forEach((ring) =>
-      layerRef.current!.entities.add({
-        polygon: {
-          hierarchy: toPositions(ring),
-          material: Cesium.Color.WHITE.withAlpha(0.1),
-          outline: true,
-          outlineColor: Cesium.Color.WHITE,
-        },
-      }),
-    );
-    mergePolygons(polygons).forEach((ring) =>
-      layerRef.current!.entities.add({
-        polygon: { hierarchy: toPositions(ring), material: Cesium.Color.GOLD.withAlpha(0.35), height: 20_000 },
-      }),
-    );
-    if (!viewer.isDestroyed()) void viewer.flyTo(layerRef.current!, { duration: 1.2 });
-  }, [clear, viewer]);
-
-  // 进入页面即展示三种包络的合并结果（数据约 20 KB）；画路线、覆盖合并按需点按钮
-  const autoDrawn = useRef(false);
-  useEffect(() => {
-    if (!viewer || autoDrawn.current) return;
-    autoDrawn.current = true;
-    void mergeEnvelopes();
-  }, [mergeEnvelopes, viewer]);
-
-  /** 200+ 个覆盖多边形（东北一次路测的分片覆盖）：先取凸包再合并成一个多边形，或逐个显示对比 */
-  const drawCoverage = async (merge: boolean) => {
-    clear();
-    const polygons = await fetchJson<Point[][]>('data/cesium/coverage-polygons.json');
-    setPolygonCount(polygons.length);
-    if (merge) {
-      layerRef.current!.entities.add({
-        polygon: { hierarchy: toPositions(mergePolygonsPath(polygons)), material: Cesium.Color.RED.withAlpha(0.4) },
-      });
-    } else {
-      polygons.forEach((ring, index) =>
-        layerRef.current!.entities.add({
-          polygon: { hierarchy: toPositions(ring), material: Cesium.Color.RED.withAlpha(0.15), height: index * 100 },
-        }),
-      );
+  const replay = () => {
+    if (viewer && startRef.current) {
+      positionsRef.current = [];
+      dotsDoneRef.current = 0;
+      if (dotsRef.current) dotsRef.current.removeAll();
+      viewer.clock.currentTime = startRef.current.clone();
     }
-    viewer!.flyTo(layerRef.current!, { duration: 1.2 });
   };
+
+  const stations = BASE_STATIONS.map(([lng, lat]) => ({ lng, lat }));
+  const legend = (
+    <Card size="small" className="pointer-events-auto opacity-95">
+      <div className="flex flex-col gap-1 text-xs">
+        {[
+          ['#52c41a', 'cesium.route.good'],
+          ['#fadb14', 'cesium.route.fair'],
+          ['#f5222d', 'cesium.route.poor'],
+        ].map(([color, key]) => (
+          <span key={key} className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+            {t(key)}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
 
   return (
     <DemoPage
       descriptionId="page.cesium.trajectory.desc"
-      source="src/utils/MapCompute/cesiumCompute.ts"
+      source="src/pages/Map/Cesium/patrolModel.ts"
       extra={
         <>
           {drawing ? (
@@ -178,22 +237,34 @@ export default function Trajectory() {
               {t('cesium.route.finish')}
             </Button>
           ) : (
-            <Button type="primary" icon={<NodeIndexOutlined />} disabled={!viewer} onClick={startDrawing}>
+            <Button icon={<NodeIndexOutlined />} disabled={!viewer} onClick={startDrawing}>
               {t('cesium.route.draw')}
             </Button>
           )}
-          <Button icon={<GatewayOutlined />} disabled={!viewer || drawing} onClick={mergeEnvelopes}>
-            {t('cesium.route.merge')}
+          <Button
+            icon={playing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+            disabled={drawing || !hasPlayback}
+            onClick={() => setPlaying((v) => !v)}
+          >
+            {t(playing ? 'cesium.route.pause' : 'cesium.route.play')}
           </Button>
-          <Button icon={<BlockOutlined />} disabled={!viewer || drawing} onClick={() => drawCoverage(true)}>
-            {t('cesium.route.mergeMany', { count: polygonCount })}
+          <Button icon={<RedoOutlined />} disabled={drawing || !hasPlayback} onClick={replay}>
+            {t('cesium.route.replay')}
           </Button>
-          <Button disabled={!viewer || drawing} onClick={() => drawCoverage(false)}>
-            {t('cesium.route.showMany')}
-          </Button>
-          <Button icon={<ClearOutlined />} disabled={drawing} onClick={clear}>
+          <Button disabled={drawing || !hasPlayback} onClick={clearPlayback}>
             {t('map.clear')}
           </Button>
+          {!drawing && (
+            <Segmented
+              value={speed}
+              onChange={(value) => setSpeed(value as number)}
+              options={[
+                { value: 1, label: '×1' },
+                { value: 2, label: '×2' },
+                { value: 4, label: '×4' },
+              ]}
+            />
+          )}
         </>
       }
     >
@@ -201,7 +272,15 @@ export default function Trajectory() {
         type={drawing ? 'warning' : 'info'}
         showIcon
         className="mb-4"
-        title={drawing ? t('cesium.route.drawing') : (result ?? t('cesium.route.hint'))}
+        title={
+          drawing
+            ? t('cesium.route.drawing')
+            : t('cesium.route.summary', {
+                count: samplesRef.current.length,
+                good: samplesRef.current.filter((s) => s.quality > 0.66).length,
+                stations: stations.length,
+              })
+        }
       />
       <Card styles={{ body: { padding: 0 } }}>
         <CesiumStage
@@ -210,6 +289,7 @@ export default function Trajectory() {
           error={error}
           basemapFailed={basemapFailed}
           onRetryBasemap={retry}
+          overlay={legend}
         />
       </Card>
     </DemoPage>

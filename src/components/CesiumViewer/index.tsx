@@ -6,7 +6,9 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import './cesium.css';
 
-/** 演示页通用的 Viewer 控件配置：关闭动画、时间轴、信息框、帮助等，保留 2D/3D 切换 */
+/** 演示页通用的 Viewer 控件配置：关闭原生动画/时间轴/信息框等（自绘控制条），保留 2D/3D 切换。
+ * 天空与大气保持默认开启（省略该键即启用）：这是 Cesium「旋转的蓝色星球」观感的来源，
+ * 关掉后瓦片未覆盖的区域就是一片黑幕 */
 const DEMO_VIEWER_OPTIONS: Cesium.Viewer.ConstructorOptions = {
   animation: false,
   infoBox: false,
@@ -16,8 +18,6 @@ const DEMO_VIEWER_OPTIONS: Cesium.Viewer.ConstructorOptions = {
   navigationHelpButton: false,
   navigationInstructionsInitiallyVisible: false,
   shouldAnimate: true,
-  skyAtmosphere: false,
-  skyBox: false,
   vrButton: false,
   baseLayerPicker: false,
 };
@@ -51,12 +51,16 @@ export const createDemoViewer = (container: string | Element, options: Cesium.Vi
     const baseLayer = shouldUseIonImagery()
       ? undefined
       : new Cesium.ImageryLayer(new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }));
-    return new Cesium.Viewer(container, {
+    const instance = new Cesium.Viewer(container, {
       ...DEMO_VIEWER_OPTIONS,
       geocoder: false,
       ...(baseLayer ? { baseLayer } : {}),
       ...options,
     });
+    // 瓦片未覆盖/加载中的区域用深蓝海洋色兜底：黑幕 → 深夜地球，哪怕离线也有「星球」的观感
+    instance.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0b2a4a');
+    instance.scene.globe.showGroundAtmosphere = true;
+    return instance;
   } catch (error) {
     console.error('Cesium Viewer init failed:', error);
     return null;
@@ -77,6 +81,10 @@ export const CesiumInitError = () => {
 type UseCesiumViewerOptions = {
   /** 初始视角 [经度, 纬度, 高度(米)] */
   home?: [number, number, number];
+  /** 入场视角的姿态（弧度）；缺省为正俯视。配合 home 组成该页的「定妆镜头」 */
+  entry?: { heading?: number; pitch?: number; roll?: number };
+  /** 关掉电影感入场（单测/截图等需要确定性视角时用） */
+  instantEntry?: boolean;
   viewerOptions?: Cesium.Viewer.ConstructorOptions;
   /** Viewer 创建后执行一次（添加图层、事件等）；返回的函数在销毁前调用 */
   onReady?: (viewer: Cesium.Viewer) => void | (() => void);
@@ -88,6 +96,8 @@ type UseCesiumViewerOptions = {
  */
 export const useCesiumViewer = ({
   home = [108, 35, 7_000_000],
+  entry,
+  instantEntry = false,
   viewerOptions,
   onReady,
 }: UseCesiumViewerOptions = {}) => {
@@ -101,19 +111,39 @@ export const useCesiumViewer = ({
   onReadyRef.current = onReady;
   // home / viewerOptions 只在创建时读一次。调用方常在渲染里写内联对象字面量，若列进依赖会每次渲染
   // 重建 Viewer（连瓦片一起重拉）；放进 ref 后 effect 只需依赖 attempt，读到的仍是本次渲染的最新值。
-  const createOptionsRef = useRef({ home, viewerOptions });
-  createOptionsRef.current = { home, viewerOptions };
+  const createOptionsRef = useRef({ home, entry, instantEntry, viewerOptions });
+  createOptionsRef.current = { home, entry, instantEntry, viewerOptions };
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
     setBasemapFailed(false);
-    const { home: target, viewerOptions: options } = createOptionsRef.current;
+    const { home: target, entry: entryPose, instantEntry: instant, viewerOptions: options } = createOptionsRef.current;
     const instance = createDemoViewer(containerRef.current, options);
     if (!instance) {
       setError(true);
       return undefined;
     }
-    instance.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(...target) });
+    // 电影感入场：先在高处落位，再缓动推近到定妆镜头（高度约 2.6 倍起步，缓入缓出 2.2 秒）
+    const destination = Cesium.Cartesian3.fromDegrees(...target);
+    const orientation = {
+      heading: entryPose?.heading ?? 0,
+      pitch: entryPose?.pitch ?? Cesium.Math.toRadians(-90),
+      roll: entryPose?.roll ?? 0,
+    };
+    if (instant) {
+      instance.camera.setView({ destination, orientation });
+    } else {
+      instance.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(target[0], target[1], target[2] * 2.6 + 600_000),
+        orientation,
+      });
+      instance.camera.flyTo({
+        destination,
+        orientation,
+        duration: 2.2,
+        easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+      });
+    }
     // 底图失败检测（F01），三条互补路径：
     // 1) fetch 层计数：对瓦片主机的失败请求计数（离线/被拦截时最直接，不依赖 Cesium 内部事件的触发时机）；
     // 2) 影像层瓦片错误事件（部分版本在重试耗尽后触发）；
