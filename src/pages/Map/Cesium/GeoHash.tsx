@@ -6,14 +6,17 @@ import { listAllDevices } from '@/services/ops';
 import { centerGeoHash, geohashBounds } from '@/utils/MapCompute/geoHash';
 import { AimOutlined, AppstoreOutlined, ClearOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Alert, Button, Card, InputNumber, Listy, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Card, InputNumber, Listy, Segmented, Space, Tag, Typography } from 'antd';
 import * as Cesium from 'cesium';
 import { useEffect, useRef, useState } from 'react';
 
 type Cell = { hash: string; count: number };
 
-/** 计数 → 颜色：由浅蓝到深红，站点越多越「热」 */
-const cellColor = (ratio: number) => Cesium.Color.fromHsl(0.6 - 0.6 * ratio, 0.85, 0.5, 0.25 + 0.45 * ratio);
+/** 计数 → 颜色：由浅蓝到深红，站点越多越「热」（深蓝星球底上要压得住，饱和度与下限 alpha 都偏高） */
+const cellColor = (ratio: number) => Cesium.Color.fromHsl(0.6 - 0.6 * ratio, 0.9, 0.56, 0.4 + 0.45 * ratio);
+
+/** 计数 → 挤出高度：把「格子里的站点数」变成看得见的立体柱（数据长在 3D 上） */
+const cellHeight = (ratio: number) => 12_000 + ratio * 320_000;
 
 export default function GeoHashPage() {
   const intl = useIntl();
@@ -23,12 +26,13 @@ export default function GeoHashPage() {
   const [precision, setPrecision] = useState(3);
   const [cells, setCells] = useState<Cell[]>([]);
   const [center, setCenter] = useState<string>();
+  const [tilted, setTilted] = useState(false);
   const layerRef = useRef<Cesium.CustomDataSource>(null);
 
   // 站点点位：设备数据与 viewer 都就绪后画一次
   useEffect(() => {
     if (!viewer || !devices) return undefined;
-    const points = addStationPoints(viewer, devices, 5);
+    const points = addStationPoints(viewer, devices, 7);
     const layer = new Cesium.CustomDataSource('geohash');
     viewer.dataSources.add(layer);
     layerRef.current = layer;
@@ -39,13 +43,15 @@ export default function GeoHashPage() {
     };
   }, [viewer, devices]);
 
-  const drawCell = (hash: string, color: Cesium.Color, label?: string) => {
+  const drawCell = (hash: string, color: Cesium.Color, label?: string, ratio?: number) => {
     const b = geohashBounds(hash);
     if (!b) return undefined;
     return layerRef.current?.entities.add({
       rectangle: {
         coordinates: Cesium.Rectangle.fromDegrees(b.longitudeMin, b.latitudeMin, b.longitudeMax, b.latitudeMax),
         material: color,
+        // 有占比就挤出成 3D 柱：高度即数据（中心格定位那类临时高亮仍是贴地面）
+        ...(ratio !== undefined ? { height: 0, extrudedHeight: cellHeight(ratio) } : {}),
         outline: true,
         outlineColor: Cesium.Color.WHITE.withAlpha(0.6),
       },
@@ -69,9 +75,29 @@ export default function GeoHashPage() {
     });
     const list = [...counts.entries()].map(([hash, count]) => ({ hash, count })).sort((a, b) => b.count - a.count);
     const max = list[0]?.count ?? 1;
-    list.forEach((cell) => drawCell(cell.hash, cellColor(cell.count / max), String(cell.count)));
+    list.forEach((cell) => drawCell(cell.hash, cellColor(cell.count / max), String(cell.count), cell.count / max));
     setCells(list);
     setCenter(undefined);
+  };
+
+  // 进页自动聚合、精度变化自动重算：演示一进来就是「密度立方」，不用先找按钮
+  useEffect(() => {
+    if (!viewer || !devices || !layerRef.current) return;
+    aggregate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewer, devices, precision]);
+
+  /** 俯视 ↔ 侧视：侧视才能看出挤出高度的数据差异，这是这页的「定妆镜头」 */
+  const flyView = (next: boolean) => {
+    setTilted(next);
+    if (!viewer) return;
+    viewer.camera.flyTo({
+      destination: next
+        ? Cesium.Cartesian3.fromDegrees(104, 24.5, 3_400_000)
+        : Cesium.Cartesian3.fromDegrees(108, 35, 7_000_000),
+      orientation: { heading: 0, pitch: Cesium.Math.toRadians(next ? -36 : -90), roll: 0 },
+      duration: 1.8,
+    });
   };
 
   const locateCenter = () => {
@@ -99,6 +125,14 @@ export default function GeoHashPage() {
       source="src/pages/Map/Cesium/GeoHash.tsx"
       extra={
         <>
+          <Segmented
+            value={tilted ? 'tilt' : 'top'}
+            onChange={(value) => flyView(value === 'tilt')}
+            options={[
+              { value: 'top', label: t('cesium.geohash.viewTop') },
+              { value: 'tilt', label: t('cesium.geohash.viewTilt') },
+            ]}
+          />
           <Space.Compact>
             <Button disabled>{t('cesium.geohash.precision')}</Button>
             <InputNumber min={2} max={6} value={precision} onChange={(v) => v && setPrecision(v)} className="w-16" />
