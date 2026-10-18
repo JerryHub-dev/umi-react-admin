@@ -1,8 +1,10 @@
 import { CesiumStage, useCesiumViewer } from '@/components/CesiumViewer';
+import { scanRingMaterial, targetIcon } from '@/components/CesiumViewer/effects';
 import DemoPage from '@/components/DemoPage';
 import { distanceKm } from '@/utils/MapCompute/geodesy';
+import { PauseCircleOutlined, PlayCircleOutlined, UnlockOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Alert, Card, Segmented, Space, Switch, Typography } from 'antd';
+import { Alert, Button, Card, Segmented, Select, Space, Switch, Typography } from 'antd';
 import * as Cesium from 'cesium';
 import CesiumNavigation from 'cesium-navigation-es6';
 import { useEffect, useRef, useState } from 'react';
@@ -110,6 +112,7 @@ const KIND_COLOR: Record<Kind, Cesium.Color> = {
   ship: Cesium.Color.fromCssColorString('#13c2c2'),
   aircraft: Cesium.Color.fromCssColorString('#fa8c16'),
 };
+const KIND_CSS: Record<Kind, string> = { ship: '#13c2c2', aircraft: '#fa8c16' };
 
 /** 按航速把航线点换成时间样本：往返运动，时长覆盖整个演示时段 */
 const buildPosition = (target: Target, start: Cesium.JulianDate, totalSeconds: number) => {
@@ -132,22 +135,39 @@ const buildPosition = (target: Target, start: Cesium.JulianDate, totalSeconds: n
 
 const DURATION_SECONDS = 12 * 3600;
 
+/** 由位置属性求航向（弧度，顺时针自北），转成 billboard 的 rotation（逆时针）——图标始终指着前进方向 */
+const headingRotation = (viewer: Cesium.Viewer, position: Cesium.PositionProperty, sampleSeconds = 180) =>
+  new Cesium.CallbackProperty(() => {
+    const now = viewer.clock.currentTime;
+    const p1 = position.getValue(now);
+    const p2 = position.getValue(Cesium.JulianDate.addSeconds(now, sampleSeconds, new Cesium.JulianDate()));
+    if (!p1 || !p2) return 0;
+    const c1 = viewer.scene.globe.ellipsoid.cartesianToCartographic(p1);
+    const c2 = viewer.scene.globe.ellipsoid.cartesianToCartographic(p2);
+    const heading = Math.atan2(
+      (c2.longitude - c1.longitude) * Math.cos((c1.latitude + c2.latitude) / 2),
+      c2.latitude - c1.latitude,
+    );
+    return -heading;
+  }, false);
+
 export default function Situation() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const [speed, setSpeed] = useState(120);
   const [trails, setTrails] = useState(true);
+  const [playing, setPlaying] = useState(true);
   const [picked, setPicked] = useState<Target>();
+  const [locked, setLocked] = useState<string>();
   const entitiesRef = useRef<Cesium.Entity[]>([]);
+  const scanRef = useRef<Cesium.Entity | undefined>(undefined);
 
   const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
-    home: [124.4, 29.2, 1_300_000],
+    // 定妆镜头：黄海南部斜视角，入场从高空推近
+    home: [124.4, 27.6, 1_100_000],
+    entry: { pitch: Cesium.Math.toRadians(-42) },
     onReady: (instance) => {
       new CesiumNavigation(instance, { enableCompass: true, enableZoomControls: true, enableDistanceLegend: true });
-      instance.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(124.4, 26.8, 900_000),
-        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 },
-      });
       const start = Cesium.JulianDate.now();
       const stop = Cesium.JulianDate.addSeconds(start, DURATION_SECONDS, new Cesium.JulianDate());
       Object.assign(instance.clock, {
@@ -158,6 +178,7 @@ export default function Situation() {
         shouldAnimate: true,
       });
 
+      // 关注海域：贴地面 + 立起 80km 的半透明围栏，把「区域感」从平面变成立体
       instance.entities.add({
         polygon: {
           hierarchy: Cesium.Cartesian3.fromDegreesArray(AREA.flat()),
@@ -166,21 +187,33 @@ export default function Situation() {
           outlineColor: Cesium.Color.DODGERBLUE,
         },
       });
+      instance.entities.add({
+        wall: {
+          positions: Cesium.Cartesian3.fromDegreesArray([...AREA, AREA[0]].flat()),
+          maximumHeights: [...AREA, AREA[0]].map(() => 80_000),
+          minimumHeights: [...AREA, AREA[0]].map(() => 0),
+          material: Cesium.Color.DODGERBLUE.withAlpha(0.1),
+        },
+      });
 
-      entitiesRef.current = TARGETS.map((target) =>
-        instance.entities.add({
+      entitiesRef.current = TARGETS.map((target) => {
+        const position = buildPosition(target, start, DURATION_SECONDS);
+        return instance.entities.add({
           id: target.id,
-          position: buildPosition(target, start, DURATION_SECONDS),
-          point: {
-            pixelSize: target.kind === 'aircraft' ? 11 : 9,
-            color: KIND_COLOR[target.kind],
-            outlineColor: Cesium.Color.WHITE,
-            outlineWidth: 2,
+          position,
+          // 剪影图标 + 航向朝向：比 9px 圆点像「被指挥的目标」得多
+          billboard: {
+            image: targetIcon(target.kind, KIND_CSS[target.kind]),
+            width: target.kind === 'aircraft' ? 30 : 26,
+            height: target.kind === 'aircraft' ? 30 : 26,
+            alignedAxis: Cesium.Cartesian3.UNIT_Z,
+            rotation: headingRotation(instance, position),
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
           },
           label: {
             text: target.id,
             font: '12px sans-serif',
-            pixelOffset: new Cesium.Cartesian2(0, -18),
+            pixelOffset: new Cesium.Cartesian2(0, -24),
             fillColor: Cesium.Color.WHITE,
             showBackground: true,
             backgroundColor: Cesium.Color.BLACK.withAlpha(0.55),
@@ -191,8 +224,8 @@ export default function Situation() {
             width: 2,
             material: KIND_COLOR[target.kind].withAlpha(0.7),
           },
-        }),
-      );
+        });
+      });
 
       const handler = new Cesium.ScreenSpaceEventHandler(instance.scene.canvas);
       handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
@@ -208,10 +241,38 @@ export default function Situation() {
   }, [viewer, speed]);
 
   useEffect(() => {
+    if (viewer) viewer.clock.shouldAnimate = playing;
+  }, [viewer, playing]);
+
+  useEffect(() => {
     entitiesRef.current.forEach((entity) => {
       if (entity.path) entity.path.show = new Cesium.ConstantProperty(trails);
     });
   }, [trails, viewer]);
+
+  /** 锁定目标：相机切换为跟踪视角，目标脚下出现循环扩张的扫描圈；解锁回到区域俯瞰 */
+  useEffect(() => {
+    if (!viewer || viewer.isDestroyed()) return undefined;
+    if (scanRef.current) {
+      viewer.entities.remove(scanRef.current);
+      scanRef.current = undefined;
+    }
+    const entity = entitiesRef.current.find((e) => e.id === locked);
+    if (!entity) {
+      viewer.trackedEntity = undefined;
+      return undefined;
+    }
+    viewer.trackedEntity = entity;
+    const target = TARGETS.find((tg) => tg.id === locked);
+    const kind = target?.kind ?? 'ship';
+    scanRef.current = viewer.entities.add({
+      position: new Cesium.CallbackPositionProperty(() => entity.position?.getValue(viewer.clock.currentTime), false),
+      ellipse: scanRingMaterial(KIND_CSS[kind], kind === 'aircraft' ? 160_000 : 60_000, 3.2),
+    });
+    return () => {
+      if (scanRef.current && !viewer.isDestroyed()) viewer.entities.remove(scanRef.current);
+    };
+  }, [viewer, locked]);
 
   const kindLabel = (kind: Kind) => t(`cesium.situation.${kind}`);
 
@@ -241,6 +302,30 @@ export default function Situation() {
       source="src/pages/Map/Cesium/Situation.tsx"
       extra={
         <>
+          <Select
+            allowClear
+            showSearch
+            value={locked}
+            onChange={setLocked}
+            placeholder={t('cesium.situation.lock')}
+            className="w-36"
+            options={TARGETS.map((target) => ({
+              value: target.id,
+              label: `${target.id} · ${kindLabel(target.kind)}`,
+            }))}
+          />
+          {locked && (
+            <Button icon={<UnlockOutlined />} onClick={() => setLocked(undefined)}>
+              {t('cesium.situation.unlock')}
+            </Button>
+          )}
+          <Button
+            type={playing ? 'default' : 'primary'}
+            icon={playing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+            onClick={() => setPlaying((v) => !v)}
+          >
+            {t(playing ? 'cesium.situation.pause' : 'cesium.situation.play')}
+          </Button>
           <Space>
             <Typography.Text type="secondary">{t('cesium.situation.speed')}</Typography.Text>
             <Segmented

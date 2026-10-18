@@ -1,159 +1,141 @@
 import { CesiumStage, useCesiumViewer } from '@/components/CesiumViewer';
+import { addScanRing } from '@/components/CesiumViewer/effects';
 import DemoPage from '@/components/DemoPage';
-import { ClearOutlined, DotChartOutlined, HeatMapOutlined } from '@ant-design/icons';
+import { PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Alert, Button, Card, Spin } from 'antd';
+import { Alert, Button, Card, Segmented } from 'antd';
 import * as Cesium from 'cesium';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { coverageRadiusKm, REGION, renderHeatCanvas, strengthColor, transmitters } from './fieldModel';
 
-type Sample = { longitude: number; latitude: number; fieldStrength: number };
-type FieldStrengthData = {
-  /** 服务端渲染好的热力图 PNG（base64），覆盖 coverDiagramParams 描述的经纬度范围 */
-  diagramPngStream: string;
-  coverageData: { arrayResult: Sample[][]; maxStrength: number; minStrength: number };
-};
+type Mode = 'heat' | 'shells' | 'both';
 
-/** 场强分级色：与图例一致 */
-const STRENGTH_STOPS: [number, string][] = [
-  [25, '#2f54eb'],
-  [40, '#52c41a'],
-  [60, '#fadb14'],
-  [75, '#fa8c16'],
-  [Infinity, '#f5222d'],
+const SHELLS: { threshold: number; alpha: number }[] = [
+  { threshold: 60, alpha: 0.1 },
+  { threshold: 45, alpha: 0.06 },
 ];
-const strengthColor = (value: number) => STRENGTH_STOPS.find(([limit]) => value <= limit)![1];
 
-let dataPromise: Promise<FieldStrengthData> | undefined;
-/** 约 1.6 MB，首次使用时才拉取并缓存（失败允许重试） */
-const loadData = () => {
-  dataPromise ??= fetch(`${PUBLIC_PATH}data/cesium/field-strength.json`)
-    .then((response) => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json() as Promise<FieldStrengthData>;
-    })
-    .catch((error) => {
-      dataPromise = undefined;
-      throw error;
-    });
-  return dataPromise;
-};
-
-const bounds = (samples: Sample[]) => {
-  const lngs = samples.map((s) => s.longitude);
-  const lats = samples.map((s) => s.latitude);
-  return Cesium.Rectangle.fromDegrees(Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats));
-};
-
+/**
+ * 场强页：同一套传播模型（fieldModel.ts）驱动两种互补的表示——
+ * 动态热力（canvas → 贴图，随时间呼吸）与覆盖壳层（60/45 dB 等场强覆盖体）。
+ * 数据全部程序生成，不依赖静态 JSON；发射机持续扫描，构成页面的「心跳」。
+ */
 export default function Heatmap() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
-  const [loading, setLoading] = useState(false);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; value: number }>();
-  const pointsRef = useRef<Cesium.PointPrimitiveCollection>(null);
-  const textureRef = useRef<Cesium.Entity>(null);
+  const [mode, setMode] = useState<Mode>('both');
+  const [playing, setPlaying] = useState(true);
+  const heatRef = useRef<Cesium.Entity>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const layerRef = useRef<Cesium.CustomDataSource>(null);
+  const timeRef = useRef({ elapsed: 0, last: performance.now() });
 
   const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
-    home: [106.64, 29.67, 60_000],
+    home: [106.64, 29.67, 78_000],
+    entry: { pitch: Cesium.Math.toRadians(-30) },
     onReady: (instance) => {
-      // 悬停读取场强：点图元的 id 挂的是采样点本身
-      const handler = new Cesium.ScreenSpaceEventHandler(instance.scene.canvas);
-      handler.setInputAction((movement: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
-        const picked = instance.scene.pick(movement.endPosition);
-        const sample = picked?.id as Sample | undefined;
-        setTooltip(
-          sample && typeof sample.fieldStrength === 'number'
-            ? {
-                x: movement.endPosition.x,
-                y: movement.endPosition.y,
-                value: Math.round(sample.fieldStrength * 10) / 10,
-              }
-            : undefined,
-        );
-      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-      return () => handler.destroy();
+      const layer = new Cesium.CustomDataSource('field');
+      instance.dataSources.add(layer);
+      layerRef.current = layer;
+
+      // 热力贴图层：一个覆盖全区域的矩形，材质每 200ms 换一张新画的 canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 520;
+      canvas.height = 340;
+      canvasRef.current = canvas;
+      renderHeatCanvas(canvas, 0);
+      heatRef.current = instance.entities.add({
+        rectangle: {
+          coordinates: Cesium.Rectangle.fromDegrees(REGION.west, REGION.south, REGION.east, REGION.north),
+          material: new Cesium.ImageMaterialProperty({ image: canvas, transparent: true }),
+        },
+      });
+
+      // 发射机：标记 + 各自的覆盖壳层 + 持续扫描
+      transmitters().forEach((tx) => {
+        layer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(tx.lng, tx.lat),
+          point: {
+            pixelSize: 9,
+            color: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.fromCssColorString('#1677ff'),
+            outlineWidth: 2,
+          },
+          label: {
+            text: tx.id,
+            font: '12px sans-serif',
+            pixelOffset: new Cesium.Cartesian2(0, -16),
+            fillColor: Cesium.Color.WHITE,
+            showBackground: true,
+            backgroundColor: Cesium.Color.BLACK.withAlpha(0.55),
+          },
+        });
+        SHELLS.forEach(({ threshold, alpha }) => {
+          const r = coverageRadiusKm(tx.power, threshold) * 1000;
+          layer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(tx.lng, tx.lat),
+            ellipsoid: {
+              radii: new Cesium.Cartesian3(r, r, r * 0.32),
+              material: Cesium.Color.fromCssColorString(strengthColor(threshold + 10)).withAlpha(alpha),
+              slicePartitions: 48,
+              stackPartitions: 32,
+            },
+          });
+        });
+        addScanRing(instance, {
+          lon: tx.lng,
+          lat: tx.lat,
+          color: '#1677ff',
+          maxRadius: coverageRadiusKm(tx.power, 55) * 1000,
+          duration: 3.4,
+        });
+      });
+      return () => {
+        if (!instance.isDestroyed()) instance.dataSources.remove(layer, true);
+      };
     },
   });
 
-  const withData = useCallback(
-    async (draw: (data: FieldStrengthData) => void) => {
-      setLoading(true);
-      try {
-        const data = await loadData();
-        if (viewer && !viewer.isDestroyed()) draw(data);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [viewer],
-  );
-
-  /** 热力图纹理：base64 PNG 直接作为矩形材质铺在测试区域上 */
-  const drawTexture = useCallback(
-    () =>
-      withData((data) => {
-        if (textureRef.current) viewer!.entities.remove(textureRef.current);
-        const rectangle = bounds(data.coverageData.arrayResult.flat());
-        textureRef.current = viewer!.entities.add({
-          rectangle: {
-            coordinates: rectangle,
-            material: new Cesium.ImageMaterialProperty({
-              image: `data:image/png;base64,${data.diagramPngStream}`,
-              transparent: true,
-            }),
-          },
-        });
-        viewer!.camera.flyTo({ destination: rectangle, duration: 1.2 });
-      }),
-    [withData, viewer],
-  );
-
-  /** 点云：PointPrimitiveCollection 批量渲染 5 千多个采样点（Entity 方式会卡住主线程） */
-  const drawPoints = useCallback(
-    () =>
-      withData((data) => {
-        if (pointsRef.current) viewer!.scene.primitives.remove(pointsRef.current);
-        const samples = data.coverageData.arrayResult.flat();
-        const points = viewer!.scene.primitives.add(
-          new Cesium.PointPrimitiveCollection(),
-        ) as Cesium.PointPrimitiveCollection;
-        samples.forEach((sample) =>
-          points.add({
-            id: sample,
-            position: Cesium.Cartesian3.fromDegrees(sample.longitude, sample.latitude),
-            pixelSize: 6,
-            color: Cesium.Color.fromCssColorString(strengthColor(sample.fieldStrength)).withAlpha(0.75),
-          }),
-        );
-        pointsRef.current = points;
-        viewer!.camera.flyTo({ destination: bounds(samples), duration: 1.2 });
-      }),
-    [withData, viewer],
-  );
-
-  // 进入页面直接铺上热力图（首次拉取约 1.6 MB，期间有加载提示），不让用户面对一张空地图去找按钮
-  const autoDrawn = useRef(false);
+  // 热力呼吸：暂停即冻结（elapsed 不再前进），200ms 重绘一次 canvas 并换材质
   useEffect(() => {
-    if (!viewer || autoDrawn.current) return;
-    autoDrawn.current = true;
-    void drawTexture();
-  }, [drawTexture, viewer]);
+    if (!viewer || !canvasRef.current || !heatRef.current?.rectangle) return undefined;
+    const canvas = canvasRef.current;
+    const rectangle = heatRef.current.rectangle;
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      const state = timeRef.current;
+      if (playing) state.elapsed += (now - state.last) / 1000;
+      state.last = now;
+      renderHeatCanvas(canvas, state.elapsed);
+      rectangle.material = new Cesium.ImageMaterialProperty({ image: canvas, transparent: true });
+    }, 200);
+    return () => window.clearInterval(timer);
+  }, [viewer, playing]);
 
-  const clear = useCallback(() => {
-    if (!viewer) return;
-    if (textureRef.current) viewer.entities.remove(textureRef.current);
-    if (pointsRef.current) viewer.scene.primitives.remove(pointsRef.current);
-    textureRef.current = null;
-    pointsRef.current = null;
-  }, [viewer]);
+  // 模式切换：热力矩形与壳层/扫描各自显隐
+  useEffect(() => {
+    if (!viewer || viewer.isDestroyed()) return;
+    const heat = heatRef.current;
+    if (heat) heat.show = mode !== 'shells';
+    const layer = layerRef.current;
+    if (layer) layer.entities.show = mode !== 'heat';
+  }, [viewer, mode]);
 
+  const stops: [number, string][] = [
+    [25, '#2f54eb'],
+    [40, '#52c41a'],
+    [60, '#fadb14'],
+    [75, '#fa8c16'],
+    [Infinity, '#f5222d'],
+  ];
   const legend = (
     <Card size="small" className="opacity-95">
       <div className="mb-1 text-xs">{t('cesium.heatmap.legend')}</div>
       <div className="flex gap-1 text-[11px]">
-        {STRENGTH_STOPS.map(([limit, color], index) => (
+        {stops.map(([limit, color], index) => (
           <div key={color} className="text-center">
             <div className="h-2 w-10 rounded-sm" style={{ background: color }} />
-            {index === STRENGTH_STOPS.length - 1 ? `> ${STRENGTH_STOPS[index - 1][0]}` : `≤ ${limit}`}
+            {index === stops.length - 1 ? `> ${stops[index - 1][0]}` : `≤ ${limit}`}
           </div>
         ))}
       </div>
@@ -163,43 +145,37 @@ export default function Heatmap() {
   return (
     <DemoPage
       descriptionId="page.cesium.heatmap.desc"
-      source="src/pages/Map/Cesium/Heatmap.tsx"
+      source="src/pages/Map/Cesium/fieldModel.ts"
       extra={
         <>
-          <Button type="primary" icon={<HeatMapOutlined />} disabled={!viewer} onClick={drawTexture}>
-            {t('cesium.heatmap.texture')}
-          </Button>
-          <Button icon={<DotChartOutlined />} disabled={!viewer} onClick={drawPoints}>
-            {t('cesium.heatmap.points')}
-          </Button>
-          <Button icon={<ClearOutlined />} onClick={clear}>
-            {t('map.clear')}
+          <Segmented
+            value={mode}
+            onChange={(value) => setMode(value as Mode)}
+            options={[
+              { value: 'heat', label: t('cesium.heatmap.modeHeat') },
+              { value: 'shells', label: t('cesium.heatmap.modeShells') },
+              { value: 'both', label: t('cesium.heatmap.modeBoth') },
+            ]}
+          />
+          <Button
+            icon={playing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+            onClick={() => setPlaying((v) => !v)}
+          >
+            {t(playing ? 'cesium.heatmap.pause' : 'cesium.heatmap.play')}
           </Button>
         </>
       }
     >
       <Alert type="info" showIcon className="mb-4" title={t('cesium.heatmap.hint')} />
       <Card styles={{ body: { padding: 0 } }}>
-        <Spin spinning={loading} description={t('cesium.heatmap.loading')}>
-          <div className="relative">
-            <CesiumStage
-              containerRef={containerRef}
-              viewer={viewer}
-              error={error}
-              basemapFailed={basemapFailed}
-              onRetryBasemap={retry}
-              overlay={legend}
-            />
-            {tooltip && (
-              <div
-                className="pointer-events-none absolute z-20 rounded bg-black/75 px-2 py-1 text-xs text-white"
-                style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
-              >
-                {t('cesium.heatmap.tooltip', { value: tooltip.value })}
-              </div>
-            )}
-          </div>
-        </Spin>
+        <CesiumStage
+          containerRef={containerRef}
+          viewer={viewer}
+          error={error}
+          basemapFailed={basemapFailed}
+          onRetryBasemap={retry}
+          overlay={legend}
+        />
       </Card>
     </DemoPage>
   );

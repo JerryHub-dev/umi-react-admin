@@ -8,7 +8,9 @@ type MockViewer = {
   container: unknown;
   destroyed: boolean;
   setViewCalls: unknown[];
-  camera: { setView: (view: unknown) => void };
+  flyToCalls: unknown[];
+  camera: { setView: (view: unknown) => void; flyTo: (view: unknown) => void };
+  scene: { globe: Record<string, unknown> };
   imageryLayers: { get: (index: number) => undefined };
   isDestroyed: () => boolean;
   destroy: () => void;
@@ -25,11 +27,16 @@ vi.mock('cesium', () => {
     container: unknown;
     destroyed = false;
     setViewCalls: unknown[] = [];
+    flyToCalls: unknown[] = [];
     camera = {
       setView: (view: unknown) => {
         this.setViewCalls.push(view);
       },
+      flyTo: (view: unknown) => {
+        this.flyToCalls.push(view);
+      },
     };
+    scene = { globe: {} as Record<string, unknown> };
     imageryLayers = { get: () => undefined };
     constructor(container: unknown, options: Record<string, unknown>) {
       if (cesium.failInit) throw new Error('WebGL unavailable');
@@ -56,6 +63,8 @@ vi.mock('cesium', () => {
       constructor(public options: unknown) {}
     },
     RequestErrorEvent: class {},
+    Math: { toRadians: (deg: number) => (deg * Math.PI) / 180 },
+    EasingFunction: { QUADRATIC_IN_OUT: 'quadratic-in-out' },
   };
 });
 
@@ -65,6 +74,7 @@ import { useCesiumViewer } from './index';
 
 type HarnessProps = {
   home?: [number, number, number];
+  instantEntry?: boolean;
   viewerOptions?: CesiumNS.Viewer.ConstructorOptions;
   onReady?: (viewer: CesiumNS.Viewer) => void | (() => void);
 };
@@ -73,6 +83,7 @@ type HarnessProps = {
 const Harness = (props: HarnessProps) => {
   const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
     home: props.home,
+    instantEntry: props.instantEntry,
     viewerOptions: props.viewerOptions,
     onReady: props.onReady,
   });
@@ -122,7 +133,7 @@ afterEach(() => {
 });
 
 describe('useCesiumViewer lifecycle', () => {
-  it('creates one viewer on the stage node, applies home view and onReady, then destroys on unmount', () => {
+  it('creates one viewer on the stage node, flies in cinematically, applies onReady, then destroys on unmount', () => {
     const readyCleanup = vi.fn();
     // 形参不能省：零参 vi.fn 的 mock.calls 类型是 [][]，后续 calls[0][0] 会报 TS2493
     const onReady = vi.fn((_viewer: unknown) => readyCleanup);
@@ -131,9 +142,21 @@ describe('useCesiumViewer lifecycle', () => {
     expect(cesium.constructed).toHaveLength(1);
     expect(cesium.constructed[0].container).toBe(harness.stage);
     expect(cesium.constructed[0].options).toMatchObject({ geocoder: false, timeline: true });
-    // 初始视角来自 home（默认 [108, 35, 7_000_000]）
+    // 电影感入场：先在约 2.6 倍高度 + 600km 处落位（正俯视），再缓动推近到 home 定妆镜头
+    const pose = { heading: 0, pitch: -Math.PI / 2, roll: 0 };
     expect(cesium.instances[0].setViewCalls).toEqual([
-      { destination: { kind: 'fromDegrees', args: [116.4, 39.9, 800] } },
+      {
+        destination: { kind: 'fromDegrees', args: [116.4, 39.9, 800 * 2.6 + 600_000] },
+        orientation: pose,
+      },
+    ]);
+    expect(cesium.instances[0].flyToCalls).toEqual([
+      {
+        destination: { kind: 'fromDegrees', args: [116.4, 39.9, 800] },
+        orientation: pose,
+        duration: 2.2,
+        easingFunction: 'quadratic-in-out',
+      },
     ]);
     expect(onReady).toHaveBeenCalledTimes(1);
     expect(onReady.mock.calls[0]?.[0]).toBe(cesium.instances[0]);
@@ -143,6 +166,19 @@ describe('useCesiumViewer lifecycle', () => {
     expect(readyCleanup).toHaveBeenCalledTimes(1);
     expect(cesium.instances[0].destroyed).toBe(true);
     expect(window.fetch).toBe(originalFetch);
+  });
+
+  it('skips the flyover and lands directly on home when instantEntry is set', () => {
+    const harness = mount({ home: [116.4, 39.9, 800], instantEntry: true });
+
+    expect(cesium.instances[0].setViewCalls).toEqual([
+      {
+        destination: { kind: 'fromDegrees', args: [116.4, 39.9, 800] },
+        orientation: { heading: 0, pitch: -Math.PI / 2, roll: 0 },
+      },
+    ]);
+    expect(cesium.instances[0].flyToCalls).toEqual([]);
+    harness.unmount();
   });
 
   it('does not recreate the viewer when the caller passes fresh inline options on re-render', async () => {
