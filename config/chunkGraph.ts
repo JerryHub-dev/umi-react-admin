@@ -27,7 +27,10 @@ class ChunkGraphPlugin {
       compilation.namedChunkGroups.forEach((group, name) => {
         graph[name] = group.getFiles();
       });
-      const file = path.join(compiler.context, CHUNK_GRAPH_FILE);
+      // 写入前做根目录边界校验：join 结果必须仍在编译根目录内（path 边界，防穿越写）
+      const file = path.resolve(compiler.context, CHUNK_GRAPH_FILE);
+      const root = path.resolve(compiler.context);
+      if (path.relative(root, file).startsWith('..')) throw new Error(`chunk graph 输出越出构建根目录: ${file}`);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, JSON.stringify(graph, null, 2));
     });

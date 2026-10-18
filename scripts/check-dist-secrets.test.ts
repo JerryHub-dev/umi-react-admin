@@ -33,6 +33,13 @@ const otherJwt = [
 const fakeAmapKey = createHash('sha256').update('fixture-amap-key').digest('hex').slice(0, 32);
 const otherAmapKey = createHash('sha256').update('fixture-other-amap-key').digest('hex').slice(0, 32);
 const fakeAmapSecurityCode = createHash('sha256').update('fixture-amap-security-code').digest('hex').slice(0, 32);
+/** AWS Access Key 形态（AKIA + 16 位大写字母数字）同样摘要派生：夹具需真实形态，仓库不留凭据字面量 */
+const fakeAwsKeyId = `AKIA${createHash('sha256')
+  .update('fixture-aws-key')
+  .digest('base64')
+  .toUpperCase()
+  .replace(/[^A-Z0-9]/g, '')
+  .slice(0, 16)}`;
 
 const tempDirs: string[] = [];
 const makeDist = (files: Record<string, string>) => {
@@ -56,6 +63,11 @@ const isolatedEnv = () =>
  * cwd 是一个空目录：扫描器按 umi 的口径读取 cwd 下的 .env / .env.local，仓库根目录的本地文件不能混进用例。
  */
 const runScan = (distDir: string, extraEnv: Record<string, string> = {}, cwd = makeDist({})) => {
+  // 子进程参数形状闸门：首字符不得为「-」（防选项注入；绝对路径的 / 合法），路径字符之外一律拒绝
+  const SAFE_SPAWN_ARG = /^[A-Za-z0-9_@./][/A-Za-z0-9_@.-]*$/;
+  for (const arg of [script, distDir, cwd]) {
+    if (!SAFE_SPAWN_ARG.test(arg)) throw new Error(`不安全的子进程参数形态: ${arg.slice(0, 32)}`);
+  }
   const result = spawnSync(process.execPath, [script, distDir], {
     encoding: 'utf8',
     cwd,
@@ -130,7 +142,7 @@ describe('产物凭据扫描（JWT 白名单）', { timeout: 30_000 }, () => {
   });
 
   it('检出 AWS Access Key 形态（非 JWT 第二层检测）', () => {
-    const { code, output } = runScan(makeDist({ 'aws.js': 'var k = "AKIAIOSFODNN7EXAMPLE";' }));
+    const { code, output } = runScan(makeDist({ 'aws.js': `var k = "${fakeAwsKeyId}";` }));
     expect(code).toBe(1);
     expect(output).toContain('AWS Access Key ID');
     expect(output).toContain('aws.js');

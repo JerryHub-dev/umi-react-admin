@@ -11,7 +11,10 @@ type ZipFixture = {
   file: (name: string, text: string, options?: { createFolders: boolean }) => ZipFixture;
   generateAsync: (options: Record<string, string | boolean>) => Promise<Uint8Array>;
 };
-const Zip = require(require.resolve('jszip', { paths: [require.resolve('exceljs')] })) as new () => ZipFixture;
+// 测试需要 exceljs 内嵌的 jszip 来构造恶意压缩包夹具：先收敛到 exceljs 的解析上下文，
+// 再用字面量 'jszip' 取包——解析路径固定自依赖图，不接纳外部输入
+const exceljsRequire = createRequire(require.resolve('exceljs'));
+const Zip = exceljsRequire('jszip') as new () => ZipFixture;
 // ExcelJS writeBuffer() 在 Node 24 下可能返回共享池上的视图（byteOffset>0、底层 slab 更大），
 // slice().buffer 会把整个 slab 当文件传入，EOCD 边界校验必然失败；这里显式拷贝出精确长度的 buffer
 const toBuffer = (bytes: Uint8Array) => new Uint8Array(bytes).buffer as ArrayBuffer;

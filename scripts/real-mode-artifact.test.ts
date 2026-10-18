@@ -77,7 +77,7 @@ const entryChunks = () => {
   const html = readFileSync(indexPath, 'utf8');
   return (html.match(/<script\b[^>]*>/g) || [])
     .filter((tag) => !/\b(async|defer)\b/.test(tag))
-    .map((tag) => /src="([^"]+)"/.exec(tag)?.[1])
+    .map((tag) => tag.match(/src="([^"]+)"/)?.[1])
     .filter((src): src is string => Boolean(src))
     .map((src) => ({ src, file: distFile(src) }))
     .filter((entry): entry is { src: string; file: string } => entry.file !== null)
