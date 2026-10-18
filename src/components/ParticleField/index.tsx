@@ -31,7 +31,7 @@ export interface ParticleFieldProps {
   className?: string;
 }
 
-const PALETTE = buildPalette();
+const PALETTES = { dark: buildPalette('dark'), light: buildPalette('light') };
 
 /**
  * 跟随指针的粒子光环背景（Canvas 2D，无第三方依赖）。算法与参数见 ./field.ts。
@@ -98,7 +98,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, quiet = fal
         if (!n) continue;
         const level = b % LEVELS;
         const style = levelStyle(level, isDark);
-        const color = PALETTE[(b - level) / LEVELS];
+        const color = PALETTES[isDark ? 'dark' : 'light'][(b - level) / LEVELS];
         const end = starts[b] + n;
         ctx.globalAlpha = style.alpha * dim;
         ctx.beginPath();
@@ -142,8 +142,6 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, quiet = fal
       radius = ringRadius(width, height);
       if (!started) {
         [motion.x, motion.y] = idleFocus(time, width, height);
-        // 入场带一点初始扰动：第一圈浪更活泼，随后自然平息
-        if (!still) motion.energy = 0.5;
         started = true;
       }
       if (still) draw();
@@ -158,11 +156,9 @@ const ParticleField: React.FC<ParticleFieldProps> = ({ dark = false, quiet = fal
       last = now;
       time += dt;
       if (!pointerActive) [targetX, targetY] = idleFocus(time, width, height);
-      // 跟指针时跟手一些，回到游走时慢慢滑过去；中心移动的快慢决定这一刻的浪有多大
-      stepMotion(motion, targetX, targetY, dt, pointerActive ? 5 : 1.4);
+      // 指针态也保持「慢半拍」的漂浮感（对齐参考站 ≈1.2/s 的有效速率），回到游走时更慢
+      stepMotion(motion, targetX, targetY, dt, pointerActive ? 1.3 : 0.9);
       quietLevel = follow(quietLevel, quietRef.current ? 1 : 0, dt, 3);
-      // 安静模式：扰动能量较快衰减，浪回到最平缓的状态
-      if (quietLevel > 0) motion.energy *= 1 - Math.min(1, quietLevel * dt * 3);
       draw(dt);
     };
 

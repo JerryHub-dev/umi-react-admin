@@ -8,9 +8,9 @@ import { readLoginReason } from '@/utils/Auth/loginUrl';
 import { safeRedirect } from '@/utils/Auth/safeRedirect';
 import { UserInfo } from '@/utils/Auth/userInfo';
 import { BizError } from '@/utils/BizError';
-import { formatDateTime } from '@/utils/format';
 import { menuKeyOf } from '@/utils/pageTitle';
 import {
+  ApartmentOutlined,
   EyeOutlined,
   GithubOutlined,
   LockOutlined,
@@ -40,13 +40,15 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { readRememberedName, writeRememberedName } from './rememberedName';
 
-// 亮点前的小圆点取自粒子色环，与背景呼应
-const HIGHLIGHTS = [
-  { key: 'dashboard', color: '#1677ff' },
-  { key: 'system', color: '#722ed1' },
-  { key: 'maps', color: '#eb2f96' },
-  { key: 'i18n', color: '#fa8c16' },
-];
+// 功能层的特性标签：短关键词而非长句——形式要匹配「清单」的语义
+const FEATURES = ['live', 'access', 'maps3d', 'i18n'] as const;
+
+/** 产品时刻：演示数据集口径的三个数字（README 同源的故事常量，非实时值） */
+const STATS = [
+  { key: 'online', value: '236/240' },
+  { key: 'alarm', value: '12' },
+  { key: 'sla', value: '96.4%' },
+] as const;
 
 /** 一键体验的四个非管理员角色（管理员单独一个主按钮） */
 const DEMO_ROLES = ['lead', 'operator', 'analyst', 'guest'] as const;
@@ -122,7 +124,7 @@ const Login: React.FC = () => {
 
   const busy = (source: Source) => ({ loading: pending === source, disabled: !!pending && pending !== source });
   const onCapsLock = (event: React.KeyboardEvent) => setCapsLock(event.getModifierState('CapsLock'));
-  const { sha, time, target } = BUILD_INFO;
+  const { sha, target } = BUILD_INFO;
 
   return (
     // 底色与文字色用 antd token（登录页在 umi 包裹的 antd <App> 容器内），暗色模式随算法切换
@@ -178,37 +180,80 @@ const Login: React.FC = () => {
           </div>
         </header>
 
-        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-10 px-4 pt-4 pb-12 lg:flex-row lg:justify-between lg:gap-16 lg:px-10">
+        <main className="flex w-full flex-1 flex-col items-center justify-center gap-10 px-4 pt-4 pb-12 lg:flex-row lg:justify-end lg:gap-16 lg:px-10 lg:pb-7">
           <section
-            className="max-w-xl text-center lg:text-left"
+            // 对角构图：文案锚在左上角（logo 正下方，品牌叙事从阅读起点开始）；
+            // 登录卡落在右下角（Z 字动线终点即行动点）。反对角留给粒子场
+            className="max-w-xl text-center lg:absolute lg:top-28 lg:left-10 lg:m-0 lg:text-left"
             // 与底色同色的文字光晕：粒子从字形下穿过时被局部压淡，正文始终清楚，又不必给文案加底板
             style={{ textShadow: `0 0 2px ${pageBg}, 0 0 6px ${pageBg}, 0 0 12px ${pageBg}` }}
           >
-            <h1 className="m-0 text-3xl leading-tight font-semibold tracking-tight text-text sm:text-4xl lg:text-5xl">
+            {/* 叙述层：徽章给视线入口，标题/副标题说明「这是什么」 */}
+            <span
+              className="inline-block rounded-full px-3 py-1 text-xs tracking-wide"
+              style={{
+                color: token.colorPrimary,
+                border: `1px solid color-mix(in srgb, ${token.colorPrimary} 28%, transparent)`,
+                background: `color-mix(in srgb, ${token.colorPrimary} 6%, transparent)`,
+              }}
+            >
+              {t('login.badge')}
+            </span>
+            <h1 className="m-0 mt-4 text-3xl leading-tight font-semibold tracking-tight text-text sm:text-4xl lg:text-5xl">
               {t('login.headline')}
             </h1>
-            {/* 窄屏只保留标题，副标题与亮点从平板宽度起出现，不把登录框挤到首屏之外 */}
-            <Typography.Paragraph type="secondary" className="mt-5 mb-0 hidden text-base leading-relaxed sm:block">
+            {/* 窄屏只保留标题，副标题与特性从平板宽度起出现，不把登录框挤到首屏之外 */}
+            <Typography.Paragraph
+              type="secondary"
+              className="mt-4 mb-0 hidden text-[15px] leading-relaxed sm:block lg:max-w-[40ch]"
+            >
               {t('login.subhead')}
             </Typography.Paragraph>
-            <ul className="mt-8 mb-0 hidden list-none flex-col gap-3 p-0 lg:flex">
-              {HIGHLIGHTS.map(({ key, color }) => (
-                <li key={key} className="flex items-center gap-3 text-sm text-text">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
-                  {t(`login.highlight.${key}`)}
-                </li>
+            {/* 功能层：短标签组成的清单，宽度自然收拢，左列右缘呈阶梯递减 */}
+            <div className="mt-6 mb-0 hidden flex-wrap justify-center gap-2 lg:flex lg:justify-start">
+              {FEATURES.map((key) => (
+                <span
+                  key={key}
+                  className="inline-flex items-center rounded-full px-3 py-1 text-xs text-text-secondary"
+                  style={{
+                    borderColor: token.colorBorderSecondary,
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    background: `color-mix(in srgb, ${token.colorBgContainer} 55%, transparent)`,
+                  }}
+                >
+                  {t(`login.feature.${key}`)}
+                </span>
               ))}
-            </ul>
+            </div>
           </section>
+          {/* 证据层：锚在左下角，与右下角的登录卡共用同一条地平线（三锚点：左上叙事 / 左下证据 / 右下行动） */}
+          <div
+            className="hidden rounded-xl border px-5 py-3 lg:absolute lg:bottom-16 lg:left-10 lg:inline-flex lg:w-96 lg:items-center lg:justify-between lg:gap-6"
+            style={{
+              borderColor: token.colorBorderSecondary,
+              background: `color-mix(in srgb, ${token.colorBgContainer} 72%, transparent)`,
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            {STATS.map(({ key, value }) => (
+              <span key={key} className="flex flex-col gap-0.5">
+                <span className="text-xs text-text-tertiary">{t(`login.stats.${key}`)}</span>
+                <span className="text-xl font-semibold tabular-nums">{value}</span>
+              </span>
+            ))}
+          </div>
 
           <div
-            className="w-full max-w-sm shrink-0 rounded-2xl border p-6 sm:p-8"
+            className="w-full max-w-sm shrink-0 rounded-2xl border p-6 sm:p-8 lg-self-end-tall lg:mr-40"
             style={{
               // 近乎不透明的面板：粒子只隐约透出一点。不用 backdrop-filter 毛玻璃——背后是每帧重绘的画布，
               // 无 GPU 合成（虚拟机、远程桌面、部分旧机器）时模糊要每帧重算，实测把帧率从 60 拖到 30
               background: `color-mix(in srgb, ${token.colorBgContainer} ${dark ? 86 : 90}%, transparent)`,
               borderColor: token.colorBorderSecondary,
-              boxShadow: dark ? '0 24px 64px -24px rgba(0, 0, 0, 0.8)' : '0 24px 64px -28px rgba(15, 23, 42, 0.28)',
+              boxShadow: dark
+                ? '0 1px 2px rgba(0, 0, 0, 0.4), 0 24px 64px -24px rgba(0, 0, 0, 0.8)'
+                : '0 1px 2px rgba(15, 23, 42, 0.06), 0 24px 64px -28px rgba(15, 23, 42, 0.28)',
             }}
             onFocus={(event) => setTyping(event.target instanceof HTMLInputElement)}
             onBlur={(event) => {
@@ -223,11 +268,12 @@ const Login: React.FC = () => {
             {(error || reason === 'expired') && (
               <Alert className="mb-5" type={error ? 'error' : 'warning'} showIcon title={error ?? t('login.expired')} />
             )}
+            {/* 演示快速体验整体降为次操作：主操作只留给表单登录；说明压成一句 */}
             {DEMO_MODE && (
-              <div className="flex flex-col gap-3">
+              <div className="mb-1 flex flex-col gap-2.5">
+                <span className="text-xs font-medium tracking-wide text-text-tertiary">{t('login.demoGroup')}</span>
                 <Button
                   size="large"
-                  type="primary"
                   block
                   icon={<SafetyCertificateOutlined />}
                   {...busy('admin')}
@@ -235,10 +281,7 @@ const Login: React.FC = () => {
                 >
                   {t('login.asAdmin')}
                 </Button>
-                <Typography.Text type="secondary" className="-mt-2 text-center text-xs">
-                  {t('login.asAdminDesc')}
-                </Typography.Text>
-                {/* 五种角色的快捷体验（F02）：一次点击即以对应角色进入；悬停看该角色能做什么（口径见角色矩阵） */}
+                {/* 四个非管理员角色：一次点击即以对应角色进入；悬停看该角色能做什么（口径见角色矩阵） */}
                 <div className="grid grid-cols-2 gap-2">
                   {DEMO_ROLES.map((name) => (
                     <Tooltip key={name} title={t(`login.as.${name}.desc`)}>
@@ -253,19 +296,33 @@ const Login: React.FC = () => {
                     </Tooltip>
                   ))}
                 </div>
-                <Typography.Text type="secondary" className="-mt-1 text-center text-xs">
-                  {t('login.asRolesDesc')}
+                <Typography.Text type="secondary" className="text-center text-xs">
+                  {t('login.demoNote')}
+                </Typography.Text>
+              </div>
+            )}
+            {!DEMO_MODE && (
+              <div className="mb-1 flex flex-col gap-2.5">
+                {/* 企业登录的占位入口：模板不内置任何 SSO，点了给明确提示而不是死链接 */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button icon={<GithubOutlined />} onClick={() => messageApi.info(t('login.sso.placeholder'))}>
+                    {t('login.sso.github')}
+                  </Button>
+                  <Button icon={<ApartmentOutlined />} onClick={() => messageApi.info(t('login.sso.placeholder'))}>
+                    {t('login.sso.enterprise')}
+                  </Button>
+                </div>
+                <Typography.Text type="secondary" className="text-center text-xs">
+                  {t('login.sso.note')}
                 </Typography.Text>
               </div>
             )}
             {/* 分隔说明是辅助信息，用次要文字色，不和上下两组操作抢视线 */}
-            {DEMO_MODE && (
-              <Divider plain>
-                <Typography.Text type="secondary" className="text-xs">
-                  {t('login.or')}
-                </Typography.Text>
-              </Divider>
-            )}
+            <Divider plain>
+              <Typography.Text type="secondary" className="text-xs">
+                {t('login.or')}
+              </Typography.Text>
+            </Divider>
             <Form<LoginParams>
               form={form}
               initialValues={
@@ -327,30 +384,34 @@ const Login: React.FC = () => {
                   </Popover>
                 </div>
               )}
-              {/* 演示模式的主操作是上方的一键体验，这里退为次要按钮；真实登录时它就是唯一的主操作 */}
-              <Button block type={DEMO_MODE ? 'default' : 'primary'} htmlType="submit" {...busy('form')}>
+              {/* 表单登录是整张卡片唯一的主操作：无论演示还是真实模式 */}
+              <Button block type="primary" htmlType="submit" {...busy('form')}>
                 {t('login.submit')}
               </Button>
             </Form>
-            {DEMO_MODE && (
-              <Typography.Paragraph type="secondary" className="mt-4 mb-0 text-center text-xs">
-                {t('login.demoHint')}
-              </Typography.Paragraph>
-            )}
+            <Typography.Paragraph type="secondary" className="mt-4 mb-0 text-center text-xs">
+              <LockOutlined /> {t('login.secure')}
+            </Typography.Paragraph>
           </div>
         </main>
 
         <footer className="flex flex-col items-center gap-1 px-5 pb-5 text-xs text-text-tertiary sm:px-10 lg:flex-row lg:justify-between">
           <span>Umi Max · React 19 · Ant Design 6 · AntV · Cesium · OpenLayers</span>
-          {/* 与工作台页脚、dist/version.json 同源：登录前就能看出线上跑的是哪个版本 */}
+          {/* 与工作台页脚、dist/version.json 同源：登录前就能看出线上跑的是哪个版本（不带构建时间） */}
           <span>
-            {intl.formatMessage({ id: 'footer.build' }, { time: formatDateTime(time, 'YYYY-MM-DD HH:mm'), target })}{' '}
+            {intl.formatMessage({ id: 'footer.buildShort' }, { target })}{' '}
             {sha === 'unknown' ? (
               sha.slice(0, 7)
             ) : (
-              <Typography.Link href={`${REPO_URL}/commit/${sha}`} target="_blank" rel="noopener noreferrer">
+              // 提交号可回链仓库，但用次要文字色：版本信息不抢彩色戏份（颜色跟随页脚的 tertiary）
+              <a
+                href={`${REPO_URL}/commit/${sha}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-text"
+              >
                 {sha.slice(0, 7)}
-              </Typography.Link>
+              </a>
             )}
           </span>
         </footer>

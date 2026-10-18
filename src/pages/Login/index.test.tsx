@@ -65,7 +65,9 @@ describe('sign-in mode entry points', () => {
       expect(html).toContain('login.as.operator');
       expect(html).toContain('login.as.analyst');
       expect(html).toContain('login.as.guest');
-      expect(html).toContain('login.demoHint');
+      expect(html).toContain('login.demoGroup');
+      expect(html).toContain('login.demoNote');
+      expect(html).toContain('login.secure');
       expect(html).toContain('value="admin"');
       expect(html).toContain('value="demo"');
       // 演示站：源码入口；任意密码都能登录，不出现记住账号 / 找回密码
@@ -89,7 +91,7 @@ describe('sign-in mode entry points', () => {
 
   it('footer shows the build the page was served from', { timeout: 20_000 }, async () => {
     const html = await renderLogin(true);
-    expect(html).toContain('footer.build');
+    expect(html).toContain('footer.buildShort');
     expect(html).toContain('0123456');
     expect(html).toContain('/commit/0123456789abcdef');
   });

@@ -27,6 +27,7 @@
  */
 @theme inline {
   --color-text: var(--ant-color-text);
+  --color-text-secondary: var(--ant-color-text-secondary);
   --color-text-tertiary: var(--ant-color-text-tertiary);
   --color-fill-tertiary: var(--ant-color-fill-tertiary);
   --color-success: var(--ant-color-success);
@@ -34,6 +35,14 @@
   --color-error: var(--ant-color-error);
   --color-bg-container: var(--ant-color-bg-container);
   --color-bg-layout: var(--ant-color-bg-layout);
+}
+
+/* 登录页卡片的「落地」：视口够高时贴到与左下角文案块同一条地平线；
+   矮屏回到垂直居中，避免顶穿 header。见 Login/index.tsx */
+@media (width >= 1024px) and (height >= 880px) {
+  .lg-self-end-tall {
+    align-self: flex-end;
+  }
 }
 
 /*
