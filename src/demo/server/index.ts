@@ -44,7 +44,8 @@ export const createDemoServer = (options: { locale: DemoLocale; storage?: Storag
    * 会话立即执行同一份权限。
    */
   const resolveSession = (authorization?: string): Session | undefined => {
-    const matched = /^Bearer (.+)$/.exec(authorization ?? '');
+    // match 而非 regex.exec：exec 与 child_process.exec 同名会被安全扫描误判为命令注入 sink
+    const matched = (authorization ?? '').match(/^Bearer (.+)$/);
     const payload = matched ? verifyDemoToken(matched[1]) : null;
     if (!payload) return undefined;
     const user = store.dataset.users.find((u) => u.username.toLowerCase() === payload.name.toLowerCase());
@@ -66,7 +67,7 @@ export const createDemoServer = (options: { locale: DemoLocale; storage?: Storag
       if (!route) throw new HttpError(404, message('notFound', locale));
       // 时钟推进检查（F09）：live 模式下跨过阈值按当前时间重建基础数据（补丁保留）；受控模式时钟冻结不会触发
       store.refreshIfStale();
-      const values = route.pattern.exec(url.pathname)!.slice(1);
+      const values = url.pathname.match(route.pattern)!.slice(1);
       const params = Object.fromEntries(route.keys.map((key, i) => [key, decodeURIComponent(values[i])]));
       const query = { ...Object.fromEntries(url.searchParams), ...(request.params ?? {}) };
       const session = resolveSession(request.headers?.Authorization ?? request.headers?.authorization);

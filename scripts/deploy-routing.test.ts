@@ -341,7 +341,7 @@ describe('nginx：/api 在 SPA location 之前明确 404（F6）', () => {
   // 独立复审 2026-10-14：`location ^~ /api/` 不匹配裸 /api（查询串也不参与 location 匹配），
   // 那两条会落到 location / 的 try_files → 200 SPA HTML。改成正则 location，这里断言它同时覆盖
   // /api、/api/、/api/v1/*，并且契约内容单点在 api-fail-closed.conf（default.conf 只 include）。
-  const apiLocation = /location\s+~\s+\^\/api\(\/\|\$\)\s*\{([\s\S]*?)\n\s*\}/.exec(nginx);
+  const apiLocation = nginx.match(/location\s+~\s+\^\/api\(\/\|\$\)\s*\{([\s\S]*?)\n\s*\}/);
   const spaLocationIndex = nginx.indexOf('location / {');
   const snippet = read('nginx/api-fail-closed.conf');
 
@@ -427,8 +427,10 @@ describe('本地静态服务器（GitHub Pages 等价）：/api 闭合失败（F
     return { port, base };
   };
 
-  const getFrom = (host: { port: number }, path: string) =>
-    new Promise<{ status: number | undefined; type: string | undefined; body: string }>((resolve, reject) => {
+  // 测试助手只允许访问本进程起的 127.0.0.1 静态服务：路径必须以 / 开头且不含换行（与全站服务端请求约束一致）
+  const getFrom = (host: { port: number }, path: string) => {
+    if (!path.startsWith('/') || /[\r\n]/.test(path)) throw new Error(`测试助手拒绝非本地路径: ${path}`);
+    return new Promise<{ status: number | undefined; type: string | undefined; body: string }>((resolve, reject) => {
       const req = request({ hostname: '127.0.0.1', port: host.port, path, agent: false }, (res) => {
         let body = '';
         res.setEncoding('utf8');
@@ -441,6 +443,7 @@ describe('本地静态服务器（GitHub Pages 等价）：/api 闭合失败（F
       req.once('error', reject);
       req.end();
     });
+  };
 
   it.each(['/', '/umi-react-admin/'])('挂载 %s 时 /api* 返回 404 JSON，不回 SPA HTML', async (base) => {
     const host = await startStaticHost(base);

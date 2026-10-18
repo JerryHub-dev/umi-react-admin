@@ -67,6 +67,24 @@ const resolveBackend = () => {
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
       return { error: 'backend_misconfigured' };
     }
+    // 生产部署拒绝环回/私网/保留地址（与全站服务端请求约束一致）：API_ORIGIN 被污染成内网地址时
+    // 不得把函数变成内网探测跳板。本地/CI 测试用 127.0.0.1 起真实上游验证代理语义，故仅生产启用
+    const host = url.hostname.toLowerCase();
+    const isLoopback = host === 'localhost' || host === '::1' || host === '[::1]' || host.endsWith('.localhost');
+    const isPrivateIpv4 =
+      /^(\d{1,3}\.){3}\d{1,3}$/.test(host) &&
+      (() => {
+        const [a, b] = host.split('.').map(Number);
+        return (
+          a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a === 0 || a >= 224
+        );
+      })();
+    const isLinkLocal =
+      host.startsWith('169.254.') || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd');
+    const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+    if (isProduction && (isLoopback || isPrivateIpv4 || isLinkLocal)) {
+      return { error: 'backend_misconfigured' };
+    }
     return { url: url.href.endsWith('/') ? url : new URL(`${url.href}/`) };
   } catch {
     return { error: 'backend_misconfigured' };

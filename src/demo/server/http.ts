@@ -41,13 +41,23 @@ const toNumber = (value: unknown, fallback: number) => {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 };
 
-/** 通用排序 + 分页（ProTable 传 current / pageSize，排序字段见 PageQuery） */
+/**
+ * 通用排序 + 分页（ProTable 传 current / pageSize，排序字段见 PageQuery）。
+ * sortField 来自请求查询串，先过「标识符 + 无原型链键」闸门再当动态键用
+ * （M-2：动态键读取的输入必须是形状校验后的字面量，避免任意键/原型链访问）。
+ */
+const SORT_FIELD = /^[$_a-zA-Z][\w$]{0,63}$/;
+const UNSORTABLE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const safeSortField = (field: unknown): string | undefined =>
+  typeof field === 'string' && SORT_FIELD.test(field) && !UNSORTABLE_KEYS.has(field) ? field : undefined;
+
 export const paginate = <T>(list: T[], query: PageQuery & Record<string, unknown>): PageResult<T> => {
   const current = toNumber(query.current, 1);
   const pageSize = Math.min(toNumber(query.pageSize, 20), 200);
   let rows = list;
-  const { sortField, sortOrder } = query;
-  if (typeof sortField === 'string' && sortField && (sortOrder === 'ascend' || sortOrder === 'descend')) {
+  const sortField = safeSortField(query.sortField);
+  const { sortOrder } = query;
+  if (sortField && (sortOrder === 'ascend' || sortOrder === 'descend')) {
     const direction = sortOrder === 'ascend' ? 1 : -1;
     rows = [...list].sort((a, b) => {
       const x = (a as Record<string, unknown>)[sortField];
