@@ -78,3 +78,30 @@ div.ant-spin-description {
   /* antd 6 Spin 的 section 用 colorPrimary 当文字色，说明文字在暗色卡片上只有 3.06:1 */
   color: var(--ant-color-text-description, var(--ant-color-text));
 }
+
+/*
+ * 顶栏右侧按钮的 hover / 菜单展开反馈：antd 6 文本按钮默认铺 fill-tertiary
+ * （浅色 4% 黑 / 深色 8% 白），在顶栏底色上几乎不可见；统一升到 fill-secondary。
+ * 选择器特异性 (0,3,1) 压过组件自身的 (0,2,1) hover 规则；变量挂在按钮自身的
+ * .css-var-* 作用域上，浅深主题各自取值。作用域类 admin-header-actions 见 RightContent.tsx。
+ */
+.admin-header-actions .ant-btn-text:not(:disabled):hover,
+.admin-header-actions .ant-btn-text.ant-dropdown-open {
+  background-color: var(--ant-color-fill-secondary);
+}
+
+/*
+ * 头像字母居中的度量补偿（4x 截图像素级实测，墨迹包围盒中心 vs 圆环中心）：
+ * antd Avatar 的基线摆放让两种文字的墨迹都整体上偏约 1.4px（拉丁 −1.46 / 汉字 −1.40），
+ * 水平方向拉丁字母右偏约 0.5px、汉字（全宽 advance）水平居中。
+ * 补偿值经两步实测标定（1.5→残差−0.46、2.5→残差+0.51，近似 1:1 生效），2.0px 时双语言残差均为 0。
+ * 用 margin 而非 transform：antd 给 .ant-avatar-string 设了内联 transform（scale），CSS transform 会被压。
+ */
+.admin-header-actions .ant-avatar-string {
+  margin-top: 2px;
+  margin-left: -0.4px;
+}
+
+:lang(zh) .admin-header-actions .ant-avatar-string {
+  margin-left: 0;
+}

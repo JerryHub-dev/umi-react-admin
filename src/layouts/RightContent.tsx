@@ -7,6 +7,7 @@ import { getDemoClock, resetDemoData, switchDemoScenario } from '@/services/syst
 import { avatarColor, avatarText } from '@/utils/avatar';
 import { formatDateTime } from '@/utils/format';
 import {
+  DownOutlined,
   FieldTimeOutlined,
   GithubOutlined,
   LogoutOutlined,
@@ -32,7 +33,8 @@ const localeOptions = [
 
 /**
  * 顶栏右侧：主题切换、语言、GitHub、账户菜单（演示场景 / 重置演示数据 / 退出登录）。
- * 菜单均为 antd Dropdown（hover 与 click 均可展开，键盘可聚焦、回车打开、方向键选择）。
+ * 菜单均为 antd Dropdown（仅 click 展开，键盘可聚焦、回车打开、方向键选择——hover 展开菜单
+ * 容易在扫过顶栏时误弹，不符合「点击才出菜单」的惯例）。
  * 受控演示模式下额外展示「演示时间」标记——冻结时钟必须显式可见，不假装数据正按现实时间刷新。
  */
 const RightContent = () => {
@@ -138,13 +140,17 @@ const RightContent = () => {
   };
 
   const displayName = initialState?.nickName || initialState?.name || '';
+  const identity = avatarColor(displayName);
   const themeLabel = intl.formatMessage(
     { id: 'header.switchTheme' },
     { mode: t(dark ? 'header.themeLight' : 'header.themeDark') },
   );
 
   return (
-    <div className="flex items-center gap-2 pr-2">
+    // backgroundColor 内联写死：ProLayout 会给 actions 容器的这个直接子元素刷一层淡底（hover 时
+    // rgba(0,0,0,.03)/深色对应值），与本区域内按钮自身的 hover 药丸叠成「整体 + 账号」两层背景；
+    // 其 CSS-in-JS 注入难枚举，内联声明对任何选择器都成立，压掉容器层、只留每个按钮自己的反馈
+    <div className="admin-header-actions flex items-center gap-2 pr-2" style={{ backgroundColor: 'transparent' }}>
       {clock?.mode === 'frozen' && (
         <Tooltip title={t('header.demoClockTip', { time: formatDateTime(clock.demoTime, 'YYYY-MM-DD HH:mm') })}>
           <Tag color="gold" icon={<FieldTimeOutlined />} className="m-0 hidden sm:inline-flex">
@@ -161,7 +167,7 @@ const RightContent = () => {
           onClick={toggleTheme}
         />
       </Tooltip>
-      <Dropdown menu={localeMenu} placement="bottomRight" trigger={['hover', 'click']}>
+      <Dropdown menu={localeMenu} placement="bottomRight" trigger={['click']}>
         <Button aria-label={t('header.language')} type="text" icon={<TranslationOutlined />} />
       </Dropdown>
       <Tooltip title={t('header.github')}>
@@ -174,12 +180,25 @@ const RightContent = () => {
           rel="noopener noreferrer"
         />
       </Tooltip>
-      <Dropdown menu={accountMenu} placement="bottomRight" trigger={['hover', 'click']}>
-        <Button data-tour="account" aria-label={t('header.account')} type="text" className="flex items-center">
-          <Avatar size={26} style={{ backgroundColor: avatarColor(displayName) }}>
+      <Dropdown menu={accountMenu} placement="bottomRight" trigger={['click']}>
+        {/* 描边头像（透明底 + 身份色圈 + 同色字）：比实心色块更轻，不与任何底色叠层；
+            账户入口内联压掉所有状态的底色，hover 反馈由名字提亮 + 箭头示意承担。
+            字母居中的加固见 tailwind.css 的 .ant-avatar-string 规则 */}
+        <Button
+          data-tour="account"
+          aria-label={t('header.account')}
+          type="text"
+          className="flex items-center"
+          style={{ backgroundColor: 'transparent' }}
+        >
+          <Avatar
+            size={26}
+            style={{ backgroundColor: 'transparent', color: identity, border: `1px solid ${identity}` }}
+          >
             {avatarText(displayName)}
           </Avatar>
-          <span className="ml-2 hidden sm:inline">{displayName}</span>
+          <span className="ml-2 hidden text-[13px] font-normal sm:inline">{displayName}</span>
+          <DownOutlined className="ml-1.5 text-[10px]! opacity-45" />
         </Button>
       </Dropdown>
     </div>
