@@ -123,7 +123,8 @@ test('重置演示数据清除改动', async ({ page }) => {
   await dialog.getByRole('button', { name: /确\s*定/ }).click();
   await expect(page.getByText('e2e@example.com')).toBeVisible();
 
-  await page.locator('[data-tour="account"]').hover();
+  // 账户菜单为点击展开（hover 展开会被读成误弹提示，见 fix/header-actions）
+  await page.locator('[data-tour="account"]').click();
   await page.getByRole('menuitem', { name: '重置演示数据' }).click();
   await page
     .getByRole('dialog')
