@@ -21,6 +21,7 @@ vi.mock('@umijs/max', () => ({
 vi.mock('antd', async () => {
   const React = await import('react');
   return {
+    ConfigProvider: ({ children }: { children?: React.ReactNode }) => children,
     Menu: (props: { selectedKeys?: string[]; items?: { key: string; label?: string }[] }) => {
       menuProps.last = props;
       return React.createElement(
