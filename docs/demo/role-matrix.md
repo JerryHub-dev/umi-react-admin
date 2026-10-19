@@ -94,7 +94,7 @@
 ### operator 运维工程师（7 项）
 
 - 能：工作台；设备/告警/工单查看；精确设备坐标（`ops.device.coordinate.view`）；告警处置（`ops.alarm.handle`）；工单开工与完成（`ops.ticket.close`）。
-- 不能：派工 / 改派 / 退回 / 返工 / 验收签字（`ops.ticket.assign`、`ops.ticket.accept`）；日程管理；报表导出；全部系统管理页面（左侧菜单不出现「系统管理」分组）。
+- 不能：派工 / 改派 / 退回 / 返工 / 验收签字（`ops.ticket.assign`、`ops.ticket.accept`）；日程管理；报表导出；全部系统管理页面（顶部菜单不出现「系统管理」分组）。
 
 ### analyst 数据分析员（5 项）
 

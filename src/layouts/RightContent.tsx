@@ -1,3 +1,4 @@
+import { OPEN_COMMAND_PALETTE_EVENT } from '@/components/CommandPalette';
 import { OPEN_TOUR_EVENT } from '@/components/GuideTour';
 import { REPO_URL } from '@/constants/repo';
 import { DEMO_MODE } from '@/demo/mode';
@@ -14,6 +15,7 @@ import {
   MoonOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
+  SearchOutlined,
   SunOutlined,
   TranslationOutlined,
   UndoOutlined,
@@ -145,6 +147,8 @@ const RightContent = () => {
     { id: 'header.switchTheme' },
     { mode: t(dark ? 'header.themeLight' : 'header.themeDark') },
   );
+  // ⌘K / Ctrl+K 随平台显示（与命令面板内部判定同一口径）
+  const searchLabel = `${t('header.search')} (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl+K'})`;
 
   return (
     // backgroundColor 内联写死：ProLayout 会给 actions 容器的这个直接子元素刷一层淡底（hover 时
@@ -158,6 +162,14 @@ const RightContent = () => {
           </Tag>
         </Tooltip>
       )}
+      <Tooltip title={searchLabel}>
+        <Button
+          aria-label={searchLabel}
+          type="text"
+          icon={<SearchOutlined />}
+          onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))}
+        />
+      </Tooltip>
       <Tooltip title={themeLabel}>
         <Button
           data-tour="theme"

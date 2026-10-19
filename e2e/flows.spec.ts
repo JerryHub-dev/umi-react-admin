@@ -15,6 +15,18 @@ test('旧版路径重定向到新地址', async ({ page }) => {
   await expect(page).toHaveURL(/\/map\/cesium\/heatmap$/);
 });
 
+test('组内导航条切换二级页面（顶栏一级 + 内容区页签二级） @smoke', async ({ page }) => {
+  await signIn(page);
+  await navigate(page, '/system/users');
+  const nav = page.locator('[data-tour="groupnav"]');
+  await expect(nav).toBeVisible();
+  // 当前页在导航条上高亮
+  await expect(nav.locator('.ant-menu-item-selected')).toContainText(/用户管理|Users/);
+  // 点击页签切换到操作日志（不再依赖左侧菜单）
+  await nav.getByRole('menuitem', { name: /操作日志|Audit log/ }).click();
+  await expect(page).toHaveURL(/\/system\/logs$/);
+});
+
 test('访客访问系统管理得到 403，权限演示页显示服务端粗化后的坐标', async ({ page }) => {
   await signIn(page, { user: 'guest' });
   await navigate(page, '/system/users');

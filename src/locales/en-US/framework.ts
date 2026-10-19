@@ -33,6 +33,10 @@ export default {
   'header.themeDark': 'dark',
   'header.language': 'Language',
   'header.github': 'GitHub repository',
+  'header.search': 'Search pages',
+  'palette.placeholder': 'Search pages by name or path…',
+  'palette.empty': 'No matching pages',
+  'palette.hint': '↑↓ Navigate · Enter Open · Esc Close · {mod} anytime',
   'header.logout': 'Sign out',
   'header.loggedOut': 'Signed out',
   'header.logoutFailed': 'Sign-out failed. Your session is still active; please try again.',
@@ -100,7 +104,10 @@ export default {
   'tour.menu': 'Guided tour',
   'tour.nav.title': 'Menus grouped by domain',
   'tour.nav.desc':
-    'Dashboard, System, Operations, Maps, Components, Media, Documents and Exceptions. Pages of each group are in the side menu.',
+    'Dashboard, System, Operations, Maps, Components, Media, Documents and Exceptions — click to switch group.',
+  'tour.groupNav.title': 'Pages within the group',
+  'tour.groupNav.desc':
+    'After entering a group, this tab row lists its pages; the current page is highlighted — click to switch.',
   'tour.theme.title': 'Theme and language',
   'tour.theme.desc':
     'Toggle light and dark in one click; switch between Chinese and English — charts and maps follow along.',
