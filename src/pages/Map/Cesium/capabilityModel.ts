@@ -132,6 +132,21 @@ export const isIntercepted = (target: SimTarget, seconds: number) => {
   return target.radiusKm <= rangeKm('intercept', position.azimuth, seconds);
 };
 
+/** 截获裕量（km）：正=包络内（离边界还有多远），负=包络外（还差多少进入）。
+ *  「能力不是色块，而是每个目标的裕量数字」——Direction 页目标面板的实时数据源 */
+export const interceptMarginKm = (target: SimTarget, seconds: number) => {
+  const position = targetPosition(target, seconds);
+  return rangeKm('intercept', position.azimuth, seconds) - target.radiusKm;
+};
+
+/** 天线方向图（极坐标图数据）：某能力在各方位的标称作用距离（t=0）。
+ *  方位用「度」且显式命名 azimuthDeg——envelopeRing / targetPosition 的 azimuth 是弧度 */
+export const polarPattern = (capability: Capability, steps = 72) =>
+  Array.from({ length: steps }, (_, i) => {
+    const azimuthDeg = (i / steps) * 360;
+    return { azimuthDeg, rangeKm: rangeKm(capability, (azimuthDeg * Math.PI) / 180, 0) };
+  });
+
 /** 测向波束的扫描角（rad，顺时针，12 秒一圈） */
 export const sweepAngle = (seconds: number) => (seconds * (Math.PI * 2)) / 12;
 

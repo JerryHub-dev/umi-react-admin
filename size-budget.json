@@ -20,13 +20,13 @@
       }
     },
     "distMB": 30,
-    "publicMB": 4
+    "publicMB": 4.5
   },
   "notes": {
     "firstScreenGzipKB": "只统计 index.html 同步脚本（入口 chunk）；登录后落地页的真实体积看 routes。2026-10-14 实测 441KB gzip（余量线 665KB）",
     "routes": "路由首屏 = 入口 umi + 布局（withLayout）+ 路由 chunk group 的全部 JS，由 config/chunkGraph.ts 构建时记录。2026-10-14 实测：首页 1057KB、登录 478KB gzip",
     "headroom": "所有指标另需满足实测 ≤ 预算 × 0.95：预算贴着实测值时压线通过等于没有预算（曾出现 690/700、1247/1250）。注意 syncScripts 是整数计数，限 6 时实际有效上限为 5",
     "distMB": "dist 含 Cesium 静态资产（约 25MB）、pdfjs 的 cmaps/standard_fonts（约 2.4MB）与自托管 TinyMCE。2026-10-14 实测 27.3MB（build:demo）/27.2MB（build:real）",
-    "publicMB": "演示媒体已自制替换，public 约 3.2MB"
+    "publicMB": "演示媒体已自制替换，public 约 3.2MB。2026-10-19 新增巡检机 glTF（assets/models/aircraft.glb，Cesium_Air 样例，586KB）后实测 3.82MB，超过原预算 4MB 的余量线 3.8MB；有意上调到 4.5MB（余量线 4.275MB）。再加大体积资产前先考虑 Draco/meshopt 压缩或外链"
   }
 }

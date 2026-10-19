@@ -69,6 +69,8 @@
     "dompurify": "^3.4.16",
     "exceljs": "^4.4.0",
     "html2canvas": "^1.4.1",
+    "mgrs": "^2.2.0",
+    "milsymbol": "^3.0.4",
     "ol": "^10.11.0",
     "pdfjs-dist": "6.3.289",
     "react": "^19.3.0",

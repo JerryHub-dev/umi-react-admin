@@ -1,7 +1,8 @@
 import { test as base, expect, type Page } from '@playwright/test';
 
 /** 第三方地图 / 影像 / 视频源的网络失败不算应用缺陷（CI 网络环境不可控） */
-const THIRD_PARTY = /amap\.com|autonavi\.com|openstreetmap\.org|cesium\.com|virtualearth\.net|huoshanstatic\.com/;
+const THIRD_PARTY =
+  /amap\.com|autonavi\.com|openstreetmap\.org|basemaps\.cartocdn\.com|cesium\.com|virtualearth\.net|huoshanstatic\.com/;
 
 export type Health = { pageErrors: string[]; consoleErrors: string[]; csp: () => Promise<string[]> };
 

@@ -96,3 +96,31 @@ export const sampleRoute = (waypoints: { longitude: number; latitude: number }[]
 
 /** 回放节奏：每秒推进 2 个采样点（240 点整圈 2 分钟） */
 export const SAMPLES_PER_SECOND = 2;
+
+/** 任务统计（面板直读）：总里程 / 预计时长 / 三档覆盖占比 / 平均质量 */
+export const missionStats = (samples: PatrolSample[]) => {
+  let lengthKm = 0;
+  for (let i = 1; i < samples.length; i++) {
+    lengthKm += distanceKm([samples[i - 1].lng, samples[i - 1].lat], [samples[i].lng, samples[i].lat]);
+  }
+  const good = samples.filter((s) => s.quality > 0.66).length;
+  const fair = samples.filter((s) => s.quality > 0.33 && s.quality <= 0.66).length;
+  const poor = samples.filter((s) => s.quality <= 0.33).length;
+  return {
+    lengthKm,
+    durationMin: samples.length / SAMPLES_PER_SECOND / 60,
+    good,
+    fair,
+    poor,
+    avgQuality: samples.reduce((s, p) => s + p.quality, 0) / Math.max(1, samples.length),
+  };
+};
+
+/** 采样点到起点的累计里程（km）序列（高度剖面图的 x 轴） */
+export const cumulativeKm = (samples: PatrolSample[]) => {
+  const out: number[] = [0];
+  for (let i = 1; i < samples.length; i++) {
+    out.push(out[i - 1] + distanceKm([samples[i - 1].lng, samples[i - 1].lat], [samples[i].lng, samples[i].lat]));
+  }
+  return out;
+};

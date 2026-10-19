@@ -143,6 +143,8 @@ export const routes: RouteItem[] = [
         name: 'cesium',
         path: '/map/cesium',
         icon: 'GlobalOutlined',
+        // 场景壳：页内 Segmented 切换六个三维场景，子路由渲染在 Outlet（三级菜单从此不存在）
+        component: './Map/Cesium/Layout',
         routes: [
           { path: '/map/cesium', redirect: '/map/cesium/geohash' },
           { name: 'geohash', path: '/map/cesium/geohash', component: './Map/Cesium/GeoHash' },

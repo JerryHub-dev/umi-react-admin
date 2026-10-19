@@ -137,6 +137,12 @@ importers:
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
+      mgrs:
+        specifier: ^2.2.0
+        version: 2.2.0
+      milsymbol:
+        specifier: ^3.0.4
+        version: 3.0.4
       ol:
         specifier: ^10.11.0
         version: 10.11.0
@@ -5817,9 +5823,15 @@ packages:
     resolution: {integrity: sha512-iclAHeNqNm68zFtnZ0e+1L2yUIdvzNoauKU4WBA3VvH/vPFieF7qfRlwUZU+DA9P9bPXIS90ulxoUoCH23sV2w==}
     engines: {node: '>= 0.6'}
 
+  mgrs@2.2.0:
+    resolution: {integrity: sha512-BHeewhEJ1n2MOFKvGXFPMxgfczWArFGltBYSZ+JTzlNfHSwJ7gEsXGXFjaU619yLmpmtyoLHu+d8Sd6ACsd0QA==}
+
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
+
+  milsymbol@3.0.4:
+    resolution: {integrity: sha512-Jrs1RBCag2IzyEJwI476i2+pNHdi8WMwAp2mDD23g3TR48ERdHmdQgPXZUosRKyhPMr58/eOPyyLE53lMPPAgw==}
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -15050,10 +15062,14 @@ snapshots:
 
   methods@1.1.2: {}
 
+  mgrs@2.2.0: {}
+
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3(patch_hash=18a4724cb117fb08010e0d8f8aa9684fbd706be3560a12dd4d0e4233d5834acd)
       picomatch: 2.3.2
+
+  milsymbol@3.0.4: {}
 
   mime-db@1.52.0: {}
 

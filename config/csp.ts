@@ -11,9 +11,12 @@
  *   升级加载器必须重新推导主机，scripts/csp-amap-pinning.test.ts 把包版本、注入地址与来源清单绑在一起。
  *   页面只有配置 AMAP_KEY 才调用 load()，加载器内置的共享 key（es/config.js）不会被使用。
  * - style 'unsafe-inline'：antd cssinjs 运行时注入 + tailwind 任意值
- * - img/connect 保留 *.amap.com / *.autonavi.com：高德瓦片与数据服务走图片/XHR，不是脚本来源
- *   openstreetmap：瓦片（OpenLayers 走 <img>，Cesium 无 token 回落走 XHR，故 img/connect 均列出）；cesium.com：ion 影像
- * - virtualearth.net：显式配置 ion token 的 Cesium 影像可能引用 Bing；无 token 时仅使用 HTTPS OSM
+ * - img/connect 保留 *.amap.com / *.autonavi.com：高德瓦片与数据服务走图片/XHR，不是脚本来源；
+ *   Cesium 无 token 链路在 OSM 不可达时也用高德瓦片兜底
+ *   openstreetmap：瓦片（OpenLayers 走 <img>，Cesium 无 token 默认底图走 XHR，故 img/connect 均列出）；cesium.com：ion 影像
+ *   basemaps.cartocdn.com：Cesium 无 token 时探针通过后升级的暗色底图（CartoDB Dark Matter，OSM 数据的 CDN 分发）
+ * - virtualearth.net：显式配置 ion token 的 Cesium 影像可能引用 Bing；无 token 时不涉及
+ *   （无 token 链路：「夜航滤镜」OSM → carto 探针升级 → OSM 不可达时高德兜底）
  * - media blob:：wavesurfer 7 把音频解码后以 blob URL 交给 <audio> 播放（缺了它音频可视页无法播放）
  * - huoshanstatic：xgplayer 演示视频
  */
@@ -34,6 +37,7 @@ export const CSP_DIRECTIVES: [string, string[]][] = [
       'https://*.amap.com',
       'https://*.autonavi.com',
       'https://tile.openstreetmap.org',
+      'https://*.basemaps.cartocdn.com',
       'https://ion.cesium.com',
       'https://api.cesium.com',
       'https://assets.ion.cesium.com',
@@ -48,6 +52,7 @@ export const CSP_DIRECTIVES: [string, string[]][] = [
       'https://*.amap.com',
       'https://*.autonavi.com',
       'https://tile.openstreetmap.org',
+      'https://*.basemaps.cartocdn.com',
       'https://ion.cesium.com',
       'https://api.cesium.com',
       'https://assets.ion.cesium.com',
