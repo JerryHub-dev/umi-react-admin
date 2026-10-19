@@ -114,3 +114,41 @@ div.ant-spin-description {
 :lang(zh) .admin-header-actions .ant-avatar-string {
   margin-left: 0;
 }
+
+/*
+ * 页面切换微动效（P2）：路由变化时内容区 150ms 淡入上浮，只做「存在感」提示不做位移叙事；
+ * prefers-reduced-motion 下禁用（与 GuideTour/ParticleField 的 motion 纪律一致）。
+ * key 由 PageTransition 以 pathname 提供，切换即重挂载触发动画。
+ */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-fade {
+  animation: page-fade-in 0.15s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade {
+    animation: none;
+  }
+}
+
+/*
+ * 组内导航条要全出血（贴顶栏、左右 1280 全宽）。ProLayout 的内容区 main.ant-pro-layout-content
+ * 默认带 padding: 32px 40px，PageContainer 挂载后才加 has-page-container 类把它归零——首次访问
+ * 页面时路由 chunk 懒编译会有一帧「有 GroupNav、无 PageContainer」，导航条被这层 padding 内缩
+ * (88,40)，下一帧弹回 (56,0)，就是「进页面时二级菜单跳一下」。GroupNav 在场时内容区一律零内边距：
+ * 稳态本来就是这个值，这里只是把首帧拉齐；页面自身留白一直由 PageContainer 的 padding 提供。
+ */
+main.ant-pro-layout-content:has([data-tour='groupnav']) {
+  padding: 0 !important;
+}

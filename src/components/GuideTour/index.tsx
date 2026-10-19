@@ -61,6 +61,16 @@ export default function GuideTour() {
       description: t('tour.nav.desc'),
       target: navTarget,
     },
+    // 组内导航条只在分组页存在（dashboard 等单页没有），不存在时跳过这步
+    ...(document.querySelector('[data-tour="groupnav"]')
+      ? [
+          {
+            title: t('tour.groupNav.title'),
+            description: t('tour.groupNav.desc'),
+            target: target('[data-tour="groupnav"]'),
+          },
+        ]
+      : []),
     { title: t('tour.theme.title'), description: t('tour.theme.desc'), target: target('[data-tour="theme"]') },
     { title: t('tour.account.title'), description: t('tour.account.desc'), target: target('[data-tour="account"]') },
     { title: t('tour.source.title'), description: t('tour.source.desc'), target: target('[data-tour="source"]') },

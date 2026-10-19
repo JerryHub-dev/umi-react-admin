@@ -14,14 +14,18 @@ export default {
   'page.spectrum.desc': 'D3 chart of the frequency bands each station model covers, against the key bands.',
   'page.amap.desc': 'AMap JS API 2.0: every station with its status; click one for details.',
   'page.openlayers.desc': 'OpenLayers on OSM tiles: station markers colored by status, with popups.',
-  'page.cesium.geohash.desc': 'GeoHash spatial index: bucket the 240 stations into grid cells and encode any location.',
+  'page.cesium.geohash.desc':
+    'Station density cubes: 240 live or 8,000 synthetic stations aggregated per GeoHash precision; ramp-shaded cubes grow on switch, hover drives the histogram.',
   'page.cesium.direction.desc':
-    'Intercept / location / demodulation envelopes of a field site, verified by recomputing them from bearing and range.',
-  'page.cesium.heatmap.desc': 'Field-strength heat map rendered as an image texture, compared with a point cloud.',
+    'ELINT coverage: intercept/location/demodulation bands from an antenna pattern, a rotating DF sweep, and per-target intercept margins updated live.',
+  'page.cesium.heatmap.desc':
+    'Spectrum field: worker-computed propagation field as a ramp heatmap with dB isolines; 60/45 dB coverage rings track transmitter power.',
   'page.cesium.trajectory.desc':
-    'Plan inspection routes sampled per kilometer, and merge multi-station coverage with polygon union and convex hulls.',
-  'page.cesium.select.desc': 'Box-select stations on the globe and measure the distance between two points.',
-  'page.cesium.situation.desc': 'A time-dynamic picture of ships and aircraft in an area of interest (simulated).',
+    'Patrol mission planning: draggable waypoints, a glTF aircraft replaying with a growing coverage corridor, a two-way altitude profile and CZML export.',
+  'page.cesium.select.desc':
+    'Spatial query: drag box, polygon lasso and circle select plus multi-segment measuring, with status rollup and map pulse linkage.',
+  'page.cesium.situation.desc':
+    'Yellow–East Sea picture: 61 mil-symbol tracks replayed over three zone layers; zone events stream in live beside the ORBAT tree and detail card.',
   'page.calendar.desc': 'Handovers, inspections and reviews. Drag to reschedule, select to create — changes are saved.',
   'page.richText.desc': 'Self-hosted TinyMCE with a weekly ops report drafted from the current data.',
   'page.signature.desc': 'Sign off a completed ticket; the signature is saved to the ticket.',

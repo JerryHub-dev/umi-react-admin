@@ -3,8 +3,11 @@
 import 'antd/dist/reset.css';
 
 import BuildFooter from '@/components/BuildFooter';
+import CommandPalette from '@/components/CommandPalette';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import GroupNav from '@/components/GroupNav';
 import GuideTour from '@/components/GuideTour';
+import PageTransition from '@/components/PageTransition';
 import RightContent from '@/layouts/RightContent';
 import Forbidden from '@/pages/Exception/403';
 import { a11yThemeTokens } from '@/styles/themeTokens';
@@ -18,13 +21,14 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { RequestConfig, RuntimeAntdConfig, RunTimeLayoutConfig } from '@umijs/max';
-import { getIntl, getLocale, matchRoutes, Navigate, useLocation, useModel } from '@umijs/max';
+import { getIntl, getLocale, history, matchRoutes, Navigate, useLocation, useModel } from '@umijs/max';
 import { App as AntdApp, theme as antdTheme } from 'antd';
 import { useEffect } from 'react';
 import { getInitialState as libGetInitialState, readTheme, type AppInitialState } from './utils/Auth/initialState';
 import { loginPath } from './utils/Auth/loginUrl';
 import { APP_TITLE, menuKeyOf, pageTitle } from './utils/pageTitle';
 import { requestConfig } from './utils/requestConfig';
+import { firstAccessibleLeaf, type NavRoute } from './utils/routeNav';
 
 // 更多信息见文档：https://umijs.org/docs/api/runtime-config#getinitialstate
 export async function getInitialState(): Promise<AppInitialState | undefined> {
@@ -156,11 +160,31 @@ export const layout: RunTimeLayoutConfig = (initialState) => {
     actionsRender: () => [<RightContent key="right-content" />],
     menuHeaderRender: undefined,
     appList: appList(),
-    layout: 'mix',
+    // 顶栏只承载一级分组，二级由内容区顶部的 GroupNav 承载，内容区回收原侧栏宽度；
+    // 分组带子项（hover/点击弹层直达任意二级页）
+    layout: 'top',
+    // 点分组标题（顶栏一级、下拉里的 Cesium 分组）= 进入该组第一个可见且可访问的子页
+    // （firstAccessibleLeaf；分组路径自身的 redirect 是静态的，不看权限，直接 push 会让无权角色落进 403）。不走 postMenuData/onTitleClick——pro-components 3.1.14 的内部构建把
+    // BaseMenu 的该属性名混淆成了 n，外部注入不生效；subMenuItemRender 是明文名且经
+    // ProLayout→Header→TopNavHeader→BaseMenu 全程 {...props} 透传（实测可达）。
+    // 移动端抽屉里点组名应展开子菜单而非跳转，按视口放行（桌面弹层 hover 触发，点标题不弹）
+    subMenuItemRender: (item, defaultDom) =>
+      item.path ? (
+        <span
+          onClick={(event) => {
+            if (window.matchMedia('(max-width: 768px)').matches) return;
+            event.preventDefault();
+            event.stopPropagation();
+            history.push(firstAccessibleLeaf(item as NavRoute) ?? item.path!);
+          }}
+        >
+          {defaultDom}
+        </span>
+      ) : (
+        defaultDom
+      ),
     // 主题与 antd 运行时算法同源（localStorage），避免首帧闪烁
     navTheme: themeMode === 'realDark' ? 'realDark' : 'light',
-    splitMenus: true,
-    fixSiderbar: true,
     fixHeader: true,
     unAccessible: <AccessFallback />,
     footerRender: () => <BuildFooter />,
@@ -168,8 +192,10 @@ export const layout: RunTimeLayoutConfig = (initialState) => {
       <ErrorBoundary>
         <MessageBridge />
         <AuthGuard>
-          {children}
+          <GroupNav />
+          <PageTransition>{children}</PageTransition>
           <GuideTour />
+          <CommandPalette />
         </AuthGuard>
       </ErrorBoundary>
     ),
