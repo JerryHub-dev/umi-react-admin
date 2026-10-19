@@ -104,3 +104,83 @@ export const targetIcon = (kind: 'ship' | 'aircraft', css: string) => {
   iconCache[key] ??= drawIcon(kind, css);
   return iconCache[key];
 };
+
+/* ------------------------------ 态势特效（重构新增） ------------------------------ */
+
+/** 呼吸围栏材质：墙体透明度随时间正弦起伏（电子围栏的「警戒呼吸」） */
+export const breathingWall = (css: string, peakAlpha = 0.35, period = 3.2) => {
+  const base = Cesium.Color.fromCssColorString(css);
+  const epoch = performance.now();
+  return new Cesium.ColorMaterialProperty(
+    new Cesium.CallbackProperty((time?: Cesium.JulianDate) => {
+      const ms = time ? Cesium.JulianDate.toDate(time).getTime() : performance.now();
+      const phase = (((ms - epoch) / 1000) % period) / period;
+      return base.withAlpha(peakAlpha * (0.35 + 0.65 * Math.sin(phase * Math.PI * 2) ** 2));
+    }, false),
+  );
+};
+
+/** 选中脉冲圈：固定半径、透明度脉冲（选中站点/目标的高亮，与扩张扫描圈区分） */
+export const pulseRing = (css: string, radius: number, period = 1.6) => {
+  const base = Cesium.Color.fromCssColorString(css);
+  const epoch = performance.now();
+  const phaseOf = (time?: Cesium.JulianDate) => {
+    const ms = time ? Cesium.JulianDate.toDate(time).getTime() : performance.now();
+    return (((ms - epoch) / 1000) % period) / period;
+  };
+  return {
+    semiMajorAxis: radius,
+    semiMinorAxis: radius,
+    material: new Cesium.ColorMaterialProperty(
+      new Cesium.CallbackProperty((time?: Cesium.JulianDate) => base.withAlpha(0.5 * (1 - phaseOf(time))), false),
+    ),
+  };
+};
+
+/** 泛光后处理（发光业务图层的「能量感」）：中端机型可关，返回是否支持 */
+export const setBloom = (viewer: Cesium.Viewer, enabled: boolean, strength = 0.35) => {
+  const bloom = viewer.scene.postProcessStages.bloom;
+  if (!bloom) return false;
+  bloom.enabled = enabled;
+  bloom.uniforms.glowOnly = false;
+  bloom.uniforms.delta = 0.9;
+  bloom.uniforms.sigma = 3.78;
+  bloom.uniforms.stepSize = 5;
+  // strength 挂在 uniforms.brightness（0..1 映射到 0.05..0.6，避免过曝）
+  bloom.uniforms.brightness = 0.05 + strength * 0.55;
+  return true;
+};
+
+/** 统一标签样式：六场景的 entity label 一套口径（字号/衬底/描边），避免各页各配 */
+export const tagLabel = (
+  options: {
+    font?: string;
+    offset?: [number, number];
+    fillCss?: string;
+    background?: string;
+  } = {},
+) => ({
+  font: options.font ?? '12px sans-serif',
+  pixelOffset: new Cesium.Cartesian2(...(options.offset ?? [0, -22])),
+  fillColor: Cesium.Color.fromCssColorString(options.fillCss ?? '#ffffff'),
+  showBackground: true,
+  backgroundColor: Cesium.Color.fromCssColorString(options.background ?? 'rgba(6,16,27,0.72)'),
+  backgroundPadding: new Cesium.Cartesian2(5, 3),
+  distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1_200_000),
+});
+
+/** 由位置属性求航向（弧度，顺时针自北）→ billboard rotation（逆时针）：图标始终指着前进方向 */
+export const headingRotation = (viewer: Cesium.Viewer, position: Cesium.PositionProperty, sampleSeconds = 180) =>
+  new Cesium.CallbackProperty(() => {
+    const now = viewer.clock.currentTime;
+    const p1 = position.getValue(now);
+    const p2 = position.getValue(Cesium.JulianDate.addSeconds(now, sampleSeconds, new Cesium.JulianDate()));
+    if (!p1 || !p2) return 0;
+    const c1 = viewer.scene.globe.ellipsoid.cartesianToCartographic(p1);
+    const c2 = viewer.scene.globe.ellipsoid.cartesianToCartographic(p2);
+    const heading = Math.atan2(
+      (c2.longitude - c1.longitude) * Math.cos((c1.latitude + c2.latitude) / 2),
+      c2.latitude - c1.latitude,
+    );
+    return -heading;
+  }, false);

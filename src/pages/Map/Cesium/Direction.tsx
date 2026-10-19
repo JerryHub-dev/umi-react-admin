@@ -1,53 +1,75 @@
-import { CesiumStage, useCesiumViewer } from '@/components/CesiumViewer';
-import { addScanRing, targetIcon } from '@/components/CesiumViewer/effects';
+import { cesiumColor, SceneStage, useCesiumViewer } from '@/components/CesiumViewer';
+import { TimeDeck } from '@/components/CesiumViewer/TimeDeck';
+import { addScanRing, headingRotation, tagLabel } from '@/components/CesiumViewer/effects';
+import { CAPABILITY_CSS } from '@/components/CesiumViewer/palette';
+import { militarySymbol } from '@/components/CesiumViewer/symbols';
 import DemoPage from '@/components/DemoPage';
-import { PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { useChartTheme } from '@/hooks/useChartTheme';
+import { Radar } from '@ant-design/plots';
 import { useIntl } from '@umijs/max';
-import { Alert, Badge, Button, Card, Segmented, Space } from 'antd';
+import { Badge, Button, Empty, Segmented, Space, Typography } from 'antd';
 import * as Cesium from 'cesium';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CAPABILITIES,
-  CAPABILITY_COLOR,
   capabilityStats,
   envelopeRing,
+  interceptMarginKm,
   isIntercepted,
+  polarPattern,
   STATION,
   sweepAngle,
   targetPosition,
   TARGETS,
+  type Capability,
   type SimTarget,
 } from './capabilityModel';
 
-type Mode = 'domes' | 'sweep' | 'both';
+type Mode = 'bands' | 'sweep' | 'both';
 
-const TIME = { elapsed: 0, last: performance.now() };
-const tick = (playing: boolean) => {
-  const now = performance.now();
-  if (playing) TIME.elapsed += (now - TIME.last) / 1000;
-  TIME.last = now;
-  return TIME.elapsed;
+/** 覆盖带（ITU 风格）：标称包络按系数向内收缩出的同心「能力等距带」，
+ *  外圈满能力、内圈核心能力。挤出多边形在该引擎版本有 worker 崩溃前科（见旧实现注释），
+ *  贴地带稳定且观感更专业——立体感由 GeoHash 的挤出矩形承担。 */
+const BAND_RATIOS = [1, 0.8, 0.6, 0.4, 0.2];
+
+const shrinkToward = (center: { lng: number; lat: number }, point: [number, number], k: number): [number, number] => [
+  center.lng + (point[0] - center.lng) * k,
+  center.lat + (point[1] - center.lat) * k,
+];
+
+/** 带状多边形层级：外环正向 + 内环作为 hole（避免单环拼接的裂缝） */
+const bandHierarchy = (capability: Capability, outer: number, inner: number) => {
+  const ringAt = (k: number) =>
+    Cesium.Cartesian3.fromDegreesArray(
+      envelopeRing(capability, 0)
+        .map((p) => shrinkToward(STATION, [p.longitude, p.latitude], k))
+        .flat(),
+    );
+  return new Cesium.PolygonHierarchy(ringAt(outer), [new Cesium.PolygonHierarchy(ringAt(inner))]);
 };
 
 /**
- * 监测站能力页：天线方向图模型（capabilityModel.ts）驱动——
- * 三种能力的穹顶随传播条件「呼吸」，测向波束持续旋转扫描，
- * 绕站目标实时判定「此刻是否在截获包络内」。数据全部程序生成。
+ * 电子侦察覆盖态势页：天线方向图模型（capabilityModel.ts）驱动——
+ * 截获/定位/解调三种能力按 0.8/0.6/0.4/0.2 收缩成同心覆盖带（ITU 等距带风格），
+ * 测向波束持续旋转（静态圆+旋转纹理，实证稳定），绕站目标实时判定截获与裕量。
+ * 左侧目标面板逐秒刷新「截获裕量 km」，右下极坐标图与地图同一数据源。
  */
 export default function Direction() {
   const intl = useIntl();
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const [mode, setMode] = useState<Mode>('both');
   const [playing, setPlaying] = useState(true);
+  const chart = useChartTheme();
+  const [speed, setSpeed] = useState(1);
+  const [margins, setMargins] = useState<Record<string, number>>({});
   const [picked, setPicked] = useState<SimTarget>();
   const layerRef = useRef<Cesium.CustomDataSource>(null);
-  const domesRef = useRef<Cesium.Entity[]>([]);
+  const bandsRef = useRef<Cesium.Entity[]>([]);
   const sweepRef = useRef<Cesium.Entity>(null);
   const targetsRef = useRef<Map<string, Cesium.Entity>>(new Map());
-  // 回放时钟的原点：目标位置的采样与时间推算都基于它
   const epoch = useRef(Cesium.JulianDate.now()).current;
 
-  // 测向波束用「静态圆形 + 旋转纹理」实现（社区雷达扫描的经典做法）：
+  // 测向波束：静态圆 + canvas 余辉纹理（社区雷达扫描的经典做法）：
   // 逐帧重建 polygon hierarchy 的动态多边形会产生空批次包围球（NaN），渲染循环停摆
   const sweepCanvas = useRef<HTMLCanvasElement>(null);
   const renderSweep = (angle: number) => {
@@ -58,7 +80,6 @@ export default function Direction() {
     ctx.clearRect(0, 0, size, size);
     const center = size / 2;
     const radius = center - 2;
-    // 波束后方 100° 的余辉：越靠近前缘越亮
     const wedges = 40;
     for (let i = 0; i < wedges; i++) {
       const start = angle - (i + 1) * (100 / wedges);
@@ -66,11 +87,9 @@ export default function Direction() {
       ctx.moveTo(center, center);
       ctx.arc(center, center, radius, ((start - 90) * Math.PI) / 180, ((start + 100 / wedges - 90) * Math.PI) / 180);
       ctx.closePath();
-      const alpha = 0.34 * (1 - i / wedges) ** 1.6;
-      ctx.fillStyle = `rgba(64, 140, 255, ${alpha.toFixed(3)})`;
+      ctx.fillStyle = `rgba(64, 140, 255, ${(0.34 * (1 - i / wedges) ** 1.6).toFixed(3)})`;
       ctx.fill();
     }
-    // 前缘
     ctx.beginPath();
     ctx.moveTo(center, center);
     ctx.lineTo(
@@ -83,29 +102,56 @@ export default function Direction() {
   };
 
   const { containerRef, viewer, error, basemapFailed, retry } = useCesiumViewer({
-    // 定妆镜头：正俯视（环形对称构图天然适合雷达视角），高度按最大能力环直径（~500km）留边
     home: [STATION.lng, STATION.lat, 780_000],
+    entry: { pitch: Cesium.Math.toRadians(-62) },
     onReady: (instance) => {
+      Object.assign(instance.clock, {
+        startTime: epoch.clone(),
+        stopTime: Cesium.JulianDate.addSeconds(epoch, 12 * 3600, new Cesium.JulianDate()),
+        currentTime: epoch.clone(),
+        clockRange: Cesium.ClockRange.LOOP_STOP,
+        shouldAnimate: true,
+        multiplier: 1,
+      });
+
       const layer = new Cesium.CustomDataSource('capability');
       instance.dataSources.add(layer);
       layerRef.current = layer;
 
-      // 监测站：标记 + 心跳扫描
+      // 监测站：军标（友方地面传感器）+ 心跳扫描
+      const stationSymbol = militarySymbol('ground', 'friend', { size: 30, label: 'MON-01' });
       instance.entities.add({
         position: Cesium.Cartesian3.fromDegrees(STATION.lng, STATION.lat),
-        point: { pixelSize: 10, color: Cesium.Color.ORANGE, outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
-        label: {
-          text: t('cesium.direction.station'),
-          font: '12px sans-serif',
-          pixelOffset: new Cesium.Cartesian2(0, -18),
-          fillColor: Cesium.Color.WHITE,
-          showBackground: true,
-          backgroundColor: Cesium.Color.BLACK.withAlpha(0.55),
+        billboard: {
+          image: stationSymbol.dataUrl,
+          width: stationSymbol.width,
+          height: stationSymbol.height,
+          // 带番号文本时画框不在图片中心：按锚点偏移，让画框（而非整张图）压在站址上
+          pixelOffset: new Cesium.Cartesian2(stationSymbol.offset.x, stationSymbol.offset.y),
+          verticalOrigin: Cesium.VerticalOrigin.CENTER,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
+        label: { ...tagLabel({ offset: [0, -28] }), text: t('cesium.direction.station') },
       });
       addScanRing(instance, { lon: STATION.lng, lat: STATION.lat, color: '#fa8c16', maxRadius: 280_000, duration: 4 });
 
-      // 测向波束：静态圆几何 + canvas 余辉纹理（100ms 重绘）
+      // 覆盖带：外缘发光描边 + 半透明填充（每能力 5 档，内环挖孔成带）
+      bandsRef.current = CAPABILITIES.flatMap((capability) => {
+        const css = CAPABILITY_CSS[capability];
+        return BAND_RATIOS.slice(0, -1).map((outer, i) => {
+          const inner = BAND_RATIOS[i + 1];
+          return layer.entities.add({
+            polygon: {
+              hierarchy: bandHierarchy(capability, outer, inner),
+              material: cesiumColor(css, 0.05 + 0.03 * (BAND_RATIOS.length - 2 - i)),
+              outline: i === 0,
+              outlineColor: cesiumColor(css, 0.8),
+            },
+          });
+        });
+      });
+
+      // 测向波束：静态圆 + 余辉纹理
       const canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
@@ -120,46 +166,54 @@ export default function Direction() {
         },
       });
 
-      // 绕站目标：位置用 SampledPositionProperty 预展开 20 分钟循环（与 Situation 同模式）；
-      // 「是否被截获」在 onTick 里翻转样式
-      const loop = 20 * 60;
-      instance.clock.shouldAnimate = true;
+      // 绕站目标：军标符号 + 航向旋转 + 截获状态标签。位置按解析式逐帧求值（与裕量面板同一函数），
+      // 覆盖整个 12h 时钟窗口——曾只在 0..1200s 采样，超出末样本后 getValue 返回 undefined，目标全部消失
       TARGETS.forEach((target) => {
-        const position = new Cesium.SampledPositionProperty();
-        for (let s = 0; s <= loop; s += 10) {
-          const p = targetPosition(target, s);
-          position.addSample(
-            Cesium.JulianDate.addSeconds(epoch, s, new Cesium.JulianDate()),
-            Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, p.altitude),
+        const position = new Cesium.CallbackPositionProperty((time, result) => {
+          const p = targetPosition(
+            target,
+            Cesium.JulianDate.secondsDifference(time ?? instance.clock.currentTime, epoch),
           );
-        }
+          return Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, p.altitude, undefined, result);
+        }, false);
+        const symbol = militarySymbol(target.kind === 'aircraft' ? 'air' : 'sea', 'neutral', {
+          size: target.kind === 'aircraft' ? 24 : 22,
+        });
         const entity = layer.entities.add({
           id: target.id,
           position,
           billboard: {
-            image: targetIcon(target.kind, '#8c8c8c'),
-            width: target.kind === 'aircraft' ? 28 : 24,
-            height: target.kind === 'aircraft' ? 28 : 24,
-            color: Cesium.Color.fromCssColorString('#8c8c8c'),
+            image: symbol.dataUrl,
+            width: symbol.width,
+            height: symbol.height,
+            alignedAxis: Cesium.Cartesian3.UNIT_Z,
+            rotation: headingRotation(instance, position, 120),
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
           label: {
+            ...tagLabel({ offset: [0, -20] }),
             text: target.id,
-            font: '11px sans-serif',
-            pixelOffset: new Cesium.Cartesian2(0, -22),
-            fillColor: Cesium.Color.WHITE.withAlpha(0.75),
-            showBackground: true,
-            backgroundColor: Cesium.Color.BLACK.withAlpha(0.45),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
         });
         targetsRef.current.set(target.id, entity);
       });
 
-      // 点击目标查看详情
       const handler = new Cesium.ScreenSpaceEventHandler(instance.scene.canvas);
       handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
         const entity = instance.scene.pick(click.position)?.id as Cesium.Entity | undefined;
         setPicked(TARGETS.find((target) => target.id === entity?.id));
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      // 主体取景：以监测站为球心、最远截获距离为半径的包围球，pitch -50 斜视、
+      // 显式 range（zoomTo 的自动定距在含时变属性的场景实测不生效，改用同级 flyToBoundingSphere）
+      void instance.camera.flyToBoundingSphere(
+        new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(STATION.lng, STATION.lat), 260_000),
+        {
+          offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-50), 760_000),
+          duration: 2.6,
+        },
+      );
       return () => {
         handler.destroy();
         if (!instance.isDestroyed()) instance.dataSources.remove(layer, true);
@@ -167,157 +221,222 @@ export default function Direction() {
     },
   });
 
-  // 波束旋转：100ms 重绘纹理并换材质；暂停即冻结
+  /* 波束旋转：相位取自 Cesium 时钟（暂停即冻结、倍速即加速），100ms 重绘纹理 */
   useEffect(() => {
     if (!viewer || !sweepCanvas.current || !sweepRef.current?.ellipse) return undefined;
     const canvas = sweepCanvas.current;
     const ellipse = sweepRef.current.ellipse;
     const timer = window.setInterval(() => {
-      renderSweep(((sweepAngle(TIME.elapsed) * 180) / Math.PI) % 360);
+      const seconds = Cesium.JulianDate.secondsDifference(viewer.clock.currentTime, epoch);
+      renderSweep(((sweepAngle(seconds) * 180) / Math.PI) % 360);
       ellipse.material = new Cesium.ImageMaterialProperty({ image: canvas, transparent: true });
     }, 100);
     return () => window.clearInterval(timer);
-  }, [viewer]);
+  }, [viewer, epoch]);
 
-  /** 能力环（平面）：贴地多边形承载方位差异（方向瓣 + 地形阴影）。
-   * 本页刻意不用任何挤出/墙体高度：实测该引擎版本的大尺寸挤出几何（polygon/ellipse 挤出、
-   * 密环变高墙）在几何 worker 里非确定性崩溃（splitLongitude 属性数不匹配 / NaN 包围球 /
-   * 法线 NaN），渲染循环停摆；挤出数据可视化由 GeoHash 的挤出矩形（稳定）承担 */
-  useEffect(() => {
-    if (!viewer || !layerRef.current) return undefined;
-    const layer = layerRef.current!;
-    domesRef.current = CAPABILITIES.map((capability) => {
-      const ring = [...envelopeRing(capability, 0), ...envelopeRing(capability, 0).slice(0, 1)];
-      return layer.entities.add({
-        polygon: {
-          hierarchy: Cesium.Cartesian3.fromDegreesArray(ring.map((p) => [p.longitude, p.latitude]).flat()),
-          material: Cesium.Color.fromCssColorString(CAPABILITY_COLOR[capability]).withAlpha(0.12),
-          outline: true,
-          outlineColor: Cesium.Color.fromCssColorString(CAPABILITY_COLOR[capability]).withAlpha(0.85),
-        },
-      });
-    });
-    return () => {
-      domesRef.current.forEach((entity) => layer.entities.remove(entity));
-      domesRef.current = [];
-    };
-  }, [viewer]);
-
-  /** 心跳：推波束纹理时间；目标位置跟随 Cesium 时钟，检测判定用同一时间源 */
+  /* 心跳（1Hz）：目标截获状态 + 裕量面板。位置随 Cesium 时钟，判定用同一时间源 */
   useEffect(() => {
     if (!viewer || viewer.isDestroyed()) return undefined;
+    let last = -1;
     const onTick = () => {
-      tick(playing);
       const seconds = Cesium.JulianDate.secondsDifference(viewer.clock.currentTime, epoch);
+      if (seconds < 0 || Math.floor(seconds) === last) return;
+      last = Math.floor(seconds);
+      const next: Record<string, number> = {};
       TARGETS.forEach((target) => {
+        next[target.id] = interceptMarginKm(target, seconds);
         const entity = targetsRef.current.get(target.id);
-        if (!entity) return;
+        if (!entity?.label) return;
         const detected = isIntercepted(target, seconds);
-        const next = Cesium.Color.fromCssColorString(detected ? '#52c41a' : '#8c8c8c');
-        if (
-          entity.billboard &&
-          !Cesium.Color.equals(entity.billboard.color?.getValue(viewer.clock.currentTime), next)
-        ) {
-          entity.billboard.color = new Cesium.ConstantProperty(next);
-          if (entity.label) {
-            entity.label.text = new Cesium.ConstantProperty(
-              detected ? `${target.id} · ${t('cesium.direction.detected')}` : target.id,
-            );
-            entity.label.fillColor = new Cesium.ConstantProperty(
-              detected ? Cesium.Color.fromCssColorString('#95de64') : Cesium.Color.WHITE.withAlpha(0.75),
-            );
-          }
-        }
+        entity.label.text = new Cesium.ConstantProperty(
+          detected ? `${target.id} · ${t('cesium.direction.detected')}` : target.id,
+        );
+        entity.label.fillColor = new Cesium.ConstantProperty(
+          detected ? cesiumColor('#95de64') : Cesium.Color.WHITE.withAlpha(0.75),
+        );
       });
+      setMargins(next);
     };
     viewer.clock.onTick.addEventListener(onTick);
     return () => {
       if (!viewer.isDestroyed()) viewer.clock.onTick.removeEventListener(onTick);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewer, playing]);
+  }, [viewer]);
 
-  // 暂停同时冻结目标（位置跟随 Cesium 时钟）
+  // 模式切换：覆盖带与波束各自显隐
   useEffect(() => {
-    if (viewer) viewer.clock.shouldAnimate = playing;
-  }, [viewer, playing]);
-
-  // 模式切换：穹顶与波束各自显隐
-  useEffect(() => {
-    domesRef.current.forEach((entity) => {
+    bandsRef.current.forEach((entity) => {
       entity.show = mode !== 'sweep';
     });
-    if (sweepRef.current) sweepRef.current.show = mode !== 'domes';
+    if (sweepRef.current) sweepRef.current.show = mode !== 'bands';
   }, [mode, viewer]);
 
-  const stats = CAPABILITIES.map((capability) => ({ capability, ...capabilityStats(capability) }));
+  const stats = useMemo(() => CAPABILITIES.map((capability) => ({ capability, ...capabilityStats(capability) })), []);
+  const interceptStats = stats.find((row) => row.capability === 'intercept');
+  const radarData = useMemo(
+    () =>
+      CAPABILITIES.flatMap((capability) =>
+        // 图表行的 azimuth 键沿用原名（G2 用字段名作轴标题），值是度
+        polarPattern(capability, 36).map((p) => ({
+          capability: t(`cesium.direction.${capability}`),
+          azimuth: p.azimuthDeg,
+          rangeKm: p.rangeKm,
+        })),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const legend = (
-    <Card size="small" className="pointer-events-auto opacity-95">
-      <Space orientation="vertical" size={2}>
+    <div className="scene-panel">
+      <div className="scene-panel-title">{t('cesium.direction.legend')}</div>
+      <Space direction="vertical" size={2}>
         {stats.map((row) => (
           <Badge
             key={row.capability}
-            color={CAPABILITY_COLOR[row.capability]}
+            color={CAPABILITY_CSS[row.capability]}
             text={t('cesium.direction.stats', {
               name: t(`cesium.direction.${row.capability}`),
               max: row.max.toFixed(0),
               min: row.min.toFixed(0),
               avg: row.avg.toFixed(0),
             })}
+            className="text-xs"
           />
         ))}
       </Space>
-    </Card>
+    </div>
+  );
+
+  const targetPanel = (
+    <div className="scene-panel">
+      <div className="scene-panel-title">{t('cesium.direction.targets')}</div>
+      <div className="flex flex-col gap-1">
+        {TARGETS.map((target) => {
+          const margin = margins[target.id];
+          const detected = margin !== undefined && margin >= 0;
+          return (
+            <Button
+              key={target.id}
+              size="small"
+              type={picked?.id === target.id ? 'primary' : 'text'}
+              className="flex h-auto items-center justify-between py-1"
+              onClick={() => {
+                setPicked(target);
+                const entity = targetsRef.current.get(target.id);
+                if (viewer && entity) viewer.flyTo(entity, { duration: 1.2 });
+              }}
+            >
+              <span className="font-mono text-[11px]">{target.id}</span>
+              <span className={`font-mono text-[11px] ${detected ? 'text-[#52c41a]' : 'opacity-60'}`}>
+                {margin === undefined ? '—' : `${margin > 0 ? '+' : ''}${margin.toFixed(0)} km`}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+      <Typography.Paragraph type="secondary" className="mt-2 mb-0 text-[11px]">
+        {t('cesium.direction.marginHint')}
+      </Typography.Paragraph>
+    </div>
+  );
+
+  const polarPanel = (
+    <div className="scene-panel">
+      <div className="scene-panel-title">{t('cesium.direction.polar')}</div>
+      <Radar
+        data={radarData}
+        xField="azimuth"
+        yField="rangeKm"
+        colorField="capability"
+        shapeField="smooth"
+        height={210}
+        theme={chart.g2Theme}
+      />
+    </div>
+  );
+
+  const detail = picked ? (
+    <div className="scene-panel">
+      <div className="scene-panel-title">{picked.id}</div>
+      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+        <Typography.Text type="secondary">{t('cesium.direction.kind')}</Typography.Text>
+        <span>{t(`cesium.direction.${picked.kind}`)}</span>
+        <Typography.Text type="secondary">{t('cesium.direction.radius')}</Typography.Text>
+        <span className="font-mono">{picked.radiusKm} km</span>
+        <Typography.Text type="secondary">{t('cesium.direction.groundSpeed')}</Typography.Text>
+        <span className="font-mono">{(Math.abs(picked.angularSpeed) * picked.radiusKm * 36).toFixed(0)} km/h</span>
+        <Typography.Text type="secondary">{t('cesium.direction.margin')}</Typography.Text>
+        <span className="font-mono">
+          {margins[picked.id] === undefined ? '—' : `${margins[picked.id].toFixed(1)} km`}
+        </span>
+      </div>
+    </div>
+  ) : (
+    <div className="scene-panel">
+      <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={t('cesium.direction.pickHint')}
+        styles={{ image: { height: 36 } }}
+        className="my-1"
+      />
+    </div>
   );
 
   return (
-    <DemoPage
-      descriptionId="page.cesium.direction.desc"
-      source="src/pages/Map/Cesium/capabilityModel.ts"
-      extra={
-        <>
+    <DemoPage descriptionId="page.cesium.direction.desc" source="src/pages/Map/Cesium/capabilityModel.ts">
+      <SceneStage
+        containerRef={containerRef}
+        viewer={viewer}
+        error={error}
+        basemapFailed={basemapFailed}
+        onRetryBasemap={retry}
+        title={t('cesium.direction.title')}
+        kpis={[
+          { label: t('cesium.direction.kpi.station'), value: 1 },
+          { label: t('cesium.direction.kpi.targets'), value: TARGETS.length },
+          {
+            label: t('cesium.direction.kpi.intercepted'),
+            value: TARGETS.filter((tg) => margins[tg.id] !== undefined && margins[tg.id] >= 0).length,
+            tone: 'success',
+          },
+          {
+            label: t('cesium.direction.kpi.maxRange'),
+            value: interceptStats ? `${interceptStats.max.toFixed(0)} km` : '—',
+          },
+        ]}
+        actions={
           <Segmented
+            size="small"
             value={mode}
             onChange={(value) => setMode(value as Mode)}
             options={[
-              { value: 'domes', label: t('cesium.direction.modeDomes') },
+              { value: 'bands', label: t('cesium.direction.modeBands') },
               { value: 'sweep', label: t('cesium.direction.modeSweep') },
               { value: 'both', label: t('cesium.direction.modeBoth') },
             ]}
           />
-          <Button
-            icon={playing ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-            onClick={() => setPlaying((v) => !v)}
-          >
-            {t(playing ? 'cesium.direction.pause' : 'cesium.direction.play')}
-          </Button>
-        </>
-      }
-    >
-      <Alert
-        type={picked ? 'success' : 'info'}
-        showIcon
-        className="mb-4"
-        title={
-          picked
-            ? t('cesium.direction.target', {
-                name: picked.id,
-                radius: picked.radiusKm,
-                speed: (Math.abs(picked.angularSpeed) * picked.radiusKm * 36).toFixed(0),
-              })
-            : t('cesium.direction.hint')
+        }
+        panels={targetPanel}
+        rightPanels={
+          <>
+            {detail}
+            {polarPanel}
+          </>
+        }
+        legend={legend}
+        timeDeck={
+          <TimeDeck
+            viewer={viewer}
+            playing={playing}
+            onPlayingChange={setPlaying}
+            speed={speed}
+            onSpeedChange={setSpeed}
+            speeds={[1, 4, 16]}
+          />
         }
       />
-      <Card styles={{ body: { padding: 0 } }}>
-        <CesiumStage
-          containerRef={containerRef}
-          viewer={viewer}
-          error={error}
-          basemapFailed={basemapFailed}
-          onRetryBasemap={retry}
-          overlay={legend}
-        />
-      </Card>
     </DemoPage>
   );
 }

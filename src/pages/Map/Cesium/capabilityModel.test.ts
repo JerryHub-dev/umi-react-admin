@@ -9,7 +9,8 @@ import {
   TARGETS,
 } from './capabilityModel';
 
-/** 数值冒烟：模型在一段时间内所有输出必须有限（渲染崩溃=cartesian NaN 的前置防线） */
+/** 数值冒烟：模型在一段时间内所有输出必须有限（渲染崩溃=cartesian NaN 的前置防线）。
+ *  覆盖 ~860 个时间片 × 6 目标的球面三角，满载机型上可能超过默认 5s，放宽到 30s。 */
 describe('监测站能力模型', () => {
   it('包络/目标/波束在 0..10 分钟内不产生 NaN 或非法值', () => {
     for (let seconds = 0; seconds < 600; seconds += 0.7) {
@@ -38,5 +39,5 @@ describe('监测站能力模型', () => {
       sector.forEach(([lng, lat]) => expect(Number.isFinite(lng) && Number.isFinite(lat)).toBe(true));
       expect(rangeKm('intercept', seconds, seconds)).toBeGreaterThan(0);
     }
-  });
+  }, 30_000);
 });

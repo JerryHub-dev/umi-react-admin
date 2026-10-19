@@ -9,9 +9,20 @@ type MockViewer = {
   destroyed: boolean;
   setViewCalls: unknown[];
   flyToCalls: unknown[];
-  camera: { setView: (view: unknown) => void; flyTo: (view: unknown) => void };
+  camera: {
+    setView: (view: unknown) => void;
+    flyTo: (view: unknown) => void;
+    moveEnd: { addEventListener: (cb: () => void) => () => void; removeEventListener: (cb: () => void) => void };
+  };
   scene: { globe: Record<string, unknown> };
-  imageryLayers: { get: (index: number) => undefined };
+  imageryLayers: {
+    // 默认无层（undefined），errorEvent 用例会注入带 provider 的假层，所以是 unknown 而非 undefined
+    get: (index: number) => unknown;
+    removed: unknown[];
+    added: unknown[];
+    remove: (layer: unknown) => boolean;
+    add: (layer: unknown, index?: number) => void;
+  };
   isDestroyed: () => boolean;
   destroy: () => void;
 };
@@ -20,6 +31,8 @@ const cesium = vi.hoisted(() => ({
   constructed: [] as { container: unknown; options: Record<string, unknown> }[],
   instances: [] as MockViewer[],
   failInit: false,
+  /** imageryLayers.get(0) 返回的底图层（默认无层；底图 errorEvent 用例注入带 provider 的假层） */
+  baseLayer: undefined as unknown,
 }));
 
 vi.mock('cesium', () => {
@@ -35,9 +48,27 @@ vi.mock('cesium', () => {
       flyTo: (view: unknown) => {
         this.flyToCalls.push(view);
       },
+      moveEnd: {
+        addEventListener: () => () => undefined,
+        removeEventListener: () => undefined,
+      },
     };
-    scene = { globe: {} as Record<string, unknown> };
-    imageryLayers = { get: () => undefined };
+    scene = {
+      globe: {} as Record<string, unknown>,
+      postProcessStages: { fxaa: { enabled: false }, bloom: null },
+    };
+    imageryLayers = {
+      get: () => cesium.baseLayer,
+      removed: [] as unknown[],
+      added: [] as unknown[],
+      remove: (layer: unknown) => {
+        this.imageryLayers.removed.push(layer);
+        return true;
+      },
+      add: (layer: unknown) => {
+        this.imageryLayers.added.push(layer);
+      },
+    };
     constructor(container: unknown, options: Record<string, unknown>) {
       if (cesium.failInit) throw new Error('WebGL unavailable');
       this.container = container;
@@ -60,6 +91,9 @@ vi.mock('cesium', () => {
       constructor(public provider: unknown) {}
     },
     OpenStreetMapImageryProvider: class {
+      constructor(public options: unknown) {}
+    },
+    UrlTemplateImageryProvider: class {
       constructor(public options: unknown) {}
     },
     RequestErrorEvent: class {},
@@ -125,6 +159,7 @@ beforeEach(() => {
   cesium.constructed.length = 0;
   cesium.instances.length = 0;
   cesium.failInit = false;
+  cesium.baseLayer = undefined;
 });
 afterEach(() => {
   window.fetch = originalFetch;
@@ -150,14 +185,13 @@ describe('useCesiumViewer lifecycle', () => {
         orientation: pose,
       },
     ]);
-    expect(cesium.instances[0].flyToCalls).toEqual([
-      {
-        destination: { kind: 'fromDegrees', args: [116.4, 39.9, 800] },
-        orientation: pose,
-        duration: 2.2,
-        easingFunction: 'quadratic-in-out',
-      },
-    ]);
+    expect(cesium.instances[0].flyToCalls[0]).toMatchObject({
+      destination: { kind: 'fromDegrees', args: [116.4, 39.9, 800] },
+      orientation: pose,
+      duration: 2.2,
+      easingFunction: 'quadratic-in-out',
+    });
+    // complete 回调用于落位后的诊断镜像（dataset.cesiumCam），不属于断言面
     expect(onReady).toHaveBeenCalledTimes(1);
     expect(onReady.mock.calls[0]?.[0]).toBe(cesium.instances[0]);
     expect(harness.text('state')).toBe('ready');
@@ -222,7 +256,9 @@ describe('useCesiumViewer lifecycle', () => {
   });
 
   it('flags a failed basemap after three tile fetch failures', async () => {
-    // 离线 / CSP 拦截：底图瓦片请求连续失败 3 次后要给出可见反馈（F01），而不是静默留一张空地图
+    // 默认底图是「夜航滤镜」OSM（免凭据、可用性最广），也是最后一道防线：
+    // 连续 3 次瓦片失败后给出可见反馈与重试（F01），而不是静默留一张空地图。
+    // ion/carto 的静默回落与像素探针升级依赖真实网络，单测不覆盖（e2e 覆盖）。
     window.fetch = vi.fn(() => Promise.reject(new Error('offline'))) as unknown as typeof window.fetch;
     const harness = mount();
     expect(harness.text('basemap')).toBe('ok');
@@ -235,5 +271,53 @@ describe('useCesiumViewer lifecycle', () => {
 
     expect(harness.text('basemap')).toBe('failed');
     harness.unmount();
+  });
+
+  it('ignores network failures from hosts other than the current basemap provider', async () => {
+    // 换层后旧层在途请求的失败、兜底探针自身的失败，都不该计入当前底图的失败数
+    window.fetch = vi.fn(() => Promise.reject(new Error('offline'))) as unknown as typeof window.fetch;
+    const harness = mount();
+    await act(async () => {
+      await Promise.all(
+        [1, 2, 3, 4].map(() =>
+          window.fetch('https://a.basemaps.cartocdn.com/dark_all/1/2/3.png').catch(() => undefined),
+        ),
+      );
+    });
+    await flush();
+    expect(harness.text('basemap')).toBe('ok');
+    harness.unmount();
+  });
+
+  it('counts HTTP-level tile errors reported by the base layer provider, without double-counting network errors', async () => {
+    // 429/403 这类 HTTP 失败 XHR 的 error 事件看不到，只能从 imageryProvider.errorEvent 拿到；
+    // 无状态码的网络层失败由 fetch/XHR 观察计数，这里跳过
+    const listeners = new Set<(error: unknown) => void>();
+    cesium.baseLayer = {
+      imageryProvider: {
+        errorEvent: {
+          addEventListener: (listener: (error: unknown) => void) => {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+          },
+        },
+      },
+    };
+    const raise = (error: unknown) => act(() => listeners.forEach((listener) => listener(error)));
+    // 高德兜底探针也失败（离线）
+    window.fetch = vi.fn(() => Promise.reject(new Error('offline'))) as unknown as typeof window.fetch;
+    const harness = mount();
+    expect(listeners.size).toBe(1);
+
+    [1, 2, 3].forEach(() => raise({ error: {} }));
+    await flush();
+    expect(harness.text('basemap')).toBe('ok');
+
+    [1, 2, 3].forEach(() => raise({ error: { statusCode: 429 } }));
+    await flush();
+    expect(harness.text('basemap')).toBe('failed');
+
+    harness.unmount();
+    expect(listeners.size).toBe(0);
   });
 });

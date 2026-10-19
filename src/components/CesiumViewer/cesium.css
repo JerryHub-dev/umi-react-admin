@@ -1,11 +1,13 @@
-/* Cesium 场景容器：高度随视口，给页面标题与工具栏留出空间 */
+/* Cesium 场景舞台：高度尽量占满视口（只给页头/场景条/说明行留空间），玻璃面板叠加其上。
+   面板颜色不写死：由 --scene-bg/--scene-ink 两个变量驱动，SceneStage 挂载时注入 antd 主题令牌。 */
 .cesium-stage {
   position: relative;
   width: 100%;
-  height: calc(100vh - 300px);
-  min-height: 520px;
+  height: calc(100vh - 216px);
+  min-height: 560px;
   overflow: hidden;
   border-radius: 8px;
+  background: #0a1a2f;
 }
 
 .cesium-stage .cesium-widget,
@@ -16,7 +18,276 @@
 
 @media (width <= 768px) {
   .cesium-stage {
-    height: calc(100vh - 340px);
+    height: calc(100vh - 300px);
     min-height: 420px;
   }
+}
+
+/* ---------------- 玻璃面板与 HUD ---------------- */
+
+.scene-panel {
+  pointer-events: auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--scene-border);
+  border-radius: 8px;
+  background: var(--scene-glass);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+  color: var(--scene-ink);
+  font-size: 12px;
+}
+
+.scene-panel-title {
+  margin-bottom: 6px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--scene-ink);
+  opacity: 0.92;
+}
+
+.scene-corner {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.scene-corner > * {
+  pointer-events: auto;
+}
+
+.scene-corner-tl {
+  top: 12px;
+  left: 12px;
+  max-width: min(46%, 560px);
+}
+
+/* 右上动作条让出 Cesium 原生工具栏（Home + 2D/3D 场景模式两枚 32px 按钮及间距 ≈ 76px）：
+   曾与工具栏同在 top:12/right:12 一带，z-index 更高，把特意保留的 2D/3D 切换盖住 */
+.scene-corner-tr {
+  top: 12px;
+  right: 96px;
+  align-items: flex-end;
+  max-width: 52%;
+}
+
+/* 原生工具栏对齐面板的 12px 边距；层级高于玻璃面板，场景模式选择器向下展开时不被右侧栏盖住 */
+.cesium-stage .cesium-viewer-toolbar {
+  top: 12px;
+  right: 12px;
+  z-index: 11;
+}
+
+.scene-corner-l {
+  top: 96px;
+  left: 12px;
+  bottom: 108px;
+  max-width: 300px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.scene-corner-r {
+  top: 96px;
+  right: 12px;
+  bottom: 108px;
+  max-width: 300px;
+  overflow: auto;
+  scrollbar-width: thin;
+  align-items: flex-end;
+}
+
+.scene-corner-bl {
+  bottom: 12px;
+  left: 12px;
+}
+
+.scene-title {
+  padding: 4px 12px;
+  border-left: 3px solid var(--scene-accent, #36cfc9);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--scene-ink);
+  text-shadow: 0 1px 4px rgb(0 0 0 / 60%);
+}
+
+.scene-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scene-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--scene-border);
+  border-radius: 999px;
+  background: var(--scene-glass);
+  backdrop-filter: blur(10px);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-chip-label {
+  font-size: 11px;
+  color: var(--scene-dim);
+}
+
+.scene-chip-value {
+  font-family: var(--scene-mono, ui-monospace, 'SF Mono', Menlo, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--scene-ink);
+}
+
+.scene-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.scene-actions .ant-segmented {
+  background: var(--scene-glass);
+  backdrop-filter: blur(10px);
+}
+
+.scene-timedeck-slot {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  width: min(720px, calc(100% - 32%));
+  pointer-events: none;
+}
+
+.scene-timedeck-slot > * {
+  pointer-events: auto;
+}
+
+/* HUD：坐标读出 + 网格开关（右下角） */
+.scene-hud {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.scene-hud > * {
+  pointer-events: auto;
+}
+
+.scene-coords {
+  padding: 3px 10px;
+  border: 1px solid var(--scene-border);
+  border-radius: 6px;
+  background: var(--scene-glass);
+  backdrop-filter: blur(10px);
+  font-family: var(--scene-mono, ui-monospace, 'SF Mono', Menlo, monospace);
+  font-size: 11px;
+  color: var(--scene-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-coords-alt {
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--scene-border);
+  color: var(--scene-dim);
+}
+
+.scene-grid-toggle {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--scene-border);
+  border-radius: 6px;
+  background: var(--scene-glass);
+  backdrop-filter: blur(10px);
+  color: var(--scene-dim);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.scene-grid-toggle.is-on {
+  color: var(--scene-accent, #36cfc9);
+  border-color: var(--scene-accent, #36cfc9);
+}
+
+/* cesium-navigation 罗盘融入玻璃体系（默认在左下，避开 LegendSlot 时由页面自调） */
+.cesium-stage .cesium-viewer-bottom {
+  right: 8px;
+  bottom: 44px;
+  left: auto;
+  color: var(--scene-dim);
+}
+
+.scene-event {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--scene-border);
+  font-size: 12px;
+}
+
+.scene-event.is-alert {
+  border-left-color: #ff4d4f;
+}
+
+/* TimeDeck：底部玻璃控制条 */
+.scene-timedeck {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.scene-timedeck-slider {
+  flex: 1;
+  min-width: 120px;
+  height: 4px;
+  appearance: none;
+  background: var(--scene-border);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.scene-timedeck-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--scene-accent, #36cfc9);
+  border-radius: 50%;
+  background: var(--scene-glass);
+  cursor: pointer;
+}
+
+.scene-timedeck-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--scene-accent, #36cfc9);
+  border-radius: 50%;
+  background: var(--scene-glass);
+  cursor: pointer;
+}
+
+.scene-timedeck-clock {
+  min-width: 108px;
+  font-family: var(--scene-mono, ui-monospace, 'SF Mono', Menlo, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
