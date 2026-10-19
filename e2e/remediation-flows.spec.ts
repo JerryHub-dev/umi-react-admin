@@ -41,7 +41,18 @@ test('F06 已验收工单返工：归档旧验收 → 再完成 → 再验收', 
   await page.keyboard.press('Escape');
   await navigate(page, '/components/signature');
   await page.getByRole('combobox').first().click();
-  await page.locator('.ant-select-item-option', { hasText: 'WO-SCN-REWORK' }).click();
+  // 候选按创建时间倒序，下拉是虚拟列表（只渲染可视的约 10 项）。排在这张工单前面的近期工单数随当天时刻
+  // 与时区变化（演示数据按本地自然日生成；CI 为 UTC 时它常落在第 10 项之后），用滚轮逐屏翻到它渲染出来再点
+  const option = page.locator('.ant-select-item-option', { hasText: 'WO-SCN-REWORK' });
+  const dropdown = page.locator('.ant-select-dropdown:visible');
+  await expect(async () => {
+    if (!(await option.count())) {
+      await dropdown.hover();
+      await page.mouse.wheel(0, 240);
+    }
+    await expect(option).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 15_000 });
+  await option.click();
   // getByText 会先命中 select 的 aria-live 隐藏区，断言可见的选中项
   await expect(page.locator('.ant-select', { hasText: 'WO-SCN-REWORK' }).first()).toBeVisible();
 });

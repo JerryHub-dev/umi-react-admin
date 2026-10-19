@@ -1,6 +1,6 @@
 import { canAccessRoute, groupOf, matchedKey, useNamedChain, type NavRoute } from '@/utils/routeNav';
 import { history, useAccess, useIntl, useLocation } from '@umijs/max';
-import { Menu, theme } from 'antd';
+import { ConfigProvider, Menu, theme } from 'antd';
 import { useEffect, useRef } from 'react';
 
 /**
@@ -71,24 +71,29 @@ export default function GroupNav() {
       }}
     >
       <div ref={scroller} className="min-w-0 flex-1" style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
-        <Menu
-          mode="horizontal"
-          disabledOverflow
-          selectedKeys={selected ? [selected] : []}
-          items={items}
-          onClick={({ key }) => {
-            if (key !== pathname) {
-              history.push(key);
-              window.scrollTo(0, 0);
-            }
-          }}
-          style={{
-            borderBottom: 'none',
-            background: 'transparent',
-            minWidth: 0,
-            lineHeight: '40px',
-          }}
-        />
+        {/* 选中页签文字（及底部指示条）antd 默认取 colorPrimary：暗色派生 #1668dc 压在 #141414 上只有 3.55:1
+            （axe color-contrast）。改用 colorLink：浅色两者同为 #0958d9 不变，暗色为 #5c99dc 6.18:1
+            （见 styles/themeTokens.ts）。取运行时 token 而非写死色值，冷启动与顶栏热切换都跟随当前主题 */}
+        <ConfigProvider theme={{ components: { Menu: { horizontalItemSelectedColor: token.colorLink } } }}>
+          <Menu
+            mode="horizontal"
+            disabledOverflow
+            selectedKeys={selected ? [selected] : []}
+            items={items}
+            onClick={({ key }) => {
+              if (key !== pathname) {
+                history.push(key);
+                window.scrollTo(0, 0);
+              }
+            }}
+            style={{
+              borderBottom: 'none',
+              background: 'transparent',
+              minWidth: 0,
+              lineHeight: '40px',
+            }}
+          />
+        </ConfigProvider>
       </div>
       <span
         className="hidden self-center text-xs font-medium tracking-wider whitespace-nowrap uppercase md:inline"
