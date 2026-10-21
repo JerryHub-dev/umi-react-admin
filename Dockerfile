@@ -7,7 +7,7 @@
 # scripts/dockerfile-frontend.test.ts 会在「用了外部 frontend 能力却没固定」时失败。
 
 # ---------- 阶段一：构建 ----------
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
+FROM node:26-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS builder
 WORKDIR /app
 
 # 先装依赖以利用层缓存
