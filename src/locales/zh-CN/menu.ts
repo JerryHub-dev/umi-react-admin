@@ -21,7 +21,7 @@ export default {
   'menu.map.cesium.heatmap': '场强热力图',
   'menu.map.cesium.trajectory': '路线与覆盖',
   'menu.map.cesium.select': '框选与测距',
-  'menu.map.cesium.situation': '海空态势',
+  'menu.map.cesium.situation': '海空目标',
   'menu.components': '组件',
   'menu.components.calendar': '日程',
   'menu.components.richText': '富文本',

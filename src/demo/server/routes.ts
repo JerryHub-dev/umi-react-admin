@@ -970,6 +970,22 @@ export const routes: Route[] = [
     },
   },
   {
+    // 登录页的三个数字：与工作台 KPI 同一聚合（此前是写死的故事常量，与进门后看到的数字对不上）。
+    // 免登录，只返回聚合计数，不含任何明细
+    method: 'GET',
+    path: '/api/v1/demo/snapshot',
+    access: 'public',
+    handle: (ctx) => {
+      const { kpi } = buildOverview(data(ctx), ctx.store.now());
+      return {
+        devicesOnline: kpi.devicesOnline,
+        devicesTotal: kpi.devicesTotal,
+        alarmsToday: kpi.alarmsToday,
+        slaRate: kpi.slaRate,
+      };
+    },
+  },
+  {
     method: 'POST',
     path: '/api/v1/demo/clock',
     access: 'system.demo.reset',

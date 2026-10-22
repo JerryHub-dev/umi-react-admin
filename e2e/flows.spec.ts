@@ -70,7 +70,7 @@ test('告警转工单后出现在看板，拖到「处理中」并写回', async
   const row = page.locator('.ant-table-row').first();
   await expect(row).toBeVisible();
   // 未恢复口径（F08）包含已转工单未恢复的行（无处置按钮），取第一个带处置按钮的行
-  await page.locator('.ant-table-row').getByRole('button', { name: /处置/ }).first().hover();
+  await page.locator('.ant-table-row').getByRole('button', { name: /处置/ }).first().click();
   await page.getByRole('menuitem', { name: '转工单' }).click();
   await expect(page.locator('.ant-message')).toContainText('已处置');
 

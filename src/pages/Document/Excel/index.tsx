@@ -224,7 +224,7 @@ export default function Excel() {
       source="src/pages/Document/Excel/userSheet.ts"
       extra={
         <>
-          <Dropdown menu={sampleMenu}>
+          <Dropdown menu={sampleMenu} trigger={['click']}>
             <Button icon={<DownloadOutlined />} disabled={!!busy && busy !== 'template'}>
               {t('excel.samples')}
             </Button>

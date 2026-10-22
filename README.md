@@ -10,7 +10,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE) [![Deploy](https://github.com/Jerry-CodeHub/umi-react-admin/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/Jerry-CodeHub/umi-react-admin/actions/workflows/deploy.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-`umi-react-admin` is an open-source admin template built on **Umi Max 4 + React 19 + Ant Design 6 + ProComponents**. Unlike most templates, its demo tells **one coherent story**: a fictional IoT monitoring platform — 240+ stations, ~90 days of alarms, tickets derived from those alarms, 86 operators with role-based permissions and audit logs. Every number on the dashboard is aggregated live from those records, and holds up to scrutiny.
+`umi-react-admin` is an open-source admin template built on **Umi Max 4 + React 19 + Ant Design 6 + ProComponents**. Unlike most templates, its demo tells **one coherent story**: a fictional IoT monitoring platform — 243 stations, ~90 days of alarms, tickets derived from those alarms, 86 operators with role-based permissions and audit logs. Every number on the dashboard is aggregated live from those records, and holds up to scrutiny.
 
 **[Live demo](https://jerry-codehub.github.io/umi-react-admin/)** — one-click sign-in for five roles (`admin` / `lead` / `operator` / `analyst` / `guest`) sharing the same dataset, so you can compare permission differences across menus, buttons and API responses (see `docs/demo/role-matrix.md`).
 
@@ -19,7 +19,7 @@
 | Dashboard | KPIs (online devices, alarms today, SLA rate, avg response), alarm trend, type mix, regional online rate, disposition flow, device health, distribution, latest activity |
 | System | Users (filter / sort / batch / detail drawer), roles (permission tree), audit logs, access demo (route-level / button-level / data-level) |
 | Operations | Device registry, alarm center (convert to ticket / recover / false positive), ticket board (drag & drop, keyboard accessible), spectrum occupancy (D3) |
-| Maps | AMap, OpenLayers (same station set); six Cesium scenes: GeoHash grid, direction & distance, heatmap, routes & coverage, box-select & measure, air/sea situation |
+| Maps | AMap, OpenLayers (same station set); six Cesium scenes: GeoHash grid, direction & distance, heatmap, routes & coverage, box-select & measure, sea & air traffic |
 | Components | Calendar (FullCalendar), rich text (self-hosted TinyMCE with data-generated weekly report), signature (ticket acceptance), page screenshot (html2canvas) |
 | Media / Documents | Video, music player, waveform; browser-side monthly PDF report and Excel import/export (row-level validation) generated live from the data |
 

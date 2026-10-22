@@ -3,11 +3,14 @@ import { REPO_URL } from '@/constants/repo';
 import { DEMO_MODE } from '@/demo/mode';
 import { useThemeMode } from '@/hooks/useThemeMode';
 import { login, type LoginParams } from '@/services/auth';
+import { getDemoSnapshot } from '@/services/system';
+import type { DemoSnapshot } from '@/services/types';
 import { readTheme } from '@/utils/Auth/initialState';
 import { readLoginReason } from '@/utils/Auth/loginUrl';
 import { safeRedirect } from '@/utils/Auth/safeRedirect';
 import { UserInfo } from '@/utils/Auth/userInfo';
 import { BizError } from '@/utils/BizError';
+import { formatNumber, formatPercent } from '@/utils/format';
 import { menuKeyOf } from '@/utils/pageTitle';
 import {
   ApartmentOutlined,
@@ -43,12 +46,15 @@ import { readRememberedName, writeRememberedName } from './rememberedName';
 // 功能层的特性标签：短关键词而非长句——形式要匹配「清单」的语义
 const FEATURES = ['live', 'access', 'maps3d', 'i18n'] as const;
 
-/** 产品时刻：演示数据集口径的三个数字（README 同源的故事常量，非实时值） */
-const STATS = [
-  { key: 'online', value: '236/240' },
-  { key: 'alarm', value: '12' },
-  { key: 'sla', value: '96.4%' },
-] as const;
+/** 证据层的三个数字：演示后端按与工作台 KPI 同一口径实时聚合（曾写死 236/240 · 12 · 96.4%，进门后对不上） */
+const statItems = (snapshot: DemoSnapshot, locale: string) => [
+  {
+    key: 'online',
+    value: `${formatNumber(snapshot.devicesOnline, locale)}/${formatNumber(snapshot.devicesTotal, locale)}`,
+  },
+  { key: 'alarm', value: formatNumber(snapshot.alarmsToday, locale) },
+  { key: 'sla', value: formatPercent(snapshot.slaRate, locale) },
+];
 
 /** 一键体验的四个非管理员角色（管理员单独一个主按钮） */
 const DEMO_ROLES = ['lead', 'operator', 'analyst', 'guest'] as const;
@@ -72,6 +78,18 @@ const Login: React.FC = () => {
   const [pending, setPending] = useState<Source>();
   const [error, setError] = useState<string>();
   const [capsLock, setCapsLock] = useState(false);
+  // 只有演示站有可展示的数据；真实部署的登录页不该出现模板的故事数字
+  const [snapshot, setSnapshot] = useState<DemoSnapshot>();
+  useEffect(() => {
+    if (!DEMO_MODE) return undefined;
+    let cancelled = false;
+    getDemoSnapshot()
+      .then((value) => !cancelled && setSnapshot(value))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   // 光标在输入框里时让背景的浪平静下来，不和输入抢注意力
   const [typing, setTyping] = useState(false);
   // 真实登录才有「记住账号」：演示模式的表单本身就预填了 admin / demo
@@ -163,6 +181,7 @@ const Login: React.FC = () => {
               onClick={toggle}
             />
             <Dropdown
+              trigger={['click']}
               menu={{
                 items: [
                   // 语言名按惯例用该语言自身书写
@@ -228,21 +247,23 @@ const Login: React.FC = () => {
             </div>
           </section>
           {/* 证据层：锚在左下角，与右下角的登录卡共用同一条地平线（三锚点：左上叙事 / 左下证据 / 右下行动） */}
-          <div
-            className="hidden rounded-xl border px-5 py-3 lg:absolute lg:bottom-16 lg:left-10 lg:inline-flex lg:w-96 lg:items-center lg:justify-between lg:gap-6"
-            style={{
-              borderColor: token.colorBorderSecondary,
-              background: `color-mix(in srgb, ${token.colorBgContainer} 72%, transparent)`,
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            {STATS.map(({ key, value }) => (
-              <span key={key} className="flex flex-col gap-0.5">
-                <span className="text-xs text-text-tertiary">{t(`login.stats.${key}`)}</span>
-                <span className="text-xl font-semibold tabular-nums">{value}</span>
-              </span>
-            ))}
-          </div>
+          {snapshot && (
+            <div
+              className="hidden rounded-xl border px-5 py-3 lg:absolute lg:bottom-16 lg:left-10 lg:inline-flex lg:w-96 lg:items-center lg:justify-between lg:gap-6"
+              style={{
+                borderColor: token.colorBorderSecondary,
+                background: `color-mix(in srgb, ${token.colorBgContainer} 72%, transparent)`,
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              {statItems(snapshot, intl.locale).map(({ key, value }) => (
+                <span key={key} className="flex flex-col gap-0.5">
+                  <span className="text-xs text-text-tertiary">{t(`login.stats.${key}`)}</span>
+                  <span className="text-xl font-semibold tabular-nums">{value}</span>
+                </span>
+              ))}
+            </div>
+          )}
 
           <div
             className="w-full max-w-sm shrink-0 rounded-2xl border p-6 sm:p-8 lg-self-end-tall lg:mr-40"

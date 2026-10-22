@@ -26,7 +26,7 @@ export default function Alarms() {
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const enums = useEnums();
   const table = useResponsiveTable();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const access = useAccess();
   const location = useLocation();
   const actionRef = useRef<ActionType>(undefined);
@@ -62,6 +62,20 @@ export default function Alarms() {
     await handleAlarm(alarm.id, action);
     message.success(t('alarms.handled'));
     actionRef.current?.reload();
+  };
+
+  /** 误报关闭会让告警直接离开「未恢复」池、不派生工单，先确认；转工单 / 标记恢复是常规处置，直接执行 */
+  const confirmAndHandle = (alarm: Alarm, action: AlarmHandleAction) => {
+    if (action !== 'falsePositive') {
+      void handle(alarm, action);
+      return;
+    }
+    modal.confirm({
+      title: t('alarms.falsePositiveConfirm', { id: alarm.id }),
+      content: t('alarms.falsePositiveConfirmDesc'),
+      okButtonProps: { danger: true },
+      onOk: () => handle(alarm, action),
+    });
   };
 
   const columns: ProColumns<Alarm>[] = [
@@ -176,10 +190,16 @@ export default function Alarms() {
       fixed: table.fixedRight,
       render: (_, alarm) =>
         alarm.status === 'active' && canHandle ? (
+          // 点击展开（与顶栏菜单一致）：悬停展开在逐行扫视表格时容易误弹
           <Dropdown
+            trigger={['click']}
             menu={{
-              items: ACTIONS.map((action) => ({ key: action, label: t(`alarms.handle.${action}`) })),
-              onClick: ({ key }) => handle(alarm, key as AlarmHandleAction),
+              items: ACTIONS.map((action) => ({
+                key: action,
+                label: t(`alarms.handle.${action}`),
+                danger: action === 'falsePositive',
+              })),
+              onClick: ({ key }) => confirmAndHandle(alarm, key as AlarmHandleAction),
             }}
           >
             <Button type="link" size="small">

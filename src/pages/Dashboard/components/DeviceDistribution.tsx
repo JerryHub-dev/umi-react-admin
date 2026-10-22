@@ -38,7 +38,15 @@ export default function DeviceDistribution({
           range: chart.categories,
         },
       }}
-      label={{ text: 'name', transform: [{ type: 'overflowHide' }], fill: '#fff', fontSize: 11 }}
+      // 外圈只给占比 ≥4% 的城市标名（约 10 台以上）：小城市的窄扇区放不下横排文字，标签互相叠压；
+      // 名称与数量悬停可见，点击大区可下钻放大
+      label={{
+        text: (d: { name: string; depth: number; x: [number, number] }) =>
+          d.depth === 1 || d.x[1] - d.x[0] >= 0.04 ? d.name : '',
+        transform: [{ type: 'overflowHide' }],
+        fill: '#fff',
+        fontSize: 11,
+      }}
       interaction={{
         drillDown: {
           breadCrumb: {

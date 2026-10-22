@@ -41,7 +41,9 @@ export default function Disposition({ data, height }: { data: DashboardOverview[
       height={height}
       theme={chart.g2Theme}
       scale={{ color: { domain: [...colorByName.keys()], range: [...colorByName.values()] } }}
-      layout={{ nodeAlign: 'justify', nodePadding: 0.03, nodeWidth: 0.012 }}
+      // left 对齐按层级排三列（级别 → 处置 → 工单结果）：justify 会把已恢复 / 误报 / 待处置这些终点节点
+      // 推到最右列，与工单结果混排，小节点的标签（待处置、超时完成、处理中）叠在一起；节点间距同时加大
+      layout={{ nodeAlign: 'left', nodePadding: 0.06, nodeWidth: 0.012 }}
       // 连线沿用起点节点的颜色，一眼看出每个级别的告警流向哪里
       linkColorField={(link: { source: { key: string } }) => link.source.key}
       style={{

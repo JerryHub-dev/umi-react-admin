@@ -49,7 +49,7 @@ const bandHierarchy = (capability: Capability, outer: number, inner: number) => 
 };
 
 /**
- * 电子侦察覆盖态势页：天线方向图模型（capabilityModel.ts）驱动——
+ * 测向覆盖态势页：天线方向图模型（capabilityModel.ts）驱动——
  * 截获/定位/解调三种能力按 0.8/0.6/0.4/0.2 收缩成同心覆盖带（ITU 等距带风格），
  * 测向波束持续旋转（静态圆+旋转纹理，实证稳定），绕站目标实时判定截获与裕量。
  * 左侧目标面板逐秒刷新「截获裕量 km」，右下极坐标图与地图同一数据源。

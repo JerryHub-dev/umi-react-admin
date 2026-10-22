@@ -133,7 +133,7 @@ for (const round of [1, 2]) {
     await navigate(page, `/ops/alarms?keyword=${MAIN_ALARM}`);
     const alarmRow = page.locator('.ant-table-row').first();
     await expect(alarmRow).toContainText(MAIN_ALARM);
-    await alarmRow.getByRole('button', { name: /处置/ }).hover();
+    await alarmRow.getByRole('button', { name: /处置/ }).click();
     await page.getByRole('menuitem', { name: '转工单' }).click();
     await expect(page.locator('.ant-message')).toContainText('已处置');
     // 返回的工单编号可点击，携带 ID 深链直接打开
@@ -243,7 +243,7 @@ for (const round of [1, 2]) {
     // ---------- E09 只读角色差异（数据分析员） ----------
     await avatarMenu(page, '退出登录');
     await page.waitForURL(/login/);
-    await page.getByRole('button', { name: /数据分析员体验/ }).click();
+    await page.getByRole('button', { name: /以数据分析员体验/ }).click();
     await page.waitForURL((url) => !url.pathname.endsWith('/login'));
     await navigate(page, '/dashboard');
     await expect(page.locator('.ant-card', { hasText: '在线设备' }).first()).toBeVisible();

@@ -30,6 +30,8 @@ export default {
   'alarms.handle.recover': '标记已恢复',
   'alarms.handle.falsePositive': '误报关闭',
   'alarms.handled': '已处置',
+  'alarms.falsePositiveConfirm': '将 {id} 作为误报关闭？',
+  'alarms.falsePositiveConfirmDesc': '关闭后该告警不再计入未恢复，也不会派生工单；操作会记入操作日志。',
   'alarms.ongoing': '持续中 · {duration}',
   'alarms.activeOnly': '只看未恢复',
   'alarms.ticketLink': '工单 {id}',

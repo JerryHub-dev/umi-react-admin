@@ -1,6 +1,6 @@
 import { DEMO_MODE } from '@/demo/mode';
 import { api, compact } from './client';
-import type { DemoClockState, LogQuery, OperationLog, PageResult, Role, RoleKey } from './types';
+import type { DemoClockState, DemoSnapshot, LogQuery, OperationLog, PageResult, Role, RoleKey } from './types';
 
 export const listRoles = () => api<Role[]>('/api/v1/roles');
 
@@ -21,6 +21,12 @@ export const resetDemoData = () => {
 // ---------------- 演示时钟与固定场景（仅演示模式；写操作需 system.demo.reset 权限） ----------------
 
 export const getDemoClock = () => api<DemoClockState>('/api/v1/demo/clock');
+
+/** 登录页展示的实时聚合数字（免登录；失败时登录页直接不显示该区块，不弹错误） */
+export const getDemoSnapshot = () => {
+  if (!DEMO_MODE) throw new Error('Demo snapshot is disabled in real mode');
+  return api<DemoSnapshot>('/api/v1/demo/snapshot', { method: 'GET', skipErrorHandler: true });
+};
 
 /** 进入/退出固定演示场景：进入 = 冻结演示时钟 + 清空补丁；退出 = 回实时 + 清空补丁 */
 export const switchDemoScenario = (action: 'enter' | 'exit') => {

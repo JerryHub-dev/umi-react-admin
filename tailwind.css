@@ -162,3 +162,15 @@ main.ant-pro-layout-content:has([data-tour='groupnav']) {
 header.ant-layout-header:has(+ header[data-testid='pro-layout-header']) {
   visibility: hidden;
 }
+
+/*
+ * 顶栏一级分组的左右内边距：antd 水平菜单默认 16px，英文八个分组（每项约 90~140px）在 1280~1440 宽
+ * 放不下，末尾分组被折进「···」（配合 en-US 的短组名 Ops / Docs / Errors）。选中下划线同步内缩，与文字等宽。
+ */
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > li.ant-menu-overflow-item {
+  padding-inline: 10px;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > li.ant-menu-overflow-item::after {
+  inset-inline: 10px;
+}

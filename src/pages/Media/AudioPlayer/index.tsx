@@ -34,6 +34,8 @@ export default function AudioPlayer() {
   const [mode, setMode] = useState<SpectrumMode>('waves');
   const [playing, setPlaying] = useState(false);
   const { md } = Grid.useBreakpoint();
+  // 样式名本地化（此前直接显示 xgplayer-music 的内部标识 waves / bars …）
+  const modeOptions = MODES.map((value) => ({ value, label: t(`audio.mode.${value}`) }));
 
   useEffect(() => {
     if (!playerRef.current || !spectrumRef.current || !lyricsRef.current) return undefined;
@@ -96,15 +98,9 @@ export default function AudioPlayer() {
           <Typography.Text type="secondary">{t('audio.mode')}</Typography.Text>
           {/* 六个选项的分段控件约 430px 宽，手机上改用下拉，避免撑出横向滚动 */}
           {md ? (
-            <Segmented<SpectrumMode> size="small" value={mode} onChange={setMode} options={MODES} />
+            <Segmented<SpectrumMode> size="small" value={mode} onChange={setMode} options={modeOptions} />
           ) : (
-            <Select<SpectrumMode>
-              size="small"
-              className="w-32"
-              value={mode}
-              onChange={setMode}
-              options={MODES.map((value) => ({ value, label: value }))}
-            />
+            <Select<SpectrumMode> size="small" className="w-32" value={mode} onChange={setMode} options={modeOptions} />
           )}
         </Space>
       }

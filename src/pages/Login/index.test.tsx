@@ -25,6 +25,8 @@ vi.mock('@umijs/max', () => ({
 }));
 vi.mock('@/hooks/useThemeMode', () => ({ useThemeMode: () => ({ dark: false, toggle: vi.fn() }) }));
 vi.mock('@/services/auth', () => ({ login: vi.fn() }));
+// 登录页快照在 effect 里拉取（SSR 渲染不执行），给一个永不完成的 Promise 即可
+vi.mock('@/services/system', () => ({ getDemoSnapshot: vi.fn(() => new Promise<never>(() => {})) }));
 vi.mock('@/utils/Auth/initialState', () => ({ readTheme: () => 'light' }));
 
 const renderLogin = async (demoMode: boolean, search = '') => {
