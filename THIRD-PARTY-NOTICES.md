@@ -23,7 +23,7 @@ Direct dependencies are predominantly permissive; the full transitive inventory 
 
 | Resource | Source | License |
 | --- | --- | --- |
-| `public/audio/audio.wav`, `public/audio/stereo.wav` | Project-made (sine-synthesized audio) | MIT, with the project |
+| `public/audio/audio.wav`, `public/audio/stereo.wav` | Project-made (synthesized by `scripts/make-demo-audio.mjs`) | MIT, with the project |
 | `public/data/cesium/*.json` (coverage envelopes, field-strength tests, station-coverage polygons), `src/demo/` (demo data generators and name catalogs) | Project-made demo data | MIT, with the project |
 | `public/logo.svg`, `public/favicon.svg`, `public/favicon.ico`, `public/apple-touch-icon.png` | Project-made logo (monitoring-radar mark; the ICO/PNG are deterministically rasterized from the two SVGs by `scripts/make-icons.mjs`) | MIT, with the project |
 | `public/_headers`, `public/_redirects`, `public/api-not-configured.json` | Project-made deployment configuration (Cloudflare Pages response headers and the `/api` rewrite) | MIT, with the project |

@@ -94,6 +94,11 @@ export default {
   'excel.dropHint':
     '需要的列：{fields}（角色可留空，按访客导入）。导入前逐行校验，有误的行不会写入；不确定格式时先下载模板。',
   'excel.samples': '示例文件',
+  'excel.trySample': '没有现成的文件？直接载入示例：',
+  'excel.sampleShort.valid': '全有效',
+  'excel.sampleShort.partial': '部分有效',
+  'excel.sampleShort.invalid': '全部无效',
+  'excel.sampleShort.duplicate': '重复登录名',
   'excel.sample.valid': '全有效（3 行 · 主线导入用）',
   'excel.sample.partial': '部分有效（2 行有效 + 2 行不同错误）',
   'excel.sample.invalid': '全部无效（错误邮箱 / 非法登录名 / 缺必填）',

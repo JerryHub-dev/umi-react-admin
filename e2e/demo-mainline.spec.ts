@@ -264,7 +264,11 @@ for (const round of [1, 2]) {
     await page.getByRole('button', { name: /以管理员体验/ }).click();
     await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 30_000 });
     await avatarMenu(page, '重置演示数据');
+    // 重置后整页刷新且 URL 不变（本来就在 /dashboard）：只等 URL 会立即通过，随后的站内跳转可能
+    // 恰好被刷新吞掉、停回工作台。等刷新真正触发的 load 事件，确定性地穿过它
+    const reloaded = page.waitForEvent('load', { timeout: 30_000 });
     await confirmModal(page);
+    await reloaded;
     await page.waitForURL(/dashboard/, { timeout: 30_000 });
     // 基线恢复：导入的用户消失、主线告警回到未恢复、在线数回到基线
     await navigate(page, '/system/users');

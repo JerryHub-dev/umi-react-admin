@@ -6,6 +6,16 @@ Maintained in the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) forma
 
 ## [Unreleased]
 
+### Demo data review fixes (2026-10-22)
+
+- **Store version 4** (`STORE_VERSION`): generation rules changed, so v3 patches are dropped (Reset restores the baseline)
+- **Audit log**: "Handle alarm" entries only target alarms that were actually handled and are stamped at the handling moment (ticket creation for ticketed alarms, recovery time for recovered / false-positive ones) — about one in ten used to point at alarms that were still unrecovered and untouched (`ALM-LIVE-*`); ticket assign / close entries use the ticket's own creation / completion time
+- **Scenario tickets** use the shared `TICKET_TITLES` templates (e.g. "Verify abnormal signal", "Quarterly routine inspection") instead of their own short titles
+- **Scenario events** sit on calendar slots instead of "now + offset": the ad-hoc review takes the next free 10:00 / 14:00 / 16:30 slot at least 30 minutes ahead (skipping one already taken by a regular review), tomorrow's handover is at 09:30, the multi-day inspection starts at 09:00 — previously minutes drifted with the visit time (11:11, 04:32) and the "handover tomorrow" landed at 19:30
+- **Ticket board**: routine inspections are created slightly more often (≈1.5 per weekday) with 5–8 days of field work, so "In progress" averages ~9 natural tickets (was ~5, sometimes 1); fault-ticket timing — and with it the SLA and response KPIs — is unchanged
+- **Audio**: `scripts/make-demo-audio.mjs` regenerates both clips deterministically as a pentatonic melody with bass and off-beat ticks (stereo) and a swelling arpeggio (mono) — same 16 kHz / 8 s format and size; the waveform now shows note attacks and the spectrum has harmonics instead of a single sine line
+- **Excel**: "Load a sample" links under the drop zone feed the bundled sample files through the same validation pipeline, without downloading and re-uploading
+
 ### UI review fixes (2026-10-22)
 
 - **Build**: the production build failed on `import { default as … } from 'mgrs'` (the ESM entry webpack resolves has only named exports), so the GitHub Pages deploy of the Situation release never shipped; `forward` is resolved through the namespace object like milsymbol. The Cesium lifecycle test mocks `cesium-navigation-es6` (its UMD build requires `'Cesium'`, which Node cannot resolve)

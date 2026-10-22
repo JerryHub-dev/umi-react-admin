@@ -9,13 +9,21 @@
  * v3（2026-10-12 审查整改）：固定演示场景（SCN 记录）、工单验收历史（acceptanceHistory）、
  * 权限点口径扩展（ops.ticket.accept / ops.schedule.update / system.demo.reset）与派生设备状态；
  * v2 补丁里可能引用已不存在的字段结构，整体作废（重置即恢复）。
+ *
+ * v4（2026-10-22 演示数据审查）：「处置告警 / 派单 / 结单」日志只指向真正发生过的处置、时刻取记录本身；
+ * 场景工单标题改用统一模板；场景日程落在整点 / 半点与工作时段；例行巡检单加量、作业期拉长。
  */
 import { generateDataset, type Dataset, type DemoLocale } from './generate';
 
-export const STORE_VERSION = 3;
+export const STORE_VERSION = 4;
 export const STORE_KEY = `umi-react-admin:demo-store:v${STORE_VERSION}`;
 /** 历史版本遗留的存储键（加载时顺手清理） */
-const LEGACY_KEYS = ['umi-react-admin-demo-users', 'umi-react-admin:demo-store:v1', 'umi-react-admin:demo-store:v2'];
+const LEGACY_KEYS = [
+  'umi-react-admin-demo-users',
+  'umi-react-admin:demo-store:v1',
+  'umi-react-admin:demo-store:v2',
+  'umi-react-admin:demo-store:v3',
+];
 
 export type CollectionName = 'users' | 'roles' | 'tickets' | 'alarms' | 'logs' | 'events';
 const COLLECTIONS: CollectionName[] = ['users', 'roles', 'tickets', 'alarms', 'logs', 'events'];

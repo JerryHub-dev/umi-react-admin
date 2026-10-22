@@ -1,5 +1,5 @@
 /**
- * 自写示例歌词（LRC），与项目自制的合成音频（public/audio/stereo.wav，约 8 秒）配套。
+ * 自写示例歌词（LRC），与项目自制的合成音频（public/audio/stereo.wav，8 秒，由 scripts/make-demo-audio.mjs 生成）配套。
  * 每行一个时间标签，用真实换行拼接：xgplayer-music 按行解析，解析结果为空时会抛
  * "Reduce of empty array"（此前歌词 JSON 里是转义后的字面量 \n，整页因此崩溃）。
  * 此前内容为商业歌曲的完整歌词，已按演示媒体自制替换的约定移除。
@@ -11,14 +11,14 @@
 export const demoLyrics = {
   'zh-CN': [
     '[00:00.00]umi-react-admin 音乐播放器演示',
-    '[00:01.50]音频为项目自制的正弦合成音',
+    '[00:01.50]音频为项目脚本合成的五声音阶旋律',
     '[00:03.00]歌词为自写的示例文本',
     '[00:04.50]用于演示频谱可视化与歌词滚动',
     '[00:06.00]替换成你有授权的音频与歌词即可',
   ].join('\n'),
   'en-US': [
     '[00:00.00]umi-react-admin music player demo',
-    '[00:01.50]The audio is a synthesized sine tone',
+    '[00:01.50]The audio is a scripted pentatonic melody',
     '[00:03.00]These lyrics are placeholder text',
     '[00:04.50]Showing the spectrum and scrolling lyrics',
     '[00:06.00]Swap in audio and lyrics you have rights to',

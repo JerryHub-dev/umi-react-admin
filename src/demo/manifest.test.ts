@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEMO_ACCOUNTS, SCENARIO_IDS, SCENARIO_MANIFEST } from './scenarios';
+import { STORE_KEY, STORE_VERSION } from './store';
 
 /**
  * 机器可读场景清单（docs/demo/demo-scenarios.json）的生成与一致性校验。
@@ -10,8 +11,9 @@ import { DEMO_ACCOUNTS, SCENARIO_IDS, SCENARIO_MANIFEST } from './scenarios';
 const MANIFEST_PATH = new URL('../../docs/demo/demo-scenarios.json', import.meta.url);
 
 const buildManifest = () => ({
-  version: 3,
-  storeKey: 'umi-react-admin:demo-store:v3',
+  // 与存储版本同源：升 STORE_VERSION 时清单随之变化，提醒重新生成
+  version: STORE_VERSION,
+  storeKey: STORE_KEY,
   generatedBy: 'src/demo/scenarios.ts（src/demo/manifest.test.ts 生成）',
   accounts: DEMO_ACCOUNTS.map((username) => ({
     username,

@@ -24,6 +24,21 @@ test('Excel 大文件拒绝后仍可导出模板并通过实际 worker 回导', 
   expect(await health.csp()).toEqual([]);
 });
 
+test('Excel 一键载入示例：不下载文件，直接进入同一条逐行校验预览', async ({ page, health }) => {
+  await signIn(page);
+  await navigate(page, '/document/excel');
+  await page.getByRole('button', { name: '部分有效' }).click();
+  await expect(page.locator('.ant-alert')).toContainText('共 4 行：2 行有效，2 行有误');
+  await expect(page.locator('.ant-table-row')).toHaveCount(4);
+  await page.getByRole('button', { name: /重新选择文件/ }).click();
+  await page.getByRole('button', { name: '全有效' }).click();
+  await expect(page.locator('.ant-alert')).toContainText('共 3 行：3 行有效，0 行有误');
+  await expect(page.getByRole('button', { name: /导入 3 条有效数据/ })).toBeEnabled();
+  expect(health.pageErrors).toEqual([]);
+  expect(health.consoleErrors).toEqual([]);
+  expect(await health.csp()).toEqual([]);
+});
+
 test('PDF 拒绝过大文件，并可恢复及重新打开正常生成的两页报告', async ({ page, health }) => {
   await signIn(page);
   await navigate(page, '/document/pdf');

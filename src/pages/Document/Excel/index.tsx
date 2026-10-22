@@ -53,6 +53,8 @@ const SAMPLE_FILES = [
   { file: 'users-duplicate.xlsx', key: 'duplicate' },
 ] as const;
 
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 export default function Excel() {
   const intl = useIntl();
   // useCallback 包一层：sampleMenu 的 useMemo 依赖它，行内函数每次渲染都是新引用会让 memo 失效
@@ -145,6 +147,22 @@ export default function Excel() {
       if (importController.current === controller) finish();
     }
     return false; // 阻止 Upload 默认上传行为
+  };
+
+  /**
+   * 直接载入随项目附带的示例文件，走与拖入文件完全相同的校验管线（大小检查 → 解析 → 逐行校验）。
+   * 此前要先从「示例文件」下载、再拖回导入区，初次体验的访客看到的只是一个空上传框
+   */
+  const handleSample = async (file: string) => {
+    if (busyRef.current) return;
+    try {
+      const response = await fetch(`${PUBLIC_PATH}demo/${file}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      await handleImport(new File([blob], file, { type: XLSX_MIME }));
+    } catch {
+      if (mounted.current) message.error(t('excel.parseFailed'));
+    }
   };
 
   const valid = rows?.filter((row) => row.input) ?? [];
@@ -266,6 +284,22 @@ export default function Excel() {
                 {t('excel.dropHint', { fields: FIELDS.map((field) => t(`users.column.${field}`)).join(' / ') })}
               </p>
             </Upload.Dragger>
+            {/* 放在拖拽区外：放进去点击会同时打开系统文件选择框 */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-1 gap-y-2">
+              <Typography.Text type="secondary">{t('excel.trySample')}</Typography.Text>
+              {SAMPLE_FILES.map(({ file, key }) => (
+                <Button
+                  key={key}
+                  type="link"
+                  size="small"
+                  disabled={!!busy}
+                  onClick={() => void handleSample(file)}
+                  data-tour={key === 'valid' ? 'excel-try-sample' : undefined}
+                >
+                  {t(`excel.sampleShort.${key}`)}
+                </Button>
+              ))}
+            </div>
           </Spin>
         </Card>
       ) : (

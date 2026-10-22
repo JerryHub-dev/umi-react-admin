@@ -443,15 +443,17 @@ const generateAlarmsAndTickets = (locale: DemoLocale, now: Date, devices: Device
       alarms.push(alarm);
     });
 
-    // 例行巡检工单：工作日新建 0~2 张，排期在 3~12 天后、现场作业 3~6 天（多站点连续巡检）（看板「待处理」「处理中」的主要来源）
+    // 例行巡检工单：工作日新建 0~2 张（均约 1.5），排期在 2~10 天后、现场作业约 5~8 天（多站点连续巡检）
+    // ——看板「待处理」「处理中」的主要来源。此前按 1.2 张 / 4 天作业生成，「处理中」平均只有 5 张、
+    // 某些时刻只剩 1 张，拖拽演示显得空。只动巡检单：故障单的时长决定时限达成率与平均响应，保持不变
     const maintRng = createRng(`${SEED}:maintenance:${key}`);
-    const maintCount = weekend ? 0 : Number(maintRng.bool(0.8)) + Number(maintRng.bool(0.4));
+    const maintCount = weekend ? 0 : Number(maintRng.bool(0.9)) + Number(maintRng.bool(0.6));
     for (let m = 1; m <= maintCount; m++) {
       const device = maintRng.pick(devices);
       const createdAt = day.getTime() + (9 * 60 + maintRng.int(0, 480)) * MINUTE;
       const respondedAt =
-        startOfDay(addDays(day, maintRng.int(3, 12))).getTime() + (9 * 60 + maintRng.int(0, 60)) * MINUTE;
-      const resolvedAt = respondedAt + maintRng.logNormal(4 * 24 * 60, 0.35) * MINUTE;
+        startOfDay(addDays(day, maintRng.int(2, 10))).getTime() + (9 * 60 + maintRng.int(0, 60)) * MINUTE;
+      const resolvedAt = respondedAt + maintRng.logNormal(6.5 * 24 * 60, 0.2) * MINUTE;
       if (createdAt <= nowMs) {
         makeTicket(
           maintRng,
@@ -529,6 +531,20 @@ const generateLogs = (locale: DemoLocale, now: Date, users: User[], alarms: Alar
   const logs: OperationLog[] = [];
   // 同一条告警 / 工单的同一种操作只记一次（此前随机抽取会出现「同一人两次派发同一张工单」）
   const handled = new Set<string>();
+  // 告警的处置时刻：转工单 = 工单创建时刻，恢复 / 误报 = 恢复时刻；仍未处置（active）的没有处置时刻。
+  // 此前「处置告警」从当天发生过的告警里任挑，约一成日志指向至今未恢复、也没转单的告警
+  const ticketCreatedAt = new Map(tickets.map((t) => [t.id, t.createdAt]));
+  const alarmHandledAt = new Map(
+    alarms.flatMap((a): [string, string][] => {
+      const at =
+        a.status === 'ticketed'
+          ? ticketCreatedAt.get(a.ticketId ?? '')
+          : a.status === 'active'
+            ? undefined
+            : a.recoveredAt;
+      return at ? [[a.id, at]] : [];
+    }),
+  );
 
   for (let k = LOG_WINDOW_DAYS - 1; k >= 0; k--) {
     const day = addDays(today, -k);
@@ -548,13 +564,16 @@ const generateLogs = (locale: DemoLocale, now: Date, users: User[], alarms: Alar
       const failed = action === 'login' && rng.bool(0.04);
       const ip = pickIp(rng);
       const userAgent = rng.pick(USER_AGENTS);
-      // 操作对象只从「操作发生前已存在」的记录里挑，工单类操作由工单处理人执行
+      // 操作对象只从「操作发生前已存在」的记录里挑，工单类操作由工单处理人执行。
+      // 处置 / 派单 / 结单的日志时刻取记录本身的时刻（处置时刻、工单创建、工单完成），与明细逐条对得上
       let actor: User = rng.pick(active);
       let target = '';
+      let recordAt: string | undefined;
       if (action === 'alarmHandle') {
-        const candidates = alarms.filter((a) => within(a.occurredAt, at));
+        const candidates = alarms.filter((a) => within(alarmHandledAt.get(a.id), at));
         const alarm = candidates[Math.floor(roll * candidates.length)];
         target = alarm?.id ?? '';
+        recordAt = alarm && alarmHandledAt.get(alarm.id);
         actor = rng.pick(opsPeople);
       } else if (action === 'ticketAssign' || action === 'ticketClose') {
         const candidates = tickets.filter((t) =>
@@ -562,6 +581,7 @@ const generateLogs = (locale: DemoLocale, now: Date, users: User[], alarms: Alar
         );
         const ticket = candidates[Math.floor(roll * candidates.length)];
         target = ticket?.id ?? '';
+        recordAt = action === 'ticketAssign' ? ticket?.createdAt : ticket?.resolvedAt;
         // 派单由值班长操作，结单由处理人本人操作
         actor =
           action === 'ticketAssign' && leads.length
@@ -576,7 +596,7 @@ const generateLogs = (locale: DemoLocale, now: Date, users: User[], alarms: Alar
         target = users[Math.floor(roll * users.length)].name;
         actor = rng.pick(admins);
       }
-      return { action, actor, target, failed, at, ip, userAgent };
+      return { action, actor, target, failed, at: recordAt ? new Date(recordAt).getTime() : at, ip, userAgent };
     })
       .filter((d) => {
         if (d.at > nowMs) return false;

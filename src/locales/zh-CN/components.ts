@@ -65,7 +65,7 @@ export default {
     '演示视频运行时从 xgplayer 的 CDN 加载，当前网络无法访问（离线、网络受限或被拦截）。检查网络后重试。',
   'video.source': '视频来源：xgplayer 官方演示素材（运行时从其 CDN 加载，不随仓库分发）；封面为项目自制。',
   'audio.title': '合成示例音',
-  'audio.source': '来源：项目自制（正弦合成） · 许可：随项目 MIT',
+  'audio.source': '来源：项目自制（脚本合成旋律） · 许可：随项目 MIT',
   'audio.mode': '频谱样式',
   'audio.mode.waves': '波浪',
   'audio.mode.bars': '柱状',

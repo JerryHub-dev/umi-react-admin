@@ -67,7 +67,7 @@ export default {
   'video.source':
     'Video: xgplayer official demo footage (loaded from their CDN at runtime, not distributed with the repo). The poster is made for this project.',
   'audio.title': 'Synthesized sample',
-  'audio.source': 'Source: synthesized for this project (sine waves) · License: MIT, with the project',
+  'audio.source': 'Source: synthesized for this project (scripted melody) · License: MIT, with the project',
   'audio.mode.waves': 'Waves',
   'audio.mode.bars': 'Bars',
   'audio.mode.lightning': 'Lightning',

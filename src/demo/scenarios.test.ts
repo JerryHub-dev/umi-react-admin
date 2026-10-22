@@ -156,7 +156,7 @@ describe('场景时序与互斥（D02/D03）', () => {
     });
   });
 
-  it('日程覆盖今天稍后/明天/全天/跨天/跨月', () => {
+  it('日程覆盖下一场评审/明早/全天/跨天/跨月', () => {
     const event = (id: string) => data.events.find((e) => e.id === id)!;
     expect(t(event(IDS.eventToday).start)).toBeGreaterThan(NOW.getTime());
     expect(t(event(IDS.eventTomorrow).start)).toBeGreaterThan(NOW.getTime());
@@ -166,5 +166,39 @@ describe('场景时序与互斥（D02/D03）', () => {
     );
     const cross = event(IDS.eventCrossMonth);
     expect(new Date(cross.end!).getMonth()).toBeGreaterThan(new Date(cross.start).getMonth() % 12);
+  });
+
+  it.each([
+    new Date(2026, 9, 12, 3, 41), // 凌晨访问
+    new Date(2026, 9, 12, 11, 7),
+    new Date(2026, 9, 12, 16, 50), // 当天评审时段已过
+    new Date(2026, 9, 15, 23, 45),
+    new Date(2026, 9, 22, 11, 0), // 隔周周四：14:00 已有常规故障复盘评审，顺延到 16:30
+  ])('场景日程落在整点 / 半点与工作时段，不随访问时刻漂移（%s）', (now) => {
+    const sample = generateDataset({ now });
+    const event = (id: string) => sample.events.find((e) => e.id === id)!;
+    const clock = (value: string) => {
+      const date = new Date(value);
+      return [date.getHours(), date.getMinutes()];
+    };
+    const review = event(IDS.eventToday);
+    expect(t(review.start)).toBeGreaterThanOrEqual(now.getTime() + 30 * 60_000);
+    expect(sample.events.filter((e) => e.id !== review.id && e.start === review.start)).toEqual([]);
+    expect([
+      [10, 0],
+      [14, 0],
+      [16, 30],
+    ]).toContainEqual(clock(review.start));
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 30);
+    expect(t(event(IDS.eventTomorrow).start)).toBe(tomorrow.getTime());
+    expect(clock(event(IDS.eventMultiDay).start)).toEqual([9, 0]);
+  });
+
+  it('场景工单标题与自然工单同一套模板（设备名 · 处置标题）', () => {
+    const scenario = data.tickets.filter((x) => x.id.startsWith('WO-SCN-'));
+    const natural = new Set(
+      data.tickets.filter((x) => !x.id.startsWith('WO-SCN-')).map((x) => x.title.split(' · ').pop()),
+    );
+    scenario.forEach((x) => expect(natural).toContain(x.title.split(' · ').pop()));
   });
 });

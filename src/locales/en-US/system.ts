@@ -99,6 +99,11 @@ export default {
   'excel.dropHint':
     'Columns: {fields} (Role may be blank and imports as Viewer). Every row is validated first and invalid rows are skipped. Not sure about the format? Download the template.',
   'excel.samples': 'Sample files',
+  'excel.trySample': 'No file at hand? Load a sample:',
+  'excel.sampleShort.valid': 'All valid',
+  'excel.sampleShort.partial': 'Partially valid',
+  'excel.sampleShort.invalid': 'All invalid',
+  'excel.sampleShort.duplicate': 'Duplicate logins',
   'excel.sample.valid': 'All valid (3 rows · for the mainline import)',
   'excel.sample.partial': 'Partially valid (2 valid + 2 different errors)',
   'excel.sample.invalid': 'All invalid (bad email / illegal login / missing fields)',

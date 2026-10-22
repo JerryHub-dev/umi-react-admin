@@ -41,7 +41,7 @@ export default function AudioPlayer() {
     if (!playerRef.current || !spectrumRef.current || !lyricsRef.current) return undefined;
     const player = new Player({
       el: playerRef.current,
-      // 项目自制的正弦合成音频（此前热链第三方 CDN 上的商业歌曲，已按演示媒体自制替换的约定移除）
+      // 项目自制的合成旋律（scripts/make-demo-audio.mjs；此前热链第三方 CDN 上的商业歌曲，已按演示媒体自制替换的约定移除）
       url: `${PUBLIC_PATH}audio/stereo.wav`,
       volume: 0.8,
       width: '100%',
