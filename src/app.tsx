@@ -8,6 +8,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import GroupNav from '@/components/GroupNav';
 import GuideTour from '@/components/GuideTour';
 import PageTransition from '@/components/PageTransition';
+import { syncColorScheme } from '@/hooks/useThemeMode';
 import RightContent from '@/layouts/RightContent';
 import Forbidden from '@/pages/Exception/403';
 import { a11yThemeTokens } from '@/styles/themeTokens';
@@ -43,6 +44,7 @@ export const request: RequestConfig = requestConfig;
  */
 export function render(oldRender: () => void) {
   document.documentElement.lang = getLocale();
+  syncColorScheme(readTheme());
   oldRender();
 }
 

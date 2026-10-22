@@ -286,6 +286,9 @@ export default function Calendar() {
                     listWeek: { titleFormat: { month: 'short', day: 'numeric' } },
                   }}
                   initialView={compact ? 'listWeek' : 'dayGridMonth'}
+                  // 统一 24 小时制 HH:mm（与全站时间格式一致）：默认格式整点省分钟，
+                  // 同一格里中文混排「9:30」与「10时」，英文是「9:30a」「12a」
+                  eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
                   height="auto"
                   editable
                   selectable

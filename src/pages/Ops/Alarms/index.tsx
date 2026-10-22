@@ -12,7 +12,7 @@ import { nowMs } from '@/utils/now';
 import { DownOutlined } from '@ant-design/icons';
 import { ProTable, type ActionType, type ProColumns, type ProFormInstance } from '@ant-design/pro-components';
 import { Link, useAccess, useIntl, useLocation } from '@umijs/max';
-import { App, Button, Dropdown, Switch, Tag, Tooltip, Typography } from 'antd';
+import { App, Badge, Button, Dropdown, Switch, Tooltip, Typography } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const ACTIONS: AlarmHandleAction[] = ['ticket', 'recover', 'falsePositive'];
@@ -145,10 +145,10 @@ export default function Alarms() {
       render: (dom, alarm) =>
         alarm.ticketId ? (
           <div>
-            {/* 已随工单恢复的转单告警按恢复语义展示，未恢复的仍算「未恢复」池的一部分（F08） */}
-            {/* 「Success」不是 antd 的状态色 key（大小写不匹配会走自定义色分支，暗色主题下渲染成近白底白字）：改用小写状态色 */}
+            {/* 已随工单恢复的转单告警按恢复语义展示，未恢复的仍算「未恢复」池的一部分（F08）。
+                与同列 valueEnum 渲染的「已恢复」同一形态（状态点 + 文字），不再一列里混用点与标签两种样式 */}
             {alarmRecovered(alarm) && alarm.status === 'ticketed' ? (
-              <Tag color="success">{enums.label('alarmStatus', 'recovered')}</Tag>
+              <Badge status="success" text={enums.label('alarmStatus', 'recovered')} />
             ) : (
               dom
             )}

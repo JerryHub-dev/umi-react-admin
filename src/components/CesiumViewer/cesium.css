@@ -86,8 +86,24 @@
   left: 12px;
   bottom: 108px;
   max-width: 300px;
+}
+
+/* 有图例时左列延伸到底：图例压在列尾（与原左下角同位），面板区在其上方收缩滚动，两者不再重叠 */
+.scene-corner-l:has(> .scene-corner-legend) {
+  bottom: 12px;
+}
+
+.scene-corner-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
   overflow: auto;
   scrollbar-width: thin;
+}
+
+.scene-corner-legend {
+  margin-top: auto;
 }
 
 .scene-corner-r {
@@ -98,11 +114,6 @@
   overflow: auto;
   scrollbar-width: thin;
   align-items: flex-end;
-}
-
-.scene-corner-bl {
-  bottom: 12px;
-  left: 12px;
 }
 
 .scene-title {
@@ -225,11 +236,13 @@
   border-color: var(--scene-accent, #36cfc9);
 }
 
-/* cesium-navigation 罗盘融入玻璃体系（默认在左下，避开 LegendSlot 时由页面自调） */
+/* 署名区（ion 条款要求可见）挪到右下、HUD 之上，让出左下的图例位。
+   Viewer 在每次 resize 时把 left/right/bottom 写成内联样式（无时间轴/动画控件时为 5px/29px/3px），
+   不加 !important 这几条不生效，ion 标志会被左下图例盖住 */
 .cesium-stage .cesium-viewer-bottom {
-  right: 8px;
-  bottom: 44px;
-  left: auto;
+  right: 8px !important;
+  bottom: 44px !important;
+  left: auto !important;
   color: var(--scene-dim);
 }
 

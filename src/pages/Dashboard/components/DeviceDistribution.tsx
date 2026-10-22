@@ -1,3 +1,4 @@
+import { REGION_KEYS } from '@/constants/enums';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import type { DashboardOverview } from '@/services/types';
 import { Sunburst } from '@ant-design/plots';
@@ -30,7 +31,13 @@ export default function DeviceDistribution({
       theme={chart.g2Theme}
       innerRadius={0.2}
       legend={false}
-      scale={{ color: { range: chart.categories } }}
+      // 与设备健康散点图同一大区配色（固定顺序；默认按扇区大小排序分配，同一大区两图颜色不同）
+      scale={{
+        color: {
+          domain: REGION_KEYS.map((region) => intl.formatMessage({ id: `region.${region}` })),
+          range: chart.categories,
+        },
+      }}
       label={{ text: 'name', transform: [{ type: 'overflowHide' }], fill: '#fff', fontSize: 11 }}
       interaction={{
         drillDown: {

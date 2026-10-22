@@ -1,3 +1,4 @@
+import { REGION_KEYS } from '@/constants/enums';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import type { DashboardOverview } from '@/services/types';
 import { Scatter } from '@ant-design/plots';
@@ -7,7 +8,8 @@ import { useIntl } from '@umijs/max';
 export default function DeviceHealth({ data, height }: { data: DashboardOverview['deviceHealth']; height: number }) {
   const intl = useIntl();
   const chart = useChartTheme();
-  const rows = data.map((row) => ({ ...row, regionLabel: intl.formatMessage({ id: `region.${row.region}` }) }));
+  const regionLabel = (region: string) => intl.formatMessage({ id: `region.${region}` });
+  const rows = data.map((row) => ({ ...row, regionLabel: regionLabel(row.region) }));
 
   return (
     <Scatter
@@ -19,7 +21,13 @@ export default function DeviceHealth({ data, height }: { data: DashboardOverview
       sizeField={4}
       height={height}
       theme={chart.g2Theme}
-      scale={{ color: { range: chart.categories }, x: { nice: true }, size: { range: [4, 4] } }}
+      // 颜色按大区固定顺序取（与旁边的设备分布旭日图同一映射）；不给 domain 时按数据出现顺序分配，
+      // 两张图里同一大区颜色不同
+      scale={{
+        color: { domain: REGION_KEYS.map(regionLabel), range: chart.categories },
+        x: { nice: true },
+        size: { range: [4, 4] },
+      }}
       style={{ fillOpacity: 0.75, lineWidth: 0 }}
       axis={{
         x: { title: intl.formatMessage({ id: 'dashboard.health.x' }), titleFill: chart.textSecondary },
