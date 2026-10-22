@@ -4,15 +4,18 @@ import { Alert, Button, Result, Spin, Tooltip, theme } from 'antd';
 import * as Cesium from 'cesium';
 import CesiumNavigation from 'cesium-navigation-es6';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import { default as mgrsDefault, forward as mgrsForwardEsm } from 'mgrs';
+import * as mgrsModule from 'mgrs';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import './cesium.css';
 import { observeTileFailures } from './tileFailures';
 
-/* mgrs 互操作加固：ESM 入口是命名导出，UMD 构建挂在 default 上（与 milsymbol 同类坑） */
+/* mgrs 互操作加固：ESM 入口是命名导出，UMD 构建挂在 default 上（与 milsymbol 同类坑，解法同 symbols.ts）。
+   不能写 `import { default as … } from 'mgrs'`：webpack 取的 ESM 入口没有 default 导出，生产构建直接报错 */
 const mgrsForward = (position: [number, number], precision: number): string => {
-  const fn = mgrsForwardEsm ?? (mgrsDefault as unknown as { forward?: typeof mgrsForwardEsm })?.forward;
-  return fn ? fn(position, precision) : '';
+  const ns = mgrsModule as unknown as Record<string, unknown>;
+  const fn = (ns.forward ?? (ns.default as Record<string, unknown> | undefined)?.forward) as
+    typeof mgrsModule.forward | undefined;
+  return typeof fn === 'function' ? fn(position, precision) : '';
 };
 
 /** 演示页通用的 Viewer 控件配置：关闭原生动画/时间轴/信息框等（自绘 TimeDeck），保留 2D/3D 切换。
