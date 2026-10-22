@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "storeKey": "umi-react-admin:demo-store:v3",
+  "version": 4,
+  "storeKey": "umi-react-admin:demo-store:v4",
   "generatedBy": "src/demo/scenarios.ts（src/demo/manifest.test.ts 生成）",
   "accounts": [
     {
@@ -191,7 +191,7 @@
         "EV-SCN-MULTIDAY",
         "EV-SCN-CROSSMONTH"
       ],
-      "initialState": "今天稍后 / 明天 / 明天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）",
+      "initialState": "下一场临时评审（最近的工作时段）/ 明早值班交接 / 后天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）",
       "demonstrates": "新建/编辑/改期/详情/空态/未来列表"
     },
     {

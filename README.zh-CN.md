@@ -10,7 +10,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE) [![Deploy](https://github.com/Jerry-CodeHub/umi-react-admin/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/Jerry-CodeHub/umi-react-admin/actions/workflows/deploy.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.zh-CN.md)
 
-`umi-react-admin` 是基于 **Umi Max 4 + React 19 + Ant Design 6 + ProComponents** 的开源后台模板。和多数模板不同，它的演示内容讲的是**同一个故事**：一个虚构的「物联网监测运营平台」——240 台监测站、近 90 天告警、由告警派生的工单、86 名运维人员、角色权限与操作审计，工作台上的每个数字都由这些明细实时聚合，经得起推敲。
+`umi-react-admin` 是基于 **Umi Max 4 + React 19 + Ant Design 6 + ProComponents** 的开源后台模板。和多数模板不同，它的演示内容讲的是**同一个故事**：一个虚构的「物联网监测运营平台」——243 台监测站、近 90 天告警、由告警派生的工单、86 名运维人员、角色权限与操作审计，工作台上的每个数字都由这些明细实时聚合，经得起推敲。
 
 **[在线演示](https://jerry-codehub.github.io/umi-react-admin/)** —— 登录页提供五种角色的一键体验（`admin` 管理员 / `lead` 值班长 / `operator` 运维工程师 / `analyst` 数据分析员 / `guest` 访客），共用同一份演示数据，可直接对比菜单、按钮与接口层的权限差异（见 `docs/demo/role-matrix.md`）。
 
@@ -19,7 +19,7 @@
 | 工作台 | KPI（在线设备、今日告警、工单时限达成率、平均响应）、告警趋势、类型占比、各大区在线率、处置流向、设备健康、设备分布、最新动态 |
 | 系统管理 | 用户管理（筛选 / 排序 / 批量 / 详情抽屉）、角色权限（权限点树）、操作日志、权限演示（路由级 / 按钮级 / 数据级） |
 | 设备运维 | 设备台账、告警中心（转工单 / 恢复 / 误报关闭）、工单看板（拖拽流转，支持键盘）、频谱占用（D3） |
-| 地图 | 高德、OpenLayers（同一批站点）；Cesium 六个场景：GeoHash 网格、方位测距、场强热力图、路线与覆盖、框选与测距、海空态势 |
+| 地图 | 高德、OpenLayers（同一批站点）；Cesium 六个场景：GeoHash 网格、方位测距、场强热力图、路线与覆盖、框选与测距、海空目标 |
 | 组件 | 日程（FullCalendar）、富文本（自托管 TinyMCE，预置按数据生成的周报）、电子签名（工单验收）、页面截图（html2canvas） |
 | 多媒体 / 文档 | 视频、音乐播放器、波形；浏览器内按数据生成的月报 PDF、Excel 导入导出（逐行校验） |
 

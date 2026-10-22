@@ -112,6 +112,7 @@ config/
 - **pdf.js 6 用到的 ES2026 方法由 PDF 页自己补**（`Pdf/pdfjsPolyfills.mjs`，只补缺失）：主线程在 react-pdf 之前 import；worker 是独立全局，经 `pdfWorkerSrc.ts` 的 blob 入口先 import 该文件的产物 URL。所以它必须是无 import 的纯 ESM，且不能经 babel（`config/urlAssets.ts`，两份 config 的 chainWebpack 都要调用）。不要换 pdfjs-dist 的 legacy 构建：它内置的 core-js 会强制替换原生 `Promise.try` 等。升级 pdfjs-dist 后用较旧的 Chromium（如沙箱的 /opt/pw-browsers）跑 PDF e2e，看是否又用上了新的内建方法
 - **public 资源路径一律经 `PUBLIC_PATH` 拼接**：GitHub Pages 部署在 `/umi-react-admin/` 子路径
 - **业务数据只由 `src/demo/generate.ts` 以固定种子生成**，不要在页面里写死示例数据，也不要引入来源不明的第三方数据
+- **全局加载占位只认 `src/loading.tsx`**（umi 约定）：放在 `src/pages/loading.tsx` 不会生效，分包加载期间整屏空白
 - **pages 下不要有名为 `model.ts(x)` 的文件**：umi model 插件会把它当数据模型加载（macOS 大小写不敏感时 `Model.tsx` 同样中招，dev 编译失败）
 - **登录后跳转要等登录态提交**：在 `setInitialState` 之后立即 `history.push` 会被路由守卫弹回登录页（登录页用 effect 监听 `initialState.name` 再跳）
 - **html2canvas 1.x 解析不了 `oklch()`**：Tailwind 4 调色板是 oklch，被截图区域不要用 Tailwind 颜色工具类或任意 `[#hex]` 颜色类（后者体积门禁也识别不了），改用 style 或 antd token

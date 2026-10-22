@@ -104,7 +104,8 @@ export default function KpiCards({ kpi, loading }: { kpi?: DashboardOverview['kp
           height={44}
           shapeField="smooth"
           theme={chart.g2Theme}
-          style={{ fill: chart.color('blue'), fillOpacity: 0.25, stroke: chart.color('blue') }}
+          // 暗色卡片底上 25% 的蓝几乎看不见，提到 45%
+          style={{ fill: chart.color('blue'), fillOpacity: chart.dark ? 0.45 : 0.25, stroke: chart.color('blue') }}
           tooltip={false}
         />
       ),

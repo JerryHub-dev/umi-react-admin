@@ -1,4 +1,4 @@
-import type { AlarmLevel, DeviceStatus, TicketPriority, TicketStatus, UserStatus } from '@/services/types';
+import type { AlarmLevel, AlarmType, DeviceStatus, TicketPriority, TicketStatus, UserStatus } from '@/services/types';
 
 /**
  * 全站语义色：同一个含义在表格 Tag、图表、地图点位、日历上用同一种颜色。
@@ -9,6 +9,19 @@ export const LEVEL_COLOR: Record<AlarmLevel, PresetColor> = {
   major: 'orange',
   minor: 'gold',
   info: 'blue',
+};
+
+/**
+ * 告警类型：固定映射（此前按数量排名从分类色板取色，同一类型会随数据换色）。
+ * 「设备离线」与设备离线状态同为灰；不用绿色——全站绿色表示正常 / 在线 / 已恢复
+ */
+export const ALARM_TYPE_COLOR: Record<AlarmType, PresetColor> = {
+  signal: 'blue',
+  link: 'cyan',
+  interference: 'purple',
+  offline: 'grey',
+  power: 'gold',
+  temperature: 'volcano',
 };
 
 export const DEVICE_STATUS_COLOR: Record<DeviceStatus, PresetColor> = {
@@ -38,7 +51,7 @@ export const USER_STATUS_BADGE: Record<UserStatus, 'success' | 'default' | 'erro
   locked: 'error',
 };
 
-/** 分类色板（大区、类型等无序类别）：6 色以内，顺序固定 */
+/** 分类色板（大区等无序类别，7 个大区各占一色）：顺序固定 */
 export const CATEGORY_COLORS: PresetColor[] = ['blue', 'cyan', 'purple', 'gold', 'magenta', 'green', 'volcano'];
 
 export type PresetColor =

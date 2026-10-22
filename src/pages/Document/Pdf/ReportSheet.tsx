@@ -3,7 +3,7 @@ import AlarmTrend from '@/pages/Dashboard/components/AlarmTrend';
 import AlarmTypes from '@/pages/Dashboard/components/AlarmTypes';
 import RegionOnline from '@/pages/Dashboard/components/RegionOnline';
 import type { DashboardOverview } from '@/services/types';
-import { formatDateTime, formatPercent } from '@/utils/format';
+import { formatDateTime, formatNumber, formatPercent } from '@/utils/format';
 import { useIntl } from '@umijs/max';
 import { ConfigProvider, Table, theme } from 'antd';
 import { forwardRef, type ReactNode } from 'react';
@@ -52,6 +52,8 @@ const ReportSheet = forwardRef<HTMLDivElement, { overview: DashboardOverview }>(
   const now = new Date(overview.generatedAt);
   const { kpi } = overview;
   const topDevices = [...overview.deviceHealth].sort((a, b) => b.alarms30d - a.alarms30d).slice(0, 8);
+  // 月报口径：统计周期内（近 30 天）的告警总数，与第 1 页告警类型环图中心的总数同源。此前放的是工作台的「今日告警」
+  const alarms30d = overview.alarmTypes.reduce((sum, row) => sum + row.count, 0);
 
   return (
     <ConfigProvider theme={{ algorithm: theme.defaultAlgorithm }}>
@@ -70,7 +72,7 @@ const ReportSheet = forwardRef<HTMLDivElement, { overview: DashboardOverview }>(
             <div className="mt-8 grid grid-cols-4 gap-3">
               {[
                 [t('dashboard.kpi.devices'), `${kpi.devicesOnline} / ${kpi.devicesTotal}`],
-                [t('dashboard.kpi.alarmsToday'), String(kpi.alarmsToday)],
+                [t('pdf.report.alarms30d'), formatNumber(alarms30d, intl.locale)],
                 [t('dashboard.kpi.sla'), formatPercent(kpi.slaRate, intl.locale)],
                 [t('dashboard.kpi.response'), `${kpi.avgResponseMinutes} ${t('dashboard.kpi.minutes')}`],
               ].map(([label, value]) => (

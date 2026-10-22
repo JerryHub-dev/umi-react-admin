@@ -1,5 +1,5 @@
 import DemoPage from '@/components/DemoPage';
-import { ALARM_LEVEL_KEYS } from '@/constants/enums';
+import SemanticTag from '@/components/SemanticTag';
 import { LEVEL_COLOR } from '@/constants/semantic';
 import { useApi } from '@/hooks/useApi';
 import { useChartTheme } from '@/hooks/useChartTheme';
@@ -7,7 +7,6 @@ import { getDevice, listAlarms, listAllDevices } from '@/services/ops';
 import type { Device } from '@/services/types';
 import { formatDateTime } from '@/utils/format';
 import { CameraOutlined, DownloadOutlined } from '@ant-design/icons';
-import { Tiny } from '@ant-design/plots';
 import { useIntl } from '@umijs/max';
 import { App, Button, Card, Descriptions, Image, Modal, Select, Skeleton, Space, Tag, Typography } from 'antd';
 import html2canvas from 'html2canvas';
@@ -147,29 +146,31 @@ export default function Screenshot() {
                     <Descriptions.Item label={t('screenshot.uptime')}>{data.device.uptime30d}%</Descriptions.Item>
                     <Descriptions.Item label={t('screenshot.signal')}>{data.device.signalDbm} dBm</Descriptions.Item>
                   </Descriptions>
-                  <Typography.Text type="secondary" className="mt-4 block text-xs">
+                  <Typography.Text type="secondary" className="mt-4 mb-2 block text-xs">
                     {t('screenshot.recentAlarms')}
                   </Typography.Text>
-                  <Tiny.Column
-                    data={[...recent].reverse().map((alarm, index) => ({
-                      index,
-                      value: { critical: 4, major: 3, minor: 2, info: 1 }[alarm.level],
-                      level: alarm.level,
-                    }))}
-                    xField="index"
-                    yField="value"
-                    colorField="level"
-                    height={60}
-                    autoFit
-                    theme={chart.g2Theme}
-                    scale={{
-                      color: {
-                        domain: ALARM_LEVEL_KEYS,
-                        range: ALARM_LEVEL_KEYS.map(chart.levelColor),
-                      },
-                    }}
-                    tooltip={false}
-                  />
+                  {/* 逐条列出（级别标签 + 类型 + 时间 · 状态）：此前是「柱高 = 级别」的迷你柱图，
+                      设备只有一条告警时画成一整块红色矩形，也读不出是哪种告警 */}
+                  {recent.length ? (
+                    <div className="flex flex-col gap-1.5">
+                      {recent.slice(0, 5).map((alarm) => (
+                        <div key={alarm.id} className="flex items-center gap-2 text-xs">
+                          <SemanticTag tone={LEVEL_COLOR[alarm.level]} className="m-0">
+                            {intl.formatMessage({ id: `alarmLevel.${alarm.level}` })}
+                          </SemanticTag>
+                          <span>{intl.formatMessage({ id: `alarmType.${alarm.type}` })}</span>
+                          <Typography.Text type="secondary" className="ml-auto text-xs tabular-nums">
+                            {formatDateTime(alarm.occurredAt, 'MM-DD HH:mm')} ·{' '}
+                            {intl.formatMessage({ id: `alarmStatus.${alarm.status}` })}
+                          </Typography.Text>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Typography.Text type="secondary" className="text-xs">
+                      {t('devices.noAlarms')}
+                    </Typography.Text>
+                  )}
                 </>
               )}
             </Skeleton>

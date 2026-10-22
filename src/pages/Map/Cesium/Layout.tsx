@@ -89,9 +89,10 @@ export default function CesiumLayout() {
           />
         </div>
       </div>
-      <div style={{ paddingInline: 40, paddingBlock: 16 }}>
-        <Outlet />
-      </div>
+      {/* 不再额外包一层内边距：各场景页自己的 DemoPage（PageContainer）已提供与其它页一致的留白。
+          曾包 40/16px，叠加后内容比场景条与其它页面多缩进 40px（手机上舞台只剩一半宽），
+          舞台底边也多出 16px 落到首屏之外（cesium.css 的 100vh - 216px 按无此层计算） */}
+      <Outlet />
     </div>
   );
 }

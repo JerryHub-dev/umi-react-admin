@@ -10,7 +10,7 @@
  *   src/demo/manifest.test.ts 生成并校验一致，覆盖约束由 scenarios.test.ts 程序化校验）。
  */
 import type { Alarm, CalendarEvent, Device, EventType, Ticket, User } from '@/services/types';
-import { DEVICE_MODELS, REGION_OWNER } from './catalog';
+import { DEVICE_MODELS, REGION_OWNER, TICKET_TITLES } from './catalog';
 import { DAY, HOUR, MINUTE, SLA_HOURS, type Dataset, type DemoLocale } from './generate';
 import { SYNTHETIC_SIGNATURE_PNG } from './signatureSample';
 
@@ -159,7 +159,8 @@ export const SCENARIO_MANIFEST: {
       SCENARIO_IDS.eventMultiDay,
       SCENARIO_IDS.eventCrossMonth,
     ],
-    initialState: '今天稍后 / 明天 / 明天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）',
+    initialState:
+      '下一场临时评审（最近的工作时段）/ 明早值班交接 / 后天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）',
     demonstrates: '新建/编辑/改期/详情/空态/未来列表',
   },
   {
@@ -302,23 +303,10 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     assigneeId: assignee.id,
     assigneeName: assignee.name,
   });
-  const faultTitle = (deviceName: string, key: 'offline' | 'power' | 'link' | 'temperature' | 'signal') => {
-    const zh: Record<typeof key, string> = {
-      offline: '设备离线',
-      power: '供电中断',
-      link: '链路中断',
-      temperature: '温度过高',
-      signal: '信号异常',
-    };
-    const en: Record<typeof key, string> = {
-      offline: 'Device offline',
-      power: 'Power loss',
-      link: 'Link down',
-      temperature: 'Overheating',
-      signal: 'Signal anomaly',
-    };
-    return `${deviceName} · ${zhOr(locale, zh[key], en[key])}`;
-  };
+  // 标题模板与自然生成、接口转单同源（catalog 的 TICKET_TITLES）：此前场景工单自带一套短标题
+  // （「信号异常」「链路中断」「例行巡检」），与看板上其它工单（「信号异常复核」「回传链路检修」「季度例行巡检」）不一致
+  const ticketTitle = (deviceName: string, key: keyof typeof TICKET_TITLES) =>
+    `${deviceName} · ${TICKET_TITLES[key][locale === 'en-US' ? 'en' : 'zh']}`;
 
   // 次级场景的配对告警（与故障工单一一对应，保持「故障工单必有来源告警」的口径）
   data.alarms.push(
@@ -371,7 +359,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     // 紧急待办：未完成 P1（挂在自然分布设备上，与主线待转单告警无关）
     ticket({
       id: SCENARIO_IDS.urgentTicket,
-      title: `${urgentDevice.name} · ${zhOr(locale, '信号异常', 'Signal anomaly')}`,
+      title: ticketTitle(urgentDevice.name, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.urgentAlarm,
       deviceId: urgentDevice.id,
@@ -385,7 +373,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     // 时限对比四张
     ticket({
       id: SCENARIO_IDS.slaNear,
-      title: `${slaNearDevice.name} · ${zhOr(locale, '信号异常', 'Signal anomaly')}`,
+      title: ticketTitle(slaNearDevice.name, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.slaNearAlarm,
       deviceId: slaNearDevice.id,
@@ -399,7 +387,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.slaOver,
-      title: `${slaOverDevice.name} · ${zhOr(locale, '信号异常', 'Signal anomaly')}`,
+      title: ticketTitle(slaOverDevice.name, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.slaOverAlarm,
       deviceId: slaOverDevice.id,
@@ -413,7 +401,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.slaOk,
-      title: faultTitle(okName, 'signal'),
+      title: ticketTitle(okName, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.slaOkAlarm,
       deviceId: SCENARIO_IDS.okDevice,
@@ -428,7 +416,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.slaLate,
-      title: faultTitle(multiName, 'signal'),
+      title: ticketTitle(multiName, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.slaLateAlarm,
       deviceId: SCENARIO_IDS.multiDevice,
@@ -444,7 +432,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     // 连续验收两张（彼此独立、已完成未验收）
     ticket({
       id: SCENARIO_IDS.accept1,
-      title: faultTitle(okName, 'signal'),
+      title: ticketTitle(okName, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.accept1Alarm,
       deviceId: SCENARIO_IDS.okDevice,
@@ -459,7 +447,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.accept2,
-      title: faultTitle(multiName, 'signal'),
+      title: ticketTitle(multiName, 'signal'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.accept2Alarm,
       deviceId: SCENARIO_IDS.multiDevice,
@@ -476,7 +464,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     {
       ...ticket({
         id: SCENARIO_IDS.reworkTicket,
-        title: faultTitle(okName, 'signal'),
+        title: ticketTitle(okName, 'signal'),
         kind: 'fault',
         alarmId: SCENARIO_IDS.reworkAlarm,
         deviceId: SCENARIO_IDS.okDevice,
@@ -498,7 +486,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     // 历史工单：完成超过三天（看板窗口之外），关联已恢复告警
     ticket({
       id: SCENARIO_IDS.historyTicket,
-      title: faultTitle(okName, 'link'),
+      title: ticketTitle(okName, 'link'),
       kind: 'fault',
       alarmId: SCENARIO_IDS.historyAlarm,
       deviceId: SCENARIO_IDS.okDevice,
@@ -514,7 +502,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     // 例行巡检四张：已排期 / 今日待开始 / 处理中 / 完成
     ticket({
       id: SCENARIO_IDS.maintenanceScheduled,
-      title: `${mainName} · ${zhOr(locale, '例行巡检', 'Routine inspection')}`,
+      title: ticketTitle(mainName, 'maintenance'),
       kind: 'maintenance',
       deviceId: SCENARIO_IDS.mainDevice,
       deviceName: mainName,
@@ -527,7 +515,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.maintenanceToday,
-      title: `${okName} · ${zhOr(locale, '例行巡检', 'Routine inspection')}`,
+      title: ticketTitle(okName, 'maintenance'),
       kind: 'maintenance',
       deviceId: SCENARIO_IDS.okDevice,
       deviceName: okName,
@@ -540,7 +528,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.maintenanceDoing,
-      title: `${multiName} · ${zhOr(locale, '例行巡检', 'Routine inspection')}`,
+      title: ticketTitle(multiName, 'maintenance'),
       kind: 'maintenance',
       deviceId: SCENARIO_IDS.multiDevice,
       deviceName: multiName,
@@ -554,7 +542,7 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
     ticket({
       id: SCENARIO_IDS.maintenanceDone,
-      title: `${okName} · ${zhOr(locale, '例行巡检', 'Routine inspection')}`,
+      title: ticketTitle(okName, 'maintenance'),
       kind: 'maintenance',
       deviceId: SCENARIO_IDS.okDevice,
       deviceName: okName,
@@ -569,7 +557,21 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     }),
   );
 
-  // 日程：今天稍后 / 明天 / 明天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）
+  // 日程：下一场临时评审 / 明早值班交接 / 后天全天 / 跨天 / 跨月（本月最后一天 → 下月第一天）。
+  // 时刻落在日历的整点 / 半点与工作时段上：此前按「现在 + 偏移」计算，分钟随访问时刻漂移（11:11、04:32），
+  // 「明日值班交接」落在明晚 19:30，「今日稍后评审」凌晨访问时排在 04:xx
+  const onDay = (offsetDays: number, hour: number, minute = 0) =>
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays, hour, minute);
+  /**
+   * 最近一个开始前至少留 30 分钟的评审时段（每天 10:00 / 14:00 / 16:30），今天排满就顺延到明天；
+   * 与已有日程同一开始时刻的时段跳过（隔周周四 14:00 有常规「故障复盘评审」）
+   */
+  const taken = new Set(data.events.filter((e) => !e.allDay).map((e) => e.start));
+  const nextReviewSlot = () =>
+    [0, 1]
+      .flatMap((day) => [onDay(day, 10), onDay(day, 14), onDay(day, 16, 30)])
+      .find((slot) => slot.getTime() >= nowMs + 30 * MINUTE && !taken.has(slot.toISOString()))!;
+  const reviewStart = nextReviewSlot();
   const event = (
     id: string,
     type: EventType,
@@ -590,25 +592,26 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
     event(
       SCENARIO_IDS.eventToday,
       'review',
-      '演示 · 今日稍后评审',
-      'Demo · Review later today',
-      new Date(nowMs + 2 * HOUR),
-      new Date(nowMs + 3 * HOUR),
+      '演示 · 临时复盘评审',
+      'Demo · Ad-hoc incident review',
+      reviewStart,
+      new Date(reviewStart.getTime() + HOUR),
     ),
     event(
       SCENARIO_IDS.eventTomorrow,
       'duty',
       '演示 · 明日值班交接',
       'Demo · Duty handover tomorrow',
-      new Date(nowMs + DAY + 9 * HOUR),
-      new Date(nowMs + DAY + 9.5 * HOUR),
+      // 与常规值班交接会同一时刻（周一 09:30）
+      onDay(1, 9, 30),
+      onDay(1, 10),
     ),
     event(
       SCENARIO_IDS.eventAllDay,
       'training',
       '演示 · 全天培训',
       'Demo · All-day training',
-      new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2),
+      onDay(2, 0),
       undefined,
       true,
     ),
@@ -617,8 +620,8 @@ export const applyScenarios = (data: Dataset, now: Date, locale: DemoLocale): vo
       'inspection',
       '演示 · 跨天巡检',
       'Demo · Multi-day inspection',
-      new Date(nowMs + 2 * DAY + 9 * HOUR),
-      new Date(nowMs + 3 * DAY + 18 * HOUR),
+      onDay(2, 9),
+      onDay(3, 18),
     ),
     event(
       SCENARIO_IDS.eventCrossMonth,

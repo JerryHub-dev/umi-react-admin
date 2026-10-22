@@ -30,7 +30,8 @@ export default function RegionOnline({ data, height }: { data: DashboardOverview
         position: 'inside',
         textAlign: 'right',
         dx: -8,
-        fill: '#fff',
+        // 深色字：白字压在亮绿柱上只有 2.3:1，近黑字两套主题下都在 7:1 以上
+        fill: 'rgba(0, 0, 0, 0.88)',
       }}
       tooltip={{ items: [{ field: 'detail', name: ' ' }] }}
     />

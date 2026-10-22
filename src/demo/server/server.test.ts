@@ -90,6 +90,22 @@ describe('鉴权', () => {
     const logs = call('GET', '/api/v1/logs', { token }).body.data as { list: { action: string; createdAt: string }[] };
     expect(logs.list[0]).toMatchObject({ action: 'login', createdAt: NOW.toISOString() });
   });
+
+  it('登录页快照免登录，数字与工作台 KPI 同一口径，且只含聚合计数', () => {
+    const res = call('GET', '/api/v1/demo/snapshot');
+    expect(res.status).toBe(200);
+    const snapshot = res.body.data as Record<string, number>;
+    expect(Object.keys(snapshot).sort()).toEqual(['alarmsToday', 'devicesOnline', 'devicesTotal', 'slaRate']);
+    const overview = call('GET', '/api/v1/dashboard/overview', { token: loginAs('admin') }).body.data as {
+      kpi: Record<string, number>;
+    };
+    expect(snapshot).toEqual({
+      devicesOnline: overview.kpi.devicesOnline,
+      devicesTotal: overview.kpi.devicesTotal,
+      alarmsToday: overview.kpi.alarmsToday,
+      slaRate: overview.kpi.slaRate,
+    });
+  });
 });
 
 describe('用户管理', () => {

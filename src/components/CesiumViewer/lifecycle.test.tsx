@@ -102,6 +102,13 @@ vi.mock('cesium', () => {
   };
 });
 
+// 罗盘控件只发布 UMD 构建，内部 require('Cesium')（大写，Node 下解析不到）；生命周期用例不关心它
+vi.mock('cesium-navigation-es6', () => ({
+  default: class {
+    destroy() {}
+  },
+}));
+
 vi.mock('@umijs/max', () => ({ useIntl: () => ({ formatMessage: ({ id }: { id: string }) => id }) }));
 
 import { useCesiumViewer } from './index';

@@ -34,12 +34,14 @@ export default function AudioPlayer() {
   const [mode, setMode] = useState<SpectrumMode>('waves');
   const [playing, setPlaying] = useState(false);
   const { md } = Grid.useBreakpoint();
+  // 样式名本地化（此前直接显示 xgplayer-music 的内部标识 waves / bars …）
+  const modeOptions = MODES.map((value) => ({ value, label: t(`audio.mode.${value}`) }));
 
   useEffect(() => {
     if (!playerRef.current || !spectrumRef.current || !lyricsRef.current) return undefined;
     const player = new Player({
       el: playerRef.current,
-      // 项目自制的正弦合成音频（此前热链第三方 CDN 上的商业歌曲，已按演示媒体自制替换的约定移除）
+      // 项目自制的合成旋律（scripts/make-demo-audio.mjs；此前热链第三方 CDN 上的商业歌曲，已按演示媒体自制替换的约定移除）
       url: `${PUBLIC_PATH}audio/stereo.wav`,
       volume: 0.8,
       width: '100%',
@@ -96,15 +98,9 @@ export default function AudioPlayer() {
           <Typography.Text type="secondary">{t('audio.mode')}</Typography.Text>
           {/* 六个选项的分段控件约 430px 宽，手机上改用下拉，避免撑出横向滚动 */}
           {md ? (
-            <Segmented<SpectrumMode> size="small" value={mode} onChange={setMode} options={MODES} />
+            <Segmented<SpectrumMode> size="small" value={mode} onChange={setMode} options={modeOptions} />
           ) : (
-            <Select<SpectrumMode>
-              size="small"
-              className="w-32"
-              value={mode}
-              onChange={setMode}
-              options={MODES.map((value) => ({ value, label: value }))}
-            />
+            <Select<SpectrumMode> size="small" className="w-32" value={mode} onChange={setMode} options={modeOptions} />
           )}
         </Space>
       }

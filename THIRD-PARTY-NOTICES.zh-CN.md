@@ -23,7 +23,7 @@
 
 | 资源 | 来源 | 许可 |
 | --- | --- | --- |
-| `public/audio/audio.wav`、`public/audio/stereo.wav` | 项目自制（正弦合成音频） | 随项目 MIT |
+| `public/audio/audio.wav`、`public/audio/stereo.wav` | 项目自制（`scripts/make-demo-audio.mjs` 合成） | 随项目 MIT |
 | `public/data/cesium/*.json`（覆盖包络、场强测试、站点覆盖多边形）、`src/demo/`（演示数据生成器与词库） | 项目自制演示数据 | 随项目 MIT |
 | `public/logo.svg`、`public/favicon.svg`、`public/favicon.ico`、`public/apple-touch-icon.png` | 项目自制标识（监测雷达图形；ICO/PNG 由 `scripts/make-icons.mjs` 从两份 SVG 确定性栅格化） | 随项目 MIT |
 | `public/_headers`、`public/_redirects`、`public/api-not-configured.json` | 项目自制的部署配置（Cloudflare Pages 响应头与 `/api` 改写） | 随项目 MIT |

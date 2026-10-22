@@ -1,18 +1,21 @@
 import { readBuildGlobal } from '@/utils/buildGlobals';
 import { useIntl } from '@umijs/max';
-import { Alert, Button, Result, Spin, Tooltip, theme } from 'antd';
+import { Alert, Button, Grid, Result, Spin, Tooltip, theme } from 'antd';
 import * as Cesium from 'cesium';
 import CesiumNavigation from 'cesium-navigation-es6';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import { default as mgrsDefault, forward as mgrsForwardEsm } from 'mgrs';
+import * as mgrsModule from 'mgrs';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import './cesium.css';
 import { observeTileFailures } from './tileFailures';
 
-/* mgrs 互操作加固：ESM 入口是命名导出，UMD 构建挂在 default 上（与 milsymbol 同类坑） */
+/* mgrs 互操作加固：ESM 入口是命名导出，UMD 构建挂在 default 上（与 milsymbol 同类坑，解法同 symbols.ts）。
+   不能写 `import { default as … } from 'mgrs'`：webpack 取的 ESM 入口没有 default 导出，生产构建直接报错 */
 const mgrsForward = (position: [number, number], precision: number): string => {
-  const fn = mgrsForwardEsm ?? (mgrsDefault as unknown as { forward?: typeof mgrsForwardEsm })?.forward;
-  return fn ? fn(position, precision) : '';
+  const ns = mgrsModule as unknown as Record<string, unknown>;
+  const fn = (ns.forward ?? (ns.default as Record<string, unknown> | undefined)?.forward) as
+    typeof mgrsModule.forward | undefined;
+  return typeof fn === 'function' ? fn(position, precision) : '';
 };
 
 /** 演示页通用的 Viewer 控件配置：关闭原生动画/时间轴/信息框等（自绘 TimeDeck），保留 2D/3D 切换。
@@ -569,6 +572,7 @@ export const SceneStage = ({
 }) => {
   const intl = useIntl();
   const { token } = theme.useToken();
+  const { sm } = Grid.useBreakpoint();
   const [coords, setCoords] = useState<string>();
   const [heightKm, setHeightKm] = useState<number>();
   const [graticuleOn, setGraticuleOn] = useState(false);
@@ -684,18 +688,32 @@ export const SceneStage = ({
         </div>
       )}
       {viewer && basemapFailed && (
-        <div className="absolute inset-x-0 top-3 z-20 mx-auto w-fit" style={{ maxWidth: '92%' }}>
+        // 窄屏铺满舞台宽度、重试按钮放到正文下方：w-fit 加右侧按钮在 ~300px 舞台上会把正文列挤成零宽（每行一个字母竖排）
+        <div className="absolute inset-x-3 top-3 z-20 sm:inset-x-0 sm:mx-auto sm:w-fit" style={{ maxWidth: '92%' }}>
           <Alert
             type="warning"
             showIcon
             closable
             className="shadow-md"
             message={intl.formatMessage({ id: 'cesium.basemapFailed.title' })}
-            description={intl.formatMessage({ id: 'cesium.basemapFailed.desc' })}
+            description={
+              <>
+                {intl.formatMessage({ id: 'cesium.basemapFailed.desc' })}
+                {!sm && (
+                  <div className="mt-2">
+                    <Button size="small" onClick={onRetryBasemap}>
+                      {intl.formatMessage({ id: 'cesium.basemapFailed.retry' })}
+                    </Button>
+                  </div>
+                )}
+              </>
+            }
             action={
-              <Button size="small" onClick={onRetryBasemap}>
-                {intl.formatMessage({ id: 'cesium.basemapFailed.retry' })}
-              </Button>
+              sm && (
+                <Button size="small" onClick={onRetryBasemap}>
+                  {intl.formatMessage({ id: 'cesium.basemapFailed.retry' })}
+                </Button>
+              )
             }
           />
         </div>
@@ -723,9 +741,15 @@ export const SceneStage = ({
           <div className="scene-actions">{actions}</div>
         </div>
       )}
-      {panels && <div className="scene-corner scene-corner-l">{panels}</div>}
+      {/* 左列：面板区在上（可滚动）、图例压在列尾。图例曾单独锚在左下角，
+          海空态势的长编成树与 8 行图例互相覆盖 */}
+      {(panels || legend) && (
+        <div className="scene-corner scene-corner-l">
+          {panels && <div className="scene-corner-panels">{panels}</div>}
+          {legend && <div className="scene-corner-legend">{legend}</div>}
+        </div>
+      )}
       {rightPanels && <div className="scene-corner scene-corner-r">{rightPanels}</div>}
-      {legend && <div className="scene-corner scene-corner-bl">{legend}</div>}
       {timeDeck && <div className="scene-timedeck-slot">{timeDeck}</div>}
       {hud}
       {children}

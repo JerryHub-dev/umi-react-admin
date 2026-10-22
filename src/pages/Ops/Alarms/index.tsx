@@ -12,7 +12,7 @@ import { nowMs } from '@/utils/now';
 import { DownOutlined } from '@ant-design/icons';
 import { ProTable, type ActionType, type ProColumns, type ProFormInstance } from '@ant-design/pro-components';
 import { Link, useAccess, useIntl, useLocation } from '@umijs/max';
-import { App, Button, Dropdown, Switch, Tag, Tooltip, Typography } from 'antd';
+import { App, Badge, Button, Dropdown, Switch, Tooltip, Typography } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const ACTIONS: AlarmHandleAction[] = ['ticket', 'recover', 'falsePositive'];
@@ -26,7 +26,7 @@ export default function Alarms() {
   const t = (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
   const enums = useEnums();
   const table = useResponsiveTable();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const access = useAccess();
   const location = useLocation();
   const actionRef = useRef<ActionType>(undefined);
@@ -62,6 +62,20 @@ export default function Alarms() {
     await handleAlarm(alarm.id, action);
     message.success(t('alarms.handled'));
     actionRef.current?.reload();
+  };
+
+  /** 误报关闭会让告警直接离开「未恢复」池、不派生工单，先确认；转工单 / 标记恢复是常规处置，直接执行 */
+  const confirmAndHandle = (alarm: Alarm, action: AlarmHandleAction) => {
+    if (action !== 'falsePositive') {
+      void handle(alarm, action);
+      return;
+    }
+    modal.confirm({
+      title: t('alarms.falsePositiveConfirm', { id: alarm.id }),
+      content: t('alarms.falsePositiveConfirmDesc'),
+      okButtonProps: { danger: true },
+      onOk: () => handle(alarm, action),
+    });
   };
 
   const columns: ProColumns<Alarm>[] = [
@@ -145,10 +159,10 @@ export default function Alarms() {
       render: (dom, alarm) =>
         alarm.ticketId ? (
           <div>
-            {/* 已随工单恢复的转单告警按恢复语义展示，未恢复的仍算「未恢复」池的一部分（F08） */}
-            {/* 「Success」不是 antd 的状态色 key（大小写不匹配会走自定义色分支，暗色主题下渲染成近白底白字）：改用小写状态色 */}
+            {/* 已随工单恢复的转单告警按恢复语义展示，未恢复的仍算「未恢复」池的一部分（F08）。
+                与同列 valueEnum 渲染的「已恢复」同一形态（状态点 + 文字），不再一列里混用点与标签两种样式 */}
             {alarmRecovered(alarm) && alarm.status === 'ticketed' ? (
-              <Tag color="success">{enums.label('alarmStatus', 'recovered')}</Tag>
+              <Badge status="success" text={enums.label('alarmStatus', 'recovered')} />
             ) : (
               dom
             )}
@@ -176,10 +190,16 @@ export default function Alarms() {
       fixed: table.fixedRight,
       render: (_, alarm) =>
         alarm.status === 'active' && canHandle ? (
+          // 点击展开（与顶栏菜单一致）：悬停展开在逐行扫视表格时容易误弹
           <Dropdown
+            trigger={['click']}
             menu={{
-              items: ACTIONS.map((action) => ({ key: action, label: t(`alarms.handle.${action}`) })),
-              onClick: ({ key }) => handle(alarm, key as AlarmHandleAction),
+              items: ACTIONS.map((action) => ({
+                key: action,
+                label: t(`alarms.handle.${action}`),
+                danger: action === 'falsePositive',
+              })),
+              onClick: ({ key }) => confirmAndHandle(alarm, key as AlarmHandleAction),
             }}
           >
             <Button type="link" size="small">

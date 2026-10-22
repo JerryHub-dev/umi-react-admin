@@ -4,6 +4,15 @@ import { useAntdConfigSetter, useModel } from '@umijs/max';
 import { theme as antdTheme } from 'antd';
 
 /**
+ * 让浏览器画布与原生控件跟随主题（color-scheme）：html/body 本身没有底色，暗色主题下
+ * 应用启动后首个页面挂载前、路由分包加载的过渡帧（React 把旧页面 display:none、新页尚未挂载）露出的是浏览器
+ * 默认白底，整屏闪白；原生滚动条也一直是浅色。启动时（app.tsx render）与每次切换各同步一次。
+ */
+export const syncColorScheme = (mode: ThemeMode) => {
+  document.documentElement.style.colorScheme = mode === 'realDark' ? 'dark' : 'light';
+};
+
+/**
  * 明暗主题切换：antd 算法经 useAntdConfigSetter 热切换，ProLayout navTheme 与持久化经 initialState 同步。
  * 顶栏与登录页共用（登录页未登录时 initialState 为空，同样可以切换）。
  */
@@ -18,6 +27,7 @@ export const useThemeMode = () => {
     } catch {
       // 存储不可用：本次会话内仍然生效
     }
+    syncColorScheme(mode);
     setAntdConfig({
       theme: {
         algorithm: mode === 'realDark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,

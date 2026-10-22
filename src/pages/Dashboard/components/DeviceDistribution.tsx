@@ -1,3 +1,4 @@
+import { REGION_KEYS } from '@/constants/enums';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import type { DashboardOverview } from '@/services/types';
 import { Sunburst } from '@ant-design/plots';
@@ -30,8 +31,22 @@ export default function DeviceDistribution({
       theme={chart.g2Theme}
       innerRadius={0.2}
       legend={false}
-      scale={{ color: { range: chart.categories } }}
-      label={{ text: 'name', transform: [{ type: 'overflowHide' }], fill: '#fff', fontSize: 11 }}
+      // 与设备健康散点图同一大区配色（固定顺序；默认按扇区大小排序分配，同一大区两图颜色不同）
+      scale={{
+        color: {
+          domain: REGION_KEYS.map((region) => intl.formatMessage({ id: `region.${region}` })),
+          range: chart.categories,
+        },
+      }}
+      // 外圈只给占比 ≥4% 的城市标名（约 10 台以上）：小城市的窄扇区放不下横排文字，标签互相叠压；
+      // 名称与数量悬停可见，点击大区可下钻放大
+      label={{
+        text: (d: { name: string; depth: number; x: [number, number] }) =>
+          d.depth === 1 || d.x[1] - d.x[0] >= 0.04 ? d.name : '',
+        transform: [{ type: 'overflowHide' }],
+        fill: '#fff',
+        fontSize: 11,
+      }}
       interaction={{
         drillDown: {
           breadCrumb: {

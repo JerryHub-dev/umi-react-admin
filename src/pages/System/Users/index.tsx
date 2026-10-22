@@ -155,6 +155,7 @@ export default function Users() {
           return [
             <Dropdown
               key="more"
+              trigger={['click']}
               menu={{
                 items: [
                   { key: 'edit', label: t('common.edit'), disabled: scopeLocked },
@@ -300,6 +301,7 @@ export default function Users() {
           </Button>,
           <Dropdown
             key="more"
+            trigger={['click']}
             menu={{
               items: [{ key: 'excel', label: t('menu.document.excel') }],
               onClick: () => history.push('/document/excel'),

@@ -120,7 +120,12 @@ const Column = ({
           </Typography.Text>
         )}
       </div>
-      <div className="flex flex-col gap-2">
+      {/* 桌面三列并排时列内滚动、列高封顶在一屏内：「已完成」三天窗口常有 30+ 张卡，曾把整页拉到 4000px+，
+          另两列跟着拉伸成大片空底色。手机单列堆叠时保持自然流（不制造嵌套滚动） */}
+      <div
+        className="-mr-1 flex flex-col gap-2 pr-1 md:max-h-[calc(100vh-200px)] md:overflow-y-auto"
+        style={{ scrollbarWidth: 'thin' }}
+      >
         {tickets.length ? (
           tickets.map((ticket) => <DraggableTicket key={ticket.id} ticket={ticket} onOpen={onOpen} />)
         ) : (

@@ -30,6 +30,9 @@ export default {
   'alarms.handle.recover': 'Mark recovered',
   'alarms.handle.falsePositive': 'Close as false positive',
   'alarms.handled': 'Handled',
+  'alarms.falsePositiveConfirm': 'Close {id} as a false positive?',
+  'alarms.falsePositiveConfirmDesc':
+    'It will leave the unrecovered pool and no ticket will be created. The action is recorded in the audit log.',
   'alarms.ongoing': 'Ongoing · {duration}',
   'alarms.activeOnly': 'Unrecovered only',
   'alarms.ticketLink': 'Ticket {id}',

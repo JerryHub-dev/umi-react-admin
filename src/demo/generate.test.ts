@@ -183,6 +183,17 @@ describe('工单', () => {
     expect(data.tickets.filter((x) => x.resolvedAt && t(x.resolvedAt) > since).length).toBeGreaterThan(5);
   });
 
+  it('两周内任意时刻，「处理中」都不少于 5 张（拖拽演示不至于只剩一两张卡）', () => {
+    const counts = Array.from({ length: 14 }, (_, d) =>
+      [3, 10, 15, 21].map(
+        (hour) =>
+          generateDataset({ now: new Date(2026, 9, 8 + d, hour, 17) }).tickets.filter((x) => x.status === 'doing')
+            .length,
+      ),
+    ).flat();
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(5);
+  });
+
   it('例行巡检都有排期：计划开工在创建之后，已开工的按计划时刻开工', () => {
     const maintenance = data.tickets.filter((x) => x.kind === 'maintenance');
     expect(maintenance.length).toBeGreaterThan(0);
@@ -204,6 +215,29 @@ describe('日志与日程', () => {
       .filter((l) => l.action === 'ticketClose')
       .forEach((l) => expect(l.actorId).toBe(tickets.get(l.target)?.assigneeId));
     data.logs.filter((l) => l.action === 'ticketAssign').forEach((l) => expect(roles.get(l.actorId)).toBe('lead'));
+  });
+
+  it('「处置告警」只指向真正处置过的告警，日志时刻即处置时刻（转单 = 工单创建，恢复 / 误报 = 恢复时刻）', () => {
+    const alarms = new Map(data.alarms.map((a) => [a.id, a]));
+    const tickets = new Map(data.tickets.map((x) => [x.id, x]));
+    const handles = data.logs.filter((l) => l.action === 'alarmHandle');
+    expect(handles.length).toBeGreaterThan(10);
+    handles.forEach((l) => {
+      const alarm = alarms.get(l.target)!;
+      expect(alarm.status).not.toBe('active');
+      const handledAt = alarm.status === 'ticketed' ? tickets.get(alarm.ticketId!)!.createdAt : alarm.recoveredAt;
+      expect(t(l.createdAt)).toBe(t(handledAt!));
+    });
+  });
+
+  it('派单 / 结单日志的时刻就是工单创建 / 完成时刻', () => {
+    const tickets = new Map(data.tickets.map((x) => [x.id, x]));
+    data.logs
+      .filter((l) => l.action === 'ticketAssign')
+      .forEach((l) => expect(t(l.createdAt)).toBe(t(tickets.get(l.target)!.createdAt)));
+    data.logs
+      .filter((l) => l.action === 'ticketClose')
+      .forEach((l) => expect(t(l.createdAt)).toBe(t(tickets.get(l.target)!.resolvedAt!)));
   });
 
   it('同一条告警 / 工单的同一种操作只记一次日志', () => {
